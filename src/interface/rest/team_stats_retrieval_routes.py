@@ -1,0 +1,134 @@
+"""
+REST API routes for team statistics retrieval operations.
+"""
+
+from datetime import datetime
+from typing import Dict, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
+
+from src.application.use_cases.team_stats_use_cases import GetTeamStatsUseCase
+from src.domain.value_objects.team_stats_category import TeamStatsCategory
+from src.infrastructure.cache.cache_provider import get_cache_adapter
+from src.infrastructure.db.database import get_db
+from src.infrastructure.db.repositories.team_stats_repository import TeamStatsRepository
+from src.interface.rest.adapters.mappers import to_team_stats_dto
+from src.interface.rest.exception_handlers import DomainExceptions
+from src.interface.rest.generated.models.models import (
+    BadRequest,
+    InternalServerError,
+    NotFound,
+    ServiceUnavailable,
+    TeamSeasonStatsDetailResponse,
+    UnprocessableEntity,
+)
+from src.interface.rest.response_handler import ResponseHandler
+
+router = APIRouter()
+
+
+def get_team_stats_use_cases(db: Session = Depends(get_db)):
+    """Get team stats use cases with dependencies."""
+    team_stats_repository = TeamStatsRepository(db)
+    cache_adapter = get_cache_adapter()
+
+    return {
+        "get_team_stats": GetTeamStatsUseCase(team_stats_repository, cache_adapter),
+    }
+
+
+@router.get(
+    "/teams/{team_id}/stats/{season}",
+    response_model=TeamSeasonStatsDetailResponse,
+    responses={
+        "400": {"model": BadRequest},
+        "404": {"model": NotFound},
+        "422": {"model": UnprocessableEntity},
+        "500": {"model": InternalServerError},
+        "503": {"model": ServiceUnavailable},
+    },
+    tags=["Teams", "Stats", "Teams", "Stats"],
+)
+async def get_team_stats(
+    team_id: int = Path(..., description="The ID of the team to get stats for"),
+    season: str = Path(..., description="The season to get stats for"),
+    category: Optional[str] = Query(
+        "all",
+        description="Optional stats category filter. Defaults to `all`.",
+        json_schema_extra={"enum": list(TeamStatsCategory.allowed_values())},
+    ),
+    use_cases: Dict = Depends(get_team_stats_use_cases),
+) -> JSONResponse:
+    """
+    Retrieve statistical data for a specific team for a given season.
+
+    This endpoint fetches and provides detailed statistics related to a specific team ID
+    and season. It employs dependency injection to fetch use cases and ensures proper
+    error handling for various scenarios.
+
+    Args:
+        team_id: The ID of the team to get statistics for
+        season: The season year to retrieve statistics for
+        category: Optional statistics category filter
+        use_cases: Dependency to retrieve the use cases related to retrieving team statistics
+
+    Returns:
+        JSONResponse: Standardized response with team statistics
+
+    Raises:
+        DomainExceptions.InvalidDataError: If team_id or season is invalid
+        DomainExceptions.TeamNotFoundError: If team statistics are not found
+    """
+    # Validate inputs
+    if team_id <= 0:
+        raise DomainExceptions.InvalidDataError("Team ID must be a positive integer")
+
+    try:
+        season_year = int(season)
+    except (TypeError, ValueError) as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="season must be an integer year",
+        ) from error
+
+    current_year = datetime.now().year
+    max_historical_season = current_year - 30
+    if season_year < max_historical_season or season_year > current_year:
+        raise DomainExceptions.InvalidDataError(f"Season must be between {max_historical_season} and {current_year}")
+
+    normalized_category = category.strip().lower() if category else None
+    resolved_category = TeamStatsCategory.ALL
+    if normalized_category:
+        try:
+            resolved_category = TeamStatsCategory(normalized_category)
+        except ValueError as error:
+            allowed_values = ", ".join(TeamStatsCategory.allowed_values())
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"category must be one of: {allowed_values}",
+            ) from error
+
+    try:
+        get_team_stats_use_case = use_cases["get_team_stats"]
+        team_stats = await get_team_stats_use_case.execute(
+            team_id=team_id,
+            season=season_year,
+            category=resolved_category,
+        )
+
+        if not team_stats:
+            raise DomainExceptions.TeamNotFoundError(team_id)
+
+        team_stats_dto = to_team_stats_dto(team_stats)
+
+        return ResponseHandler.success(
+            data=team_stats_dto,
+            message=f"Team statistics retrieved successfully for season {season_year}",
+        )
+
+    except DomainExceptions.TeamNotFoundError:
+        raise
+    except Exception as e:
+        raise DomainExceptions.ExternalServiceError("Database", str(e))

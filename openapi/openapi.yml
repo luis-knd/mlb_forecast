@@ -1,0 +1,3023 @@
+openapi: 3.1.0
+info:
+  title: MLB Forecast API
+  description: "\n    # MLB Predictions Backend API\n\n    Enterprise-grade MLB game\
+    \ prediction platform delivering real-time analytics and machine learning insights.\n\
+    \n    ## \U0001F680 Core Features\n\n    ### \u26BE **Data Ingestion Pipeline**\n\
+    \    - Real-time game results from official MLB APIs\n    - Historical statistics\
+    \ and performance metrics\n    - Live game schedules and league standings\n  \
+    \  - Automated data validation and cleansing\n\n    ### \U0001F916 **Advanced\
+    \ Machine Learning**\n    - Probabilistic game outcome predictions\n    - Total\
+    \ runs and score forecasting\n    - Player performance analytics\n    - Continuous\
+    \ model training and optimization\n\n    ### \u26A1 **High-Performance Architecture**\n\
+    \    - Multi-layer Redis caching system\n    - Optimized database queries with\
+    \ indexing\n    - Asynchronous processing for scalability\n    - Sub-second API\
+    \ response times\n\n    ### \U0001F4CA **Analytics & Insights**\n    - Team performance\
+    \ trending\n    - Head-to-head historical analysis\n    - Weather impact on game\
+    \ outcomes\n    - Injury reports integration\n\n    ## \U0001F527 Technical Stack\n\
+    \n    - **Framework**: FastAPI with async/await patterns\n    - **Database**:\
+    \ PostgreSQL with optimized schemas\n    - **Cache**: Redis for high-speed data\
+    \ retrieval\n    - **ML**: Scikit-learn with automated retraining\n    - **Architecture**:\
+    \ Hexagonal/Clean architecture principles\n\n    ## \U0001F4C8 API Capabilities\n\
+    \n    - Hexagonal architecture for modularity\n    - RESTful endpoints with OpenAPI\
+    \ documentation\n    - Real-time prediction scoring\n    - Batch prediction processing\n\
+    \    - Model performance monitoring\n    - Comprehensive error handling and logging\n\
+    \n    ## \U0001F4DD API Response Format\n\n    All endpoints return responses\
+    \ in the following standardized format:\n\n    ```json\n    {\n        \"status\"\
+    : \"success|error\",\n        \"code\": 200,\n        \"data\": {},\n        \"\
+    errors\": [],\n        \"message\": \"Optional descriptive message\"\n    }\n\
+    \    ```\n    "
+  version: 1.0.0
+paths:
+  /api/v1/teams:
+    get:
+      tags:
+        - Teams
+      summary: List Teams
+      description: "Get a list of teams with optional filtering by league or division.\n\
+        \nThis endpoint retrieves a list of teams. It supports filtering the teams\
+        \ by\nleague or division. Filters are optional, and if not provided, all teams\
+        \ will\nbe returned.\n\nArgs:\n    league: Optional filter by league (e.g.,\
+        \ American or National)\n    division: Optional filter by division (e.g.,\
+        \ East, West, Central)\n    use_cases: Dependency injected dictionary containing\
+        \ use cases\n\nReturns:\n    JSONResponse: Standardized response with list\
+        \ of teams\n\nRaises:\n    DomainExceptions.InvalidDataError: If invalid filter\
+        \ parameters are provided"
+      operationId: list_teams_api_v1_teams_get
+      parameters:
+        - name: league
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            description: Filter by league (e.g. American or National)
+            title: League
+          description: Filter by league (e.g. American or National)
+        - name: division
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            description: Filter by division (e.g. East, West, Central)
+            title: Division
+          description: Filter by division (e.g. East, West, Central)
+      responses:
+        '200':
+          description: Response successfully to retrieve teams list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamListResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/teams/{team_id}:
+    get:
+      tags:
+        - Teams
+      summary: Get Team
+      description: "Get team details by team ID.\n\nThis endpoint retrieves the details\
+        \ of a specific team using its unique identifier.\n\nArgs:\n    team_id: The\
+        \ ID of the team to retrieve\n    use_cases: Dependency injected dictionary\
+        \ containing use cases\n\nReturns:\n    JSONResponse: Standardized response\
+        \ with team details\n\nRaises:\n    DomainExceptions.TeamNotFoundError: If\
+        \ the team is not found\n    DomainExceptions.InvalidDataError: If team_id\
+        \ is invalid"
+      operationId: get_team_api_v1_teams__team_id__get
+      parameters:
+        - name: team_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            description: The ID of the team to get
+            title: Team Id
+          description: The ID of the team to get
+      responses:
+        '200':
+          description: Successfully retrieved team details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamDetailResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/data/ingest/teams:
+    post:
+      tags:
+        - Teams
+        - Data Ingestion
+      summary: Ingest Teams
+      description: "Ingest team data from external MLB API.\n\nThis endpoint triggers\
+        \ the ingestion of team data from the official MLB API\nand returns metadata\
+        \ about the operation.\n\nArgs:\n    use_cases: Dependency injected dictionary\
+        \ containing use cases\n\nReturns:\n    JSONResponse: Standardized response\
+        \ with ingestion results\n\nRaises:\n    DomainExceptions.ExternalServiceError:\
+        \ If MLB API is unavailable"
+      operationId: ingest_teams_api_v1_data_ingest_teams_post
+      responses:
+        '201':
+          description: Successfully ingested team data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataIngestionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/teams/{team_id}/stats/{season}:
+    get:
+      tags:
+        - Teams
+        - Stats
+      summary: Get Team Stats
+      description: >
+        Returns season-level composite statistics for a team, grouped by
+        hitting, pitching, fielding and catching. Use the optional `category`
+        query parameter to limit the response to a single block while the
+        remaining categories are returned as `null` for compatibility.
+      operationId: get_team_season_composite_stats
+      parameters:
+        - name: team_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            title: Team Id
+            description: The ID of the team to get stats for
+          description: The ID of the team to get stats for
+        - name: season
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - hitting
+              - pitching
+              - fielding
+              - catching
+              - all
+            default: all
+          description: "Optional stats category filter. Defaults to `all`."
+      responses:
+        '200':
+          description: Successfully retrieved team composite statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamSeasonStatsDetailResponse'
+              examples:
+                all:
+                  summary: All categories
+                  value:
+                    status: success
+                    code: 200
+                    data:
+                      team_id: 62
+                      season: 2025
+                      hitting:
+                        hits: 1450
+                        games_played: 162
+                      pitching:
+                        wins: 90
+                        games_played: 162
+                      fielding:
+                        total_chances: 5100
+                        games_played: 162
+                      catching:
+                        caught_stealing: 45
+                        games_played: 162
+                      updated_at: '2025-07-25T17:58:28Z'
+                    errors: []
+                    message: Team statistics retrieved successfully
+                hitting:
+                  summary: Hitting category only
+                  value:
+                    status: success
+                    code: 200
+                    data:
+                      team_id: 62
+                      season: 2025
+                      hitting:
+                        hits: 1450
+                        games_played: 162
+                      pitching: null
+                      fielding: null
+                      catching: null
+                      updated_at: '2025-07-25T17:58:28Z'
+                    errors: []
+                    message: Team hitting statistics retrieved successfully
+                pitching:
+                  summary: Pitching category only
+                  value:
+                    status: success
+                    code: 200
+                    data:
+                      team_id: 62
+                      season: 2025
+                      hitting: null
+                      pitching:
+                        wins: 90
+                        innings_pitched: 1450.1
+                      fielding: null
+                      catching: null
+                      updated_at: '2025-07-25T17:58:28Z'
+                    errors: []
+                    message: Team pitching statistics retrieved successfully
+                fielding:
+                  summary: Fielding category only
+                  value:
+                    status: success
+                    code: 200
+                    data:
+                      team_id: 62
+                      season: 2025
+                      hitting: null
+                      pitching: null
+                      fielding:
+                        total_chances: 5100
+                        fielding_percentage: 0.972
+                      catching: null
+                      updated_at: '2025-07-25T17:58:28Z'
+                    errors: []
+                    message: Team fielding statistics retrieved successfully
+                catching:
+                  summary: Catching category only
+                  value:
+                    status: success
+                    code: 200
+                    data:
+                      team_id: 62
+                      season: 2025
+                      hitting: null
+                      pitching: null
+                      fielding: null
+                      catching:
+                        caught_stealing: 45
+                        passed_balls: 5
+                      updated_at: '2025-07-25T17:58:28Z'
+                    errors: []
+                    message: Team catching statistics retrieved successfully
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/games:
+    get:
+      tags:
+        - Games
+      summary: List Games
+      description: "Retrieve games with optional filtering and pagination.\n\nArgs:\n\
+        \    date: Filter by date in YYYY-MM-DD format\n    team_id: Filter by team\
+        \ ID\n    status: Filter by game status\n    limit: Maximum number of games\
+        \ to return\n    use_cases: Dependency injected use cases\n\nReturns:\n  \
+        \  JSONResponse: Standardized response with games list\n\nRaises:\n    DomainExceptions.InvalidDataError:\
+        \ If filters are invalid"
+      operationId: list_games_api_v1_games_get
+      parameters:
+        - name: date
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            description: Filter by date in YYYY-MM-DD format
+            title: Date
+          description: Filter by date in YYYY-MM-DD format
+        - name: team_id
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: integer
+              - type: 'null'
+            description: Filter by team ID
+            title: Team Id
+          description: Filter by team ID
+        - name: status
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            description: Filter by game status (scheduled, in_progress, completed)
+            title: Status
+          description: Filter by game status (scheduled, in_progress, completed)
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            maximum: 200
+            description: Maximum number of games to return
+            default: 50
+            title: Limit
+          description: Maximum number of games to return
+      responses:
+        '200':
+          description: Successfully retrieved games list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameListResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/games/{game_id}:
+    get:
+      tags:
+        - Games
+      summary: Get Game
+      description: "Get a game by its ID.\n\nArgs:\n    game_id: The ID of the game\
+        \ to retrieve\n    use_cases: Dependency injected use cases\n\nReturns:\n\
+        \    JSONResponse: Standardized response with game details\n\nRaises:\n  \
+        \  DomainExceptions.GameNotFoundError: If game is not found\n    DomainExceptions.InvalidDataError:\
+        \ If game_id is invalid"
+      operationId: get_game_api_v1_games__game_id__get
+      parameters:
+        - name: game_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            description: The ID of the game to get
+            title: Game Id
+          description: The ID of the game to get
+      responses:
+        '200':
+          description: Successfully retrieved game details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameDetailResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/data/ingest/games:
+    post:
+      tags:
+        - Games
+        - Data Ingestion
+      summary: Ingest Games
+      description: "Ingest game data from external MLB API.\n\nArgs:\n    date: Specific\
+        \ date to ingest games for in YYYY-MM-DD format\n    days_back: Number of\
+        \ days back to ingest (max 30)\n    use_cases: Dependency injected use cases\n\
+        \nReturns:\n    JSONResponse: Standardized response with ingestion results\n\
+        \nRaises:\n    DomainExceptions.InvalidDataError: If date format is invalid\n\
+        \    DomainExceptions.ExternalServiceError: If MLB API is unavailable"
+      operationId: ingest_games_api_v1_data_ingest_games_post
+      parameters:
+        - name: date
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            description: Specific date to ingest games for (YYYY-MM-DD)
+            title: Date
+          description: Specific date to ingest games for (YYYY-MM-DD)
+        - name: days_back
+          in: query
+          required: false
+          schema:
+            type: integer
+            maximum: 30
+            description: Number of days back to ingest games for
+            default: 7
+            title: Days Back
+          description: Number of days back to ingest games for
+      responses:
+        '201':
+          description: Successfully ingested game data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataIngestionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/predictions/{game_id}:
+    get:
+      tags:
+        - Predictions
+      summary: Get Game Predictions
+      description: "Get predictions for a specific game.\n\nRetrieves machine learning\
+        \ predictions for a game including win probabilities\nand predicted scores\
+        \ for both teams.\n\nArgs:\n    game_id: The ID of the game to get predictions\
+        \ for\n    prediction_type: Optional filter by prediction type\n    use_cases:\
+        \ Dependency injected dictionary containing use cases\n\nReturns:\n    JSONResponse:\
+        \ Standardized response with prediction data\n\nRaises:\n    DomainExceptions.InvalidDataError:\
+        \ If game_id is invalid"
+      operationId: get_game_predictions_api_v1_predictions__game_id__get
+      parameters:
+        - name: game_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            description: The ID of the game to get predictions for
+            title: Game Id
+          description: The ID of the game to get predictions for
+        - name: prediction_type
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            description: Filter by prediction type
+            title: Prediction Type
+          description: Filter by prediction type
+      responses:
+        '200':
+          description: Successfully retrieved predictions for game
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PredictionListResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/predictions:
+    post:
+      tags:
+        - Predictions
+      summary: Generate Prediction
+      description: "Generate a new prediction for a game.\n\nCreates machine learning\
+        \ predictions for a game using current team statistics\nand historical performance\
+        \ data.\n\nArgs:\n    game_id: The ID of the game to create prediction for\n\
+        \    prediction_type: Type of prediction to generate (winner, total_runs,\
+        \ etc.)\n    use_cases: Dependency injected dictionary containing use cases\n\
+        \nReturns:\n    JSONResponse: Standardized response with created prediction\n\
+        \nRaises:\n    DomainExceptions.GameNotFoundError: If the game is not found\n\
+        \    DomainExceptions.InvalidDataError: If game_id is invalid\n    DomainExceptions.ExternalServiceError:\
+        \ If ML model is unavailable"
+      operationId: generate_prediction_api_v1_predictions_post
+      parameters:
+        - name: game_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            description: The ID of the game to create prediction for
+            title: Game Id
+          description: The ID of the game to create prediction for
+        - name: prediction_type
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Type of prediction to generate
+            default: winner
+            title: Prediction Type
+          description: Type of prediction to generate
+      responses:
+        '201':
+          description: Successfully created prediction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PredictionCreateResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/cache/stats:
+    get:
+      tags:
+        - System
+      summary: Get Cache Stats
+      description: "Get cache statistics for monitoring and debugging purposes.\n\n\
+        Returns detailed information about the cache system including hit rates,\n\
+        memory usage, and key statistics.\n\nArgs:\n    use_cases: Dependency injected\
+        \ dictionary containing use cases\n\nReturns:\n    JSONResponse: Standardized\
+        \ response with cache statistics"
+      operationId: get_cache_stats_api_v1_cache_stats_get
+      parameters:
+        - name: include_keys
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+            description: Include a sample of keys in stats output
+          description: Include a sample of keys in stats output
+        - name: pattern
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            description: Pattern to match keys when include_keys=true (e.g., 'mlb:*')
+            title: Pattern
+          description: Pattern to match keys when include_keys=true (e.g., 'mlb:*')
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 100
+            description: Max number of keys to list when include_keys=true
+            title: Limit
+          description: Max number of keys to list when include_keys=true
+      responses:
+        '200':
+          description: Successfully retrieved cache statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheStatsResponse'
+              example:
+                status: success
+                code: 200
+                data:
+                  cache_stats:
+                    connected_clients: 5
+                    used_memory: 1048576
+                    used_memory_human: "1.00M"
+                    total_connections_received: 12345
+                    total_commands_processed: 67890
+                    keyspace_hits: 1000
+                    keyspace_misses: 200
+                    hit_rate_percentage: 83.33
+                    total_requests: 1200
+                    total_keys: 42
+                    keys_pattern: "mlb:*"
+                    keys_returned: 3
+                    keys:
+                      - "mlb:teams:2025"
+                      - "mlb:games:2025-04-01"
+                      - "mlb:stats:hitting:2025"
+                  retrieved_at: "2025-10-04T13:00:00Z"
+                errors: []
+                message: Cache statistics retrieved successfully
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/cache:
+    delete:
+      tags:
+        - System
+      summary: Clear Cache
+      description: "Clear cache keys based on a provided pattern.\n\nRemoves cache\
+        \ entries matching the specified pattern. If no pattern is provided,\nclears\
+        \ all cache entries. Use with caution in production environments.\n\nArgs:\n\
+        \    pattern: Optional pattern to match cache keys for selective clearing\n\
+        \    use_cases: Dependency injected dictionary containing use cases\n\nReturns:\n\
+        \    JSONResponse: Standardized response with operation results\n\nRaises:\n\
+        \    DomainExceptions.InvalidDataError: If pattern format is invalid"
+      operationId: clear_cache_api_v1_cache_delete
+      parameters:
+        - name: pattern
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            description: Pattern to clear specific cache keys (e.g., 'mlb:teams:*')
+            title: Pattern
+          description: Pattern to clear specific cache keys (e.g., 'mlb:teams:*')
+      responses:
+        '200':
+          description: Successfully cleared cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheClearResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/health:
+    get:
+      tags:
+        - System
+      summary: Health Check
+      description: "Comprehensive system health check endpoint.\n\nPerforms health\
+        \ checks on all critical system components including database,\ncache, and\
+        \ external services. Returns detailed status information.\n\nArgs:\n    db:\
+        \ Database session dependency\n    use_cases: Dependency injected dictionary\
+        \ containing use cases\n\nReturns:\n    JSONResponse: Standardized response\
+        \ with health status\n\nRaises:\n    DomainExceptions.ExternalServiceError:\
+        \ If critical services are unavailable"
+      operationId: health_check_api_v1_health_get
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/info:
+    get:
+      tags:
+        - System
+      summary: App Info
+      description: "Get comprehensive application information and metadata.\n\nReturns\
+        \ detailed information about the application including version,\nconfiguration,\
+        \ runtime statistics, and system capabilities.\n\nArgs:\n    db: Database\
+        \ session dependency\n    use_cases: Dependency injected dictionary containing\
+        \ use cases\n\nReturns:\n    JSONResponse: Standardized response with application\
+        \ information"
+      operationId: app_info_api_v1_info_get
+      responses:
+        '200':
+          description: Successfully retrieved application information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppInfoResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/data/ingest/full:
+    post:
+      tags:
+        - Data Ingestion
+      summary: Ingest Full Data
+      description: "Handle the full data ingestion process for a given season.\n\n\
+        Fetches and processes data for teams, games, and team statistics. The process\n\
+        involves multiple steps, each of which can succeed or fail independently.\n\
+        \nArgs:\n    season: The season year for which data should be ingested\n \
+        \   days_back: The number of days back to ingest games for\n    use_cases:\
+        \ Dependency providing use cases for data ingestion\n\nReturns:\n    JSONResponse:\
+        \ Standardized response with full ingestion results\n\nRaises:\n    DomainExceptions.InvalidDataError:\
+        \ If season or days_back is invalid\n    DomainExceptions.ExternalServiceError:\
+        \ If MLB API is unavailable"
+      operationId: ingest_full_data_api_v1_data_ingest_full_post
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema:
+            type: integer
+            description: Season to ingest data for
+            default: 2025
+            title: Season
+          description: Season to ingest data for
+        - name: days_back
+          in: query
+          required: false
+          schema:
+            type: integer
+            maximum: 30
+            description: Number of days back to ingest games for
+            default: 7
+            title: Days Back
+          description: Number of days back to ingest games for
+      responses:
+        '201':
+          description: Successfully completed full data ingestion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FullIngestionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/ml/retrain:
+    post:
+      tags:
+        - Data Ingestion
+        - ML Model
+      summary: Retrain Ml Model
+      description: "Retrain the Machine Learning model with new data.\n\nReturns:\n\
+        \    Status message"
+      operationId: retrain_ml_model_api_v1_ml_retrain_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: { }
+  /api/v1/data/ingest/team_stats:
+    post:
+      tags:
+        - Teams
+        - Stats
+        - Data Ingestion
+      summary: Ingest All Team Stats
+      description: "Ingest all team statistics data from the MLB API for a specific\
+        \ season.\n\nThis endpoint allows for the ingestion of all team statistics\
+        \ (hitting, pitching, fielding, catching)\nfrom the MLB API for a given season.\
+        \ It uses the IngestAllTeamStatsUseCase to fetch and store\nstatistics for\
+        \ all teams in the specified season.\n\nParameters:\n    season (int): The\
+        \ season year to ingest statistics for. Defaults to the current year.\n  \
+        \  use_cases (Dict): Dependency-injected dictionary containing team stats\
+        \ ingestion use cases.\n\nReturns:\n    dict: A dictionary containing success\
+        \ status, message, and data about the ingested\n    team statistics including\
+        \ the count and season.\n\nRaises:\n    HTTPException: If an error occurs\
+        \ during the team statistics ingestion process,\n    an HTTP 500 status code\
+        \ is raised with an error message."
+      operationId: ingest_all_team_stats_api_v1_data_ingest_team_stats_post
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema:
+            type: integer
+            description: Season to ingest team statistics for
+            default: 2025
+            title: Season
+          description: Season to ingest team statistics for
+      responses:
+        '201':
+          description: Ingest all team statistics data from the MLB API
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamStatsIngestionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/data/ingest/team_stats/hitting:
+    post:
+      tags:
+        - Teams
+        - Stats
+        - Data Ingestion
+      summary: Ingest Team Hitting Stats
+      description: "Ingest team hitting statistics data from the MLB API for a specific\
+        \ season.\n\nThis endpoint allows for the ingestion of team hitting statistics\
+        \ from the MLB API\nfor a given season. It uses the IngestTeamHittingStatsUseCase\
+        \ to fetch and store\nhitting statistics for all teams in the specified season.\n\
+        \nParameters:\n    season (int): The season year to ingest statistics for.\
+        \ Defaults to the current year.\n    use_cases (Dict): Dependency-injected\
+        \ dictionary containing team stats ingestion use cases.\n\nReturns:\n    dict:\
+        \ A dictionary containing success status, message, and data about the ingested\n\
+        \    team hitting statistics including the count and season.\n\nRaises:\n\
+        \    HTTPException: If an error occurs during the team hitting statistics\
+        \ ingestion process,\n    an HTTP 500 status code is raised with an error\
+        \ message."
+      operationId: ingest_team_hitting_stats_api_v1_data_ingest_team_stats_hitting_post
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema:
+            type: integer
+            description: Season to ingest team hitting statistics for
+            default: 2025
+            title: Season
+          description: Season to ingest team hitting statistics for
+      responses:
+        '201':
+          description: Team hitting statistics ingested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamStatsIngestionResponse'
+              example:
+                status: success
+                code: 201
+                data:
+                  hitting_stats_count: 30
+                  season: 2025
+                errors: []
+                message: Team hitting statistics ingested successfully for season 2025
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/data/ingest/team_stats/pitching:
+    post:
+      tags:
+        - Teams
+        - Stats
+        - Data Ingestion
+      summary: Ingest Team Pitching Stats
+      description: "Ingest team pitching statistics data from the MLB API for a specific\
+        \ season.\n\nThis endpoint allows for the ingestion of team pitching statistics\
+        \ from the MLB API\nfor a given season. It uses the IngestTeamPitchingStatsUseCase\
+        \ to fetch and store\npitching statistics for all teams in the specified season.\n\
+        \nParameters:\n    season (int): The season year to ingest statistics for.\
+        \ Defaults to the current year.\n    use_cases (Dict): Dependency-injected\
+        \ dictionary containing team stats ingestion use cases.\n\nReturns:\n    dict:\
+        \ A dictionary containing success status, message, and data about the ingested\n\
+        \    team pitching statistics including the count and season.\n\nRaises:\n\
+        \    HTTPException: If an error occurs during the team pitching statistics\
+        \ ingestion process,\n    an HTTP 500 status code is raised with an error\
+        \ message."
+      operationId: ingest_team_pitching_stats_api_v1_data_ingest_team_stats_pitching_post
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema:
+            type: integer
+            description: Season to ingest team pitching statistics for
+            default: 2025
+            title: Season
+          description: Season to ingest team pitching statistics for
+      responses:
+        '201':
+          description: Team pitching statistics ingested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamStatsIngestionResponse'
+              example:
+                status: success
+                code: 201
+                data:
+                  pitching_stats_count: 30
+                  season: 2025
+                errors: []
+                message: Team pitching statistics ingested successfully for season 2025
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/data/ingest/team_stats/fielding:
+    post:
+      tags:
+        - Teams
+        - Stats
+        - Data Ingestion
+      summary: Ingest Team Fielding Stats
+      description: "Ingest team fielding statistics data from the MLB API for a specific\
+        \ season.\n\nThis endpoint allows for the ingestion of team fielding statistics\
+        \ from the MLB API\nfor a given season. It uses the IngestTeamFieldingStatsUseCase\
+        \ to fetch and store\nfielding statistics for all teams in the specified season.\n\
+        \nParameters:\n    season (int): The season year to ingest statistics for.\
+        \ Defaults to the current year.\n    use_cases (Dict): Dependency-injected\
+        \ dictionary containing team stats ingestion use cases.\n\nReturns:\n    dict:\
+        \ A dictionary containing success status, message, and data about the ingested\n\
+        \    team fielding statistics including the count and season.\n\nRaises:\n\
+        \    HTTPException: If an error occurs during the team fielding statistics\
+        \ ingestion process,\n    an HTTP 500 status code is raised with an error\
+        \ message."
+      operationId: ingest_team_fielding_stats_api_v1_data_ingest_team_stats_fielding_post
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema:
+            type: integer
+            description: Season to ingest team fielding statistics for
+            default: 2025
+            title: Season
+          description: Season to ingest team fielding statistics for
+      responses:
+        '201':
+          description: Team fielding statistics ingested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamStatsIngestionResponse'
+              example:
+                status: success
+                code: 201
+                data:
+                  fielding_stats_count: 30
+                  season: 2025
+                errors: []
+                message: Team fielding statistics ingested successfully for season 2025
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/data/ingest/team_stats/catching:
+    post:
+      tags:
+        - Teams
+        - Stats
+        - Data Ingestion
+        - Teams
+        - Stats
+        - Data Ingestion
+      summary: Ingest Team Catching Stats
+      description: "Ingest team catching statistics data from the MLB API for a specific\
+        \ season.\n\nThis endpoint allows for the ingestion of team catching statistics\
+        \ from the MLB API\nfor a given season. It uses the IngestTeamCatchingStatsUseCase\
+        \ to fetch and store\ncatching statistics for all teams in the specified season.\n\
+        \nParameters:\n    season (int): The season year to ingest statistics for.\
+        \ Defaults to the current year.\n    use_cases (Dict): Dependency-injected\
+        \ dictionary containing team stats ingestion use cases.\n\nReturns:\n    dict:\
+        \ A dictionary containing success status, message, and data about the ingested\n\
+        \    team catching statistics including the count and season.\n\nRaises:\n\
+        \    HTTPException: If an error occurs during the team catching statistics\
+        \ ingestion process,\n    an HTTP 500 status code is raised with an error\
+        \ message."
+      operationId: ingest_team_catching_stats_api_v1_data_ingest_team_stats_catching_post
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema:
+            type: integer
+            description: Season to ingest team catching statistics for
+            default: 2025
+            title: Season
+          description: Season to ingest team catching statistics for
+      responses:
+        '201':
+          description: Team catching statistics ingested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamStatsIngestionResponse'
+              example:
+                status: success
+                code: 201
+                data:
+                  catching_stats_count: 30
+                  season: 2025
+                errors: []
+                message: Team catching statistics ingested successfully for season 2025
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /:
+    get:
+      summary: Root
+      description: Root endpoint providing basic information about the API.
+      operationId: root__get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: { }
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+components:
+  schemas:
+    AppInfoData:
+      properties:
+        application_info:
+          additionalProperties: true
+          type: object
+          title: Application Info
+        retrieved_at:
+          type: string
+          title: Retrieved At
+          default: ''
+      type: object
+      title: AppInfoData
+      description: Application information data model.
+    AppInfoResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          $ref: '#/components/schemas/AppInfoData'
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+          default: Application information retrieved successfully
+      type: object
+      required:
+        - code
+      title: AppInfoResponse
+      description: Response model for application info endpoint.
+      example:
+        status: success
+        code: 200
+        data:
+          application_info:
+            name: MLB Forecast API
+            version: 1.0.0
+            environment: production
+            python_version: 3.11.0
+            uptime_seconds: 3600
+            total_requests: 15420
+            active_connections: 12
+          retrieved_at: '2025-07-25T18:30:15.123456Z'
+        errors: [ ]
+        message: Application information retrieved successfully
+    CacheClearData:
+      properties:
+        operation:
+          type: string
+          title: Operation
+          default: cache_clear
+        pattern:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Pattern
+        result:
+          additionalProperties: true
+          type: object
+          title: Result
+        timestamp:
+          type: string
+          title: Timestamp
+          default: ''
+      type: object
+      title: CacheClearData
+      description: Cache clear operation data model.
+    CacheClearResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          $ref: '#/components/schemas/CacheClearData'
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+          default: Cache cleared successfully
+      type: object
+      required:
+        - code
+      title: CacheClearResponse
+      description: Response model for cache clear endpoint.
+      example:
+        status: success
+        code: 200
+        data:
+          operation: cache_clear
+          pattern: mlb:teams:*
+          result:
+            keys_deleted: 15
+            operation_time_ms: 45
+          timestamp: '2025-07-25T18:30:15.123456Z'
+        errors: [ ]
+        message: 'Cache cleared with pattern: mlb:teams:*'
+    CacheStatsData:
+      properties:
+        cache_stats:
+          additionalProperties: true
+          type: object
+          title: Cache Stats
+        retrieved_at:
+          type: string
+          title: Retrieved At
+          default: ''
+      type: object
+      title: CacheStatsData
+      description: Cache statistics data model.
+    CacheStatsResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          $ref: '#/components/schemas/CacheStatsData'
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+          default: Cache statistics retrieved successfully
+      type: object
+      required:
+        - code
+      title: CacheStatsResponse
+      description: Response model for cache statistics endpoint.
+      example:
+        status: success
+        code: 200
+        data:
+          cache_stats:
+            hits: 1250
+            misses: 150
+            hit_rate: 0.89
+            total_keys: 45
+            memory_usage: 2.3MB
+          retrieved_at: '2025-07-25T18:30:15.123456Z'
+        errors: [ ]
+        message: Cache statistics retrieved successfully
+    DataIngestionResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          $ref: '#/components/schemas/IngestionSummaryData'
+          description: Ingestion operation details
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+          description: Success message
+      type: object
+      required:
+        - code
+        - data
+        - message
+      title: DataIngestionResponse
+      description: Response model for data ingestion endpoints.
+      content:
+        application/json:
+          example:
+            status: success
+            code: 201
+            data:
+              ingestion_summary:
+                operation: team_ingestion
+                records_processed: 30
+                records_created: 30
+                records_updated: 0
+                errors: [ ]
+                duration_seconds: 2.45
+                timestamp: '2025-07-25T18:30:15.123456Z'
+              sample_teams:
+                - id: 1
+                  mlb_id: 147
+                  name: New York Yankees
+                  abbreviation: NYY
+                  city: New York
+                  division: American League East
+                  league: American League
+                  venue_name: Yankee Stadium
+                  created_at: '2025-07-25T17:58:28.647662Z'
+            errors: [ ]
+            message: Successfully ingested 30 teams
+    DataIngestionResultDTO:
+      properties:
+        operation:
+          type: string
+          title: Operation
+          description: Type of ingestion operation
+        records_processed:
+          type: integer
+          title: Records Processed
+          description: Number of records processed
+        records_created:
+          type: integer
+          title: Records Created
+          description: Number of new records created
+        records_updated:
+          type: integer
+          title: Records Updated
+          description: Number of existing records updated
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: Any errors encountered
+        duration_seconds:
+          type: number
+          title: Duration Seconds
+          description: Operation duration in seconds
+        timestamp:
+          type: string
+          format: date-time
+          title: Timestamp
+          description: Operation timestamp
+      type: object
+      required:
+        - operation
+        - records_processed
+        - records_created
+        - records_updated
+        - duration_seconds
+        - timestamp
+      title: DataIngestionResultDTO
+      description: Data Transfer Object for data ingestion operation results.
+    BadRequest:
+      description: Bad Request - Invalid input parameters
+      title: Bad Request
+      $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Not Found - Resource not found
+      title: Not Found
+      $ref: '#/components/schemas/ErrorResponse'
+    UnprocessableEntity:
+      description: Validation Error - Request validation failed
+      title: Validation Error
+      $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: Internal Server Error
+      title: Internal Server Error
+      $ref: '#/components/schemas/ErrorResponse'
+    ServiceUnavailable:
+      description: Service Unavailable - External service error
+      title: Service Unavailable
+      $ref: '#/components/schemas/ErrorResponse'
+    ErrorResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          description: Response status
+          default: error
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          type: 'null'
+          title: Data
+          description: No data in error responses
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Message
+          description: Error message
+      type: object
+      required:
+        - code
+        - errors
+      title: ErrorResponse
+      description: Error response model for API documentation.
+      examples:
+        - code: 400
+          errors:
+            - League must be 'American' or 'National'
+          message: Invalid data provided
+          status: error
+        - code: 404
+          errors:
+            - Team with ID 999 not found
+          message: Resource not found
+          status: error
+        - code: 500
+          errors:
+            - An unexpected error occurred
+          message: Internal server error
+          status: error
+    TeamStatsIngestionData:
+      properties:
+        hitting_stats_count:
+          type: integer
+          title: Hitting stats created or updated
+          description: Quantity of hitting stats created or updated
+        pitching_stats_count:
+          type: integer
+          title: Pitching stats created or updated
+          description: Quantity of pitching stats created or updated
+        fielding_stats_count:
+          type: integer
+          title: Fielding stats created or updated
+          description: Quantity of fielding stats created or updated
+        catching_stats_count:
+          type: integer
+          title: Catching stats created or updated
+          description: Quantity of catching stats created or updated
+        season:
+          type: integer
+          title: Year of season
+          description: Year of season from teams stats ingested
+    FullIngestionData:
+      properties:
+        status:
+          type: string
+          title: Status
+          description: Response status (success/error)
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          anyOf:
+            - { }
+            - type: 'null'
+          title: Data
+          description: Response data payload
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Message
+          description: Optional response message
+        overall_summary:
+          $ref: '#/components/schemas/DataIngestionResultDTO'
+        teams_ingested:
+          type: integer
+          title: Teams Ingested
+          default: 0
+        games_ingested:
+          type: integer
+          title: Games Ingested
+          default: 0
+        stats_ingested:
+          type: integer
+          title: Stats Ingested
+          default: 0
+        breakdown:
+          additionalProperties: true
+          type: object
+          title: Breakdown
+          default:
+            teams:
+              count: 0
+              success: true
+            games:
+              count: 0
+              success: true
+            team_stats:
+              count: 0
+              success: true
+      type: object
+      required:
+        - status
+        - code
+        - overall_summary
+      title: FullIngestionData
+      description: Full data ingestion data model.
+    TeamStatsIngestionResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          $ref: '#/components/schemas/TeamStatsIngestionData'
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+          default: Full data ingestion completed successfully
+      type: object
+      required:
+        - code
+        - data
+      title: TeamStatsIngestionResponse
+      description: Response model for teams stats ingestion endpoint.
+    FullIngestionResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          $ref: '#/components/schemas/FullIngestionData'
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+          default: Full data ingestion completed successfully
+      type: object
+      required:
+        - code
+        - data
+      title: FullIngestionResponse
+      description: Response model for full data ingestion endpoint.
+      example:
+        status: success
+        code: 201
+        data:
+          overall_summary:
+            operation: full_data_ingestion
+            records_processed: 462
+            records_created: 462
+            records_updated: 0
+            errors: [ ]
+            duration_seconds: 45.67
+            timestamp: '2025-07-25T18:30:15.123456Z'
+          teams_ingested: 30
+          games_ingested: 105
+          stats_ingested: 120
+          breakdown:
+            teams:
+              success: true
+              count: 30
+            games:
+              success: true
+              count: 105
+            team_stats:
+              success: true
+              count: 120
+        errors: [ ]
+        message: Full data ingestion completed successfully for season 2024
+    GameDTO:
+      properties:
+        id:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Id
+          description: Internal game ID
+        mlb_game_id:
+          type: integer
+          title: Mlb Game Id
+          description: Official MLB game ID
+        home_team_id:
+          type: integer
+          title: Home Team Id
+          description: Home team ID
+        away_team_id:
+          type: integer
+          title: Away Team Id
+          description: Away team ID
+        game_date:
+          type: string
+          format: date-time
+          title: Game Date
+          description: Game date and time
+        status:
+          type: string
+          title: Status
+          description: Game status
+        scheduled_innings:
+          type: integer
+          title: Scheduled Innings
+          description: Scheduled innings
+          default: 9
+        home_score:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Home Score
+          description: Home team final score
+        away_score:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Away Score
+          description: Away team final score
+        winning_team_id:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Winning Team Id
+          description: Winning team ID
+        created_at:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Created At
+          description: Record creation timestamp
+        updated_at:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Updated At
+          description: Record last update timestamp
+      type: object
+      required:
+        - mlb_game_id
+        - home_team_id
+        - away_team_id
+        - game_date
+        - status
+      title: GameDTO
+      description: Data Transfer Object for Game entity.
+      example:
+        id: 1
+        mlb_game_id: 12345
+        home_team_id: 147
+        away_team_id: 121
+        game_date: '2025-07-25T19:05:00Z'
+        status: completed
+        scheduled_innings: 9
+        home_score: 7
+        away_score: 4
+        winning_team_id: 147
+        created_at: '2025-07-25T17:58:28.647662Z'
+        updated_at: '2025-07-25T22:30:15.123456Z'
+    GameDetailResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          $ref: '#/components/schemas/GameDTO'
+          description: Game details
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+          description: Success message
+      type: object
+      required:
+        - code
+        - data
+        - message
+      title: GameDetailResponse
+      description: Response model for single game endpoints.
+      example:
+        status: success
+        code: 200
+        data:
+          id: 1
+          mlb_game_id: 12345
+          home_team_id: 147
+          away_team_id: 121
+          game_date: '2025-07-25T19:05:00Z'
+          status: completed
+          scheduled_innings: 9
+          home_score: 7
+          away_score: 4
+          winning_team_id: 147
+          created_at: '2025-07-25T17:58:28.647662Z'
+          updated_at: '2025-07-25T22:30:15.123456Z'
+        errors: [ ]
+        message: Game 12345 retrieved successfully
+    GameListResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          items:
+            $ref: '#/components/schemas/GameDTO'
+          type: array
+          title: Data
+          description: List of games
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+          description: Success message
+      type: object
+      required:
+        - code
+        - data
+        - message
+      title: GameListResponse
+      description: Response model for game list endpoints.
+      example:
+        status: success
+        code: 200
+        data:
+          - id: 1
+            mlb_game_id: 12345
+            home_team_id: 147
+            away_team_id: 121
+            game_date: '2025-07-25T19:05:00Z'
+            status: scheduled
+            scheduled_innings: 9
+            created_at: '2025-07-25T17:58:28.647662Z'
+        errors: [ ]
+        message: Retrieved 15 games successfully
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    HealthCheckDTO:
+      properties:
+        status:
+          type: string
+          title: Status
+          description: Service status
+        timestamp:
+          type: string
+          format: date-time
+          title: Timestamp
+          description: Health check timestamp
+        version:
+          type: string
+          title: Version
+          description: API version
+        database:
+          type: string
+          title: Database
+          description: Database connection status
+        cache:
+          type: string
+          title: Cache
+          description: Cache connection status
+        ml_model:
+          type: string
+          title: Ml Model
+          description: ML model status
+      type: object
+      required:
+        - status
+        - timestamp
+        - version
+        - database
+        - cache
+        - ml_model
+      title: HealthCheckDTO
+      description: Data Transfer Object for health check responses.
+    HealthCheckResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          $ref: '#/components/schemas/HealthCheckDTO'
+          description: System health information
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+          description: Success message
+      type: object
+      required:
+        - code
+        - data
+        - message
+      title: HealthCheckResponse
+      description: Response model for health check endpoints.
+      example:
+        status: success
+        code: 200
+        data:
+          status: healthy
+          timestamp: '2025-07-25T18:30:15.123456Z'
+          version: 1.0.0
+          database: connected
+          cache: connected
+          ml_model: available
+        errors: [ ]
+        message: System health check completed successfully
+    IngestionSummaryData:
+      properties:
+        ingestion_summary:
+          $ref: '#/components/schemas/DataIngestionResultDTO'
+          description: Ingestion operation summary
+        sample_teams:
+          anyOf:
+            - items:
+                $ref: '#/components/schemas/TeamDTO'
+              type: array
+            - type: 'null'
+          title: Sample Teams
+          description: Sample of ingested teams
+        sample_games:
+          anyOf:
+            - items:
+                $ref: '#/components/schemas/GameDTO'
+              type: array
+            - type: 'null'
+          title: Sample Games
+          description: Sample of ingested games
+      type: object
+      required:
+        - ingestion_summary
+      title: IngestionSummaryData
+      description: Data model for ingestion operation responses.
+    PredictionCreateData:
+      properties:
+        prediction:
+          $ref: '#/components/schemas/PredictionDTO'
+          description: Created prediction details
+        processing_time_seconds:
+          type: number
+          title: Processing Time Seconds
+          description: Time taken to generate prediction
+        created_at:
+          type: string
+          title: Created At
+          description: Creation timestamp
+      type: object
+      required:
+        - prediction
+        - processing_time_seconds
+        - created_at
+      title: PredictionCreateData
+      description: Data model for prediction creation response.
+    PredictionCreateResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          $ref: '#/components/schemas/PredictionCreateData'
+          description: Prediction creation details
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+          description: Success message
+      type: object
+      required:
+        - code
+        - data
+        - message
+      title: PredictionCreateResponse
+      description: Response model for prediction creation endpoints.
+      example:
+        status: success
+        code: 201
+        data:
+          prediction:
+            id: 1
+            game_id: 12345
+            model_version: v1.2.0
+            home_win_probability: 0.62
+            away_win_probability: 0.38
+            predicted_home_score: 5.2
+            predicted_away_score: 3.8
+            confidence_score: 0.75
+            created_at: '2025-07-25T18:30:15.123456Z'
+          processing_time_seconds: 1.23
+          created_at: '2025-07-25T18:30:15.123456Z'
+        errors: [ ]
+        message: Prediction created successfully for game 12345
+    PredictionDTO:
+      properties:
+        id:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Id
+          description: Internal prediction ID
+        game_id:
+          type: integer
+          title: Game Id
+          description: Associated game ID
+        ml_model_version:
+          type: string
+          title: Ml Model Version
+          description: ML model version used
+        home_win_probability:
+          type: number
+          title: Home Win Probability
+          description: Probability of home team winning
+        away_win_probability:
+          type: number
+          title: Away Win Probability
+          description: Probability of away team winning
+        predicted_home_score:
+          anyOf:
+            - type: number
+            - type: 'null'
+          title: Predicted Home Score
+          description: Predicted home team score
+        predicted_away_score:
+          anyOf:
+            - type: number
+            - type: 'null'
+          title: Predicted Away Score
+          description: Predicted away team score
+        confidence_score:
+          type: number
+          title: Confidence Score
+          description: Prediction confidence level
+        created_at:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Created At
+          description: Prediction timestamp
+      type: object
+      required:
+        - game_id
+        - ml_model_version
+        - home_win_probability
+        - away_win_probability
+        - confidence_score
+      title: PredictionDTO
+      description: Data Transfer Object for Prediction entity.
+    PredictionListResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          items:
+            $ref: '#/components/schemas/PredictionDTO'
+          type: array
+          title: Data
+          description: List of predictions
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+          description: Success message
+      type: object
+      required:
+        - code
+        - data
+        - message
+      title: PredictionListResponse
+      description: Response model for prediction list endpoints.
+      example:
+        status: success
+        code: 200
+        data:
+          - id: 1
+            game_id: 12345
+            model_version: v1.2.0
+            home_win_probability: 0.62
+            away_win_probability: 0.38
+            predicted_home_score: 5.2
+            predicted_away_score: 3.8
+            confidence_score: 0.75
+            created_at: '2025-07-25T18:30:15.123456Z'
+        errors: [ ]
+        message: Retrieved 1 predictions for game 12345
+    TeamDTO:
+      properties:
+        id:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Id
+          description: Internal team ID
+        mlb_id:
+          type: integer
+          title: Mlb Id
+          description: Official MLB team ID
+        name:
+          type: string
+          title: Name
+          description: Team name
+        abbreviation:
+          type: string
+          title: Abbreviation
+          description: Team abbreviation (e.g., NYY)
+        city:
+          type: string
+          title: City
+          description: Team city
+        division:
+          type: string
+          title: Division
+          description: Division (East, Central, West)
+        league:
+          type: string
+          title: League
+          description: League (American, National)
+        venue_name:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Venue Name
+          description: Home venue name
+        created_at:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Created At
+          description: Record creation timestamp
+        updated_at:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Updated At
+          description: Record last update timestamp
+      type: object
+      required:
+        - mlb_id
+        - name
+        - abbreviation
+        - city
+        - division
+        - league
+      title: TeamDTO
+      description: Data Transfer Object for Team entity.
+    TeamDetailResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          $ref: '#/components/schemas/TeamDTO'
+          description: Team details
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+          description: Success message
+      type: object
+      required:
+        - code
+        - data
+        - message
+      title: TeamDetailResponse
+      description: Response model for single team endpoints.
+      example:
+        status: success
+        code: 200
+        data:
+          id: 1
+          mlb_id: 147
+          name: New York Yankees
+          abbreviation: NYY
+          city: New York
+          division: American League East
+          league: American League
+          venue_name: Yankee Stadium
+          created_at: '2025-07-25T17:58:28.647662Z'
+        errors: [ ]
+        message: Team New York Yankees retrieved successfully
+    TeamListResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          items:
+            $ref: '#/components/schemas/TeamDTO'
+          type: array
+          title: Data
+          description: List of teams
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+          description: Success message
+      type: object
+      required:
+        - code
+        - data
+        - message
+      title: TeamListResponse
+      description: Response model for team list endpoints.
+      example:
+        status: success
+        code: 200
+        data:
+          - id: 1
+            mlb_id: 133
+            name: Athletics
+            abbreviation: ATH
+            city: Sacramento
+            division: American League West
+            league: American League
+            venue_name: Sutter Health Park
+            created_at: '2025-07-25T17:58:28.639243Z'
+          - id: 2
+            mlb_id: 136
+            name: Seattle Mariners
+            abbreviation: SEA
+            city: Seattle
+            division: American League West
+            league: American League
+            venue_name: T-Mobile Park
+            created_at: '2025-07-25T17:58:28.656583Z'
+        errors: [ ]
+        message: Retrieved 2 team successfully
+    TeamSeasonStatsDTO:
+      type: object
+      title: TeamSeasonStatsDTO
+      description: Composite team stats per season grouped by category.
+      properties:
+        team_id:
+          type: integer
+          title: Team Id
+        season:
+          type: integer
+          title: Season
+        hitting:
+          allOf:
+            - $ref: '#/components/schemas/HittingStatsDTO'
+          nullable: true
+          description: Hitting statistics or null when filtered out.
+        pitching:
+          allOf:
+            - $ref: '#/components/schemas/PitchingStatsDTO'
+          nullable: true
+          description: Pitching statistics or null when filtered out.
+        fielding:
+          allOf:
+            - $ref: '#/components/schemas/FieldingStatsDTO'
+          nullable: true
+          description: Fielding statistics or null when filtered out.
+        catching:
+          allOf:
+            - $ref: '#/components/schemas/CatchingStatsDTO'
+          nullable: true
+          description: Catching statistics or null when filtered out.
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+      required: [ team_id, season, hitting, pitching, fielding, catching ]
+
+    TeamSeasonStatsDetailResponse:
+      type: object
+      description: Response model for composite team stats.
+      properties:
+        status: { type: string, default: success }
+        code: { type: integer, description: HTTP status code }
+        data:
+          $ref: '#/components/schemas/TeamSeasonStatsDTO'
+        errors:
+          type: array
+          items: { type: string }
+        message: { type: string }
+      required: [ code, data ]
+      example:
+        status: success
+        code: 200
+        data:
+          team_id: 62
+          season: 2025
+          hitting:
+            games_played: 162
+            plate_appearances: 6200
+            at_bats: 5600
+            runs: 780
+            hits: 1450
+            singles: 950
+            doubles: 310
+            triples: 25
+            home_runs: 165
+            rbi: 740
+            walks: 520
+            strikeouts: 1350
+            stolen_bases: 120
+            caught_stealing: 35
+            hit_by_pitch: 75
+            sacrifice_hits: 20
+            sacrifice_flies: 45
+            ground_into_double_play: 105
+            total_bases: 2300
+            batting_average: 0.259
+            on_base_percentage: 0.325
+            slugging_percentage: 0.410
+            ops: 0.735
+            stolen_base_percentage: 0.774
+          pitching:
+            games_played: 162
+            games_started: 162
+            wins: 89
+            losses: 73
+            saves: 42
+            blown_saves: 12
+            holds: 68
+            innings_pitched: 1448.1
+            batters_faced: 6100
+            hits_allowed: 1330
+            runs_allowed: 680
+            earned_runs: 620
+            home_runs_allowed: 180
+            walks_allowed: 510
+            strikeouts: 1485
+            hit_batters: 58
+            wild_pitches: 45
+            balks: 3
+            ground_outs: 1650
+            air_outs: 1500
+            era: 3.86
+            whip: 1.23
+            strikeouts_per_9: 9.2
+            walks_per_9: 3.2
+            home_runs_per_9: 1.1
+            strikeout_walk_ratio: 2.9
+            opponent_batting_average: 0.242
+          fielding:
+            games_played: 162
+            innings: 14250
+            total_chances: 6150
+            putouts: 4300
+            assists: 1650
+            errors: 200
+            double_plays: 145
+            triple_plays: 0
+            fielding_percentage: 0.967
+            range_factor_per_game: 5.9
+          catching:
+            games_caught: 162
+            stolen_bases_allowed: 125
+            caught_stealing: 45
+            caught_stealing_percentage: 0.265
+            passed_balls: 7
+            wild_pitches: 42
+            pickoffs: 6
+            catcher_interference: 1
+        errors: [ ]
+        message: Team composite statistics retrieved successfully
+
+    HittingStatsDTO:
+      type: object
+      properties:
+        games_played: { type: integer }
+        at_bats: { type: integer }
+        plate_appearances: { type: integer }
+        hits: { type: integer }
+        doubles: { type: integer }
+        triples: { type: integer }
+        home_runs: { type: integer }
+        runs_scored: { type: integer }
+        runs_batted_in: { type: integer }
+        stolen_bases: { type: integer }
+        caught_stealing: { type: integer }
+        base_on_balls: { type: integer }
+        strikeouts: { type: integer }
+        hit_by_pitch: { type: integer }
+        sacrifice_hits: { type: integer }
+        sacrifice_flies: { type: integer }
+        ground_into_double_play: { type: integer }
+        left_on_base: { type: integer }
+        batting_average: { type: number, format: float }
+        on_base_percentage: { type: number, format: float }
+        slugging_percentage: { type: number, format: float }
+        ops: { type: number, format: float }
+        babip: { type: number, format: float }
+        total_bases: { type: integer }
+        at_bats_per_home_run: { type: number, format: float, nullable: true }
+        stolen_base_percentage: { type: number, format: float, nullable: true }
+        ground_outs: { type: integer }
+        air_outs: { type: integer }
+        ground_outs_to_air_outs: { type: number, format: float, nullable: true }
+        number_of_pitches: { type: integer }
+        intentional_walks: { type: integer }
+      additionalProperties: false
+
+    PitchingStatsDTO:
+      type: object
+      properties:
+        games_played: { type: integer }
+        wins: { type: integer }
+        losses: { type: integer }
+        saves: { type: integer }
+        save_opportunities: { type: integer }
+        holds: { type: integer }
+        blown_saves: { type: integer }
+        innings_pitched: { type: number, format: float }
+        batters_faced: { type: integer }
+        hits_allowed: { type: integer }
+        runs_allowed: { type: integer }
+        earned_runs: { type: integer }
+        home_runs_allowed: { type: integer }
+        strikeouts: { type: integer }
+        base_on_balls: { type: integer }
+        intentional_walks: { type: integer }
+        hit_batsmen: { type: integer }
+        wild_pitches: { type: integer }
+        balks: { type: integer }
+        number_of_pitches: { type: integer }
+        complete_games: { type: integer }
+        shutouts: { type: integer }
+        games_started: { type: integer }
+        ground_outs: { type: integer }
+        air_outs: { type: integer }
+        doubles: { type: integer }
+        triples: { type: integer }
+        at_bats: { type: integer }
+        outs: { type: integer }
+        strikes: { type: integer }
+        pickoffs: { type: integer }
+        total_bases: { type: integer }
+        games_finished: { type: integer }
+        catchers_interference: { type: integer }
+        sacrifice_bunts: { type: integer }
+        sacrifice_flies: { type: integer }
+        ground_into_double_play: { type: integer }
+        caught_stealing: { type: integer }
+        earned_run_average: { type: number, format: float }
+        whip: { type: number, format: float }
+        strikeouts_per_nine: { type: number, format: float }
+        walks_per_nine: { type: number, format: float }
+        hits_per_nine: { type: number, format: float }
+        home_runs_per_nine: { type: number, format: float }
+        strikeout_to_walk_ratio: { type: number, format: float }
+        ground_outs_to_airouts: { type: number, format: float }
+        pitches_per_inning: { type: number, format: float }
+        batting_average_against: { type: number, format: float }
+        inherited_runners: { type: integer }
+        inherited_runners_scored: { type: integer }
+        quality_starts: { type: integer }
+        on_base_percentage: { type: number, format: float }
+        slugging_percentage: { type: number, format: float }
+        ops: { type: number, format: float }
+        stolen_base_percentage: { type: number, format: float }
+        strike_percentage: { type: number, format: float }
+        win_percentage: { type: number, format: float }
+        runs_scored_per_nine: { type: number, format: float }
+      additionalProperties: false
+
+    FieldingStatsDTO:
+      type: object
+      properties:
+        games_played: { type: integer }
+        games_started: { type: integer }
+        innings_played: { type: integer }
+        total_chances: { type: integer }
+        putouts: { type: integer }
+        assists: { type: integer }
+        errors: { type: integer }
+        throwing_errors: { type: integer }
+        double_plays: { type: integer }
+        triple_plays: { type: integer }
+        fielding_percentage: { type: number, format: float }
+        defensive_efficiency_ratio: { type: number, format: float, nullable: true }
+        range_factor_per_game: { type: number, format: float, nullable: true }
+        range_factor_per_nine: { type: number, format: float, nullable: true }
+        outfield_assists: { type: integer }
+        passed_balls: { type: integer }
+        wild_pitches: { type: integer }
+        stolen_bases_allowed: { type: integer }
+        caught_stealing: { type: integer }
+        stolen_base_percentage: { type: number, format: float, nullable: true }
+        catchers_interference: { type: integer }
+        pickoffs: { type: integer }
+      additionalProperties: false
+
+    CatchingStatsDTO:
+      type: object
+      properties:
+        games_played: { type: integer }
+        games_pitched: { type: integer }
+        at_bats: { type: integer }
+        hits: { type: integer }
+        runs: { type: integer }
+        home_runs: { type: integer }
+        strikeouts: { type: integer }
+        base_on_balls: { type: integer }
+        intentional_walks: { type: integer }
+        hit_by_pitch: { type: integer }
+        total_bases: { type: integer }
+        sacrifice_bunts: { type: integer }
+        sacrifice_flies: { type: integer }
+        batting_average: { type: number, format: float }
+        on_base_percentage: { type: number, format: float }
+        slugging_percentage: { type: number, format: float }
+        ops: { type: number, format: float }
+        passed_balls: { type: integer }
+        wild_pitches: { type: integer }
+        stolen_bases_allowed: { type: integer }
+        caught_stealing: { type: integer }
+        stolen_base_percentage: { type: number, format: float, nullable: true }
+        pickoffs: { type: integer }
+        pickoff_attempts: { type: integer }
+        catchers_interference: { type: integer }
+        earned_runs: { type: integer }
+        batters_faced: { type: integer }
+        hit_batsmen: { type: integer }
+        strikeout_walk_ratio: { type: number, format: float, nullable: true }
+      additionalProperties: false
+
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+              - type: string
+              - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+        - loc
+        - msg
+        - type
+      title: ValidationError

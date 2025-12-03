@@ -1,0 +1,195 @@
+import asyncio
+import contextlib
+from contextlib import ExitStack
+from unittest.mock import AsyncMock, patch
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from src.infrastructure.db.database import Base, get_db
+from src.infrastructure.db.models import TeamModel
+from src.interface.rest.main import app
+
+TEST_DATABASE_URL = "sqlite:///./tests/database/test.db"
+test_engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
+TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Create an instance of the default event loop for the test session."""
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    asyncio.set_event_loop(loop)
+    yield loop
+
+    pending_tasks = [task for task in asyncio.all_tasks(loop) if not task.done()]
+    for task in pending_tasks:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            loop.run_until_complete(task)
+
+    loop.run_until_complete(loop.shutdown_asyncgens())
+    loop.run_until_complete(loop.shutdown_default_executor())
+    loop.close()
+
+
+@pytest.fixture(autouse=True)
+def setup_test_database():
+    """Setup and teardown test database for each test."""
+    # Create all tables
+    Base.metadata.create_all(bind=test_engine)
+    yield
+    # Drop all tables after test
+    Base.metadata.drop_all(bind=test_engine)
+
+
+@pytest.fixture
+def test_db_session():
+    """Create a test database session."""
+    session = TestSessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+@pytest.fixture
+def mock_cache_for_integration():
+    """Mock cache adapter for integration tests."""
+    mock_cache = AsyncMock()
+    mock_cache.get.return_value = None  # Always miss cache to test real logic
+    mock_cache.set.return_value = None
+    mock_cache.clear.return_value = None
+    mock_cache.delete.return_value = None
+    mock_cache.exists.return_value = False
+    mock_cache.get_many.return_value = {}
+    mock_cache.connect.return_value = None
+    mock_cache.disconnect.return_value = None
+    mock_cache.redis_client = object()
+    mock_cache.connection_pool = None
+    return mock_cache
+
+
+def override_get_db():
+    """Override the get_db dependency for testing."""
+    session = TestSessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+@pytest.fixture
+def integration_client(mock_cache_for_integration):
+    """Create a test client with real database for integration tests."""
+    # Override database dependency
+    app.dependency_overrides[get_db] = override_get_db
+
+    # Patch the cache provider to return our mock cache
+    cache_patch_targets = [
+        "src.infrastructure.cache.cache_provider.get_cache_adapter",
+        "src.interface.rest.team_routes.get_cache_adapter",
+        "src.interface.rest.game_routes.get_cache_adapter",
+        "src.interface.rest.data_ingestion_routes.get_cache_adapter",
+        "src.interface.rest.team_stats_routes.get_cache_adapter",
+        "src.interface.rest.team_stats_retrieval_routes.get_cache_adapter",
+        "src.interface.rest.prediction_routes.get_cache_adapter",
+        "src.interface.rest.system_routes.get_cache_adapter",
+    ]
+
+    with ExitStack() as stack:
+        for target in cache_patch_targets:
+            stack.enter_context(patch(target, return_value=mock_cache_for_integration))
+        with TestClient(app) as test_client:
+            yield test_client
+
+    # Clear overrides after test
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def test_teams_data():
+    """
+    Create strategic test team data that will expose the filtering bug.
+
+    This data is designed to test edge cases in filtering:
+    - Teams with similar league names but different exact matches
+    - Teams that should match both league and division filters
+    - Teams that should only match one filter
+    """
+    return [
+        {
+            "mlb_id": 133,
+            "name": "Oakland Athletics",
+            "abbreviation": "OAK",
+            "city": "Oakland",
+            "division": "American League West",
+            "league": "American League",
+            "venue_name": "Oakland Coliseum",
+        },
+        {
+            "mlb_id": 136,
+            "name": "Seattle Mariners",
+            "abbreviation": "SEA",
+            "city": "Seattle",
+            "division": "American League West",
+            "league": "American League",
+            "venue_name": "T-Mobile Park",
+        },
+        {
+            "mlb_id": 147,
+            "name": "New York Yankees",
+            "abbreviation": "NYY",
+            "city": "New York",
+            "division": "American League East",
+            "league": "American League",
+            "venue_name": "Yankee Stadium",
+        },
+        {
+            "mlb_id": 119,
+            "name": "Los Angeles Dodgers",
+            "abbreviation": "LAD",
+            "city": "Los Angeles",
+            "division": "National League West",
+            "league": "National League",
+            "venue_name": "Dodger Stadium",
+        },
+        {
+            "mlb_id": 137,
+            "name": "San Francisco Giants",
+            "abbreviation": "SF",
+            "city": "San Francisco",
+            "division": "National League West",
+            "league": "National League",
+            "venue_name": "Oracle Park",
+        },
+        {
+            "mlb_id": 121,
+            "name": "New York Mets",
+            "abbreviation": "NYM",
+            "city": "New York",
+            "division": "National League East",
+            "league": "National League",
+            "venue_name": "Citi Field",
+        },
+    ]
+
+
+@pytest.fixture
+def populated_test_db(test_db_session, test_teams_data):
+    """Populate test database with team data."""
+    teams = []
+    for team_data in test_teams_data:
+        team_model = TeamModel(**team_data)
+        test_db_session.add(team_model)
+        teams.append(team_model)
+
+    test_db_session.commit()
+
+    # Refresh to get the assigned IDs
+    for team in teams:
+        test_db_session.refresh(team)
+
+    return teams

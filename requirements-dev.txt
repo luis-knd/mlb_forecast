@@ -1,0 +1,39 @@
+# Dependencias adicionales para desarrollo
+# Instalar con: pip install -r requirements-dev.txt
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+
+# Code quality
+black==23.11.0
+isort==5.12.0
+flake8==6.1.0
+mypy==1.7.1
+tomli==2.2.1
+
+# Documentation
+mkdocs==1.5.3
+mkdocs-material==9.4.8
+
+# Debugging
+ipdb==0.13.13
+rich==13.7.0
+
+# Performance monitoring
+memory-profiler==0.61.0
+line-profiler==4.1.1
+
+# Development utilities
+python-dotenv==1.0.0
+watchdog==3.0.0
+pre-commit==3.7.1
+
+# OpenAPI toolchain
+openapi-spec-validator==0.8.0b1
+datamodel-code-generator==0.30.1
+fastapi-code-generator==0.5.4
+PyYAML==6.0.2
+Jinja2==3.1.4

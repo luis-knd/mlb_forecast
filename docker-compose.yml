@@ -1,0 +1,78 @@
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://mlb_user:mlb_password@postgres:5432/mlb_forecast
+      - REDIS_URL=redis://redis:6379/0
+      - MLB_API_BASE_URL=${MLB_API_BASE_URL}
+      - ENVIRONMENT=${ENVIRONMENT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/v1/health', timeout=2).status==200 else 1)\" "]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlb_user -d mlb_forecast"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  scheduler:
+    build: .
+    environment:
+      - DATABASE_URL=postgresql://mlb_user:mlb_password@postgres:5432/mlb_forecast
+      - REDIS_URL=redis://redis:6379/0
+      - MLB_API_BASE_URL=${MLB_API_BASE_URL}
+      - ENVIRONMENT=${ENVIRONMENT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    command: python -m src.interface.scheduler.main
+
+volumes:
+  postgres_data:
+  redis_data:
