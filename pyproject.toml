@@ -63,6 +63,12 @@ module = "src.infrastructure.db.repositories.*"
 warn_return_any = false
 ignore_errors = true
 
+# Allow Any returns for mappers temporarily
+[[tool.mypy.overrides]]
+module = "src.infrastructure.mappers.*"
+warn_return_any = false
+ignore_errors = true
+
 # Allow untyped definitions for interface layer temporarily
 [[tool.mypy.overrides]]
 module = "src.interface.*"

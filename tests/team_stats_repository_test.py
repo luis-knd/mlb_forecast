@@ -99,3 +99,36 @@ async def test_save_team_stats_updates_existing_data(team_stats_repo, db_session
 
     assert pitching is not None, "Pitching stats were not persisted"
     assert fielding is not None, "Fielding stats were not persisted"
+
+
+@pytest.mark.asyncio
+async def test_get_by_id_returns_correct_entity(team_stats_repo, db_session):
+    """
+    Test that get_by_id returns a correctly mapped TeamStats entity.
+    """
+    # Arrange
+    team_stats = TeamStats.create(
+        team_id=1,
+        season=2023,
+        games_played=162,
+        wins=90,
+        runs_scored=800,
+        runs_allowed=700,
+        hits=1400,
+    )
+    saved_stats = await team_stats_repo.save(team_stats)
+    stats_id = saved_stats.id
+
+    # Act
+    retrieved_stats = await team_stats_repo.get_by_id(stats_id)
+
+    # Assert
+    assert retrieved_stats is not None
+    assert retrieved_stats.id == stats_id
+    assert retrieved_stats.team_id == 1
+    assert retrieved_stats.season == 2023
+    assert retrieved_stats.runs_scored == 800
+    assert retrieved_stats.hits == 1400
+    # Check if mapper worked for calculated fields
+    assert retrieved_stats.run_differential == 100
+    assert retrieved_stats.pythagorean_expectation > 0.0
