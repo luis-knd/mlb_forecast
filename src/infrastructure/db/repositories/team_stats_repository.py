@@ -198,27 +198,89 @@ class TeamStatsRepository(TeamStatsRepositoryPort):
     async def save(self, team_stats: TeamStats) -> TeamStats:
         """
         Save team statistics (create or update).
-
-        Note: This method is now a facade that delegates to the individual stats repositories.
-        In a production environment, you would likely want to use a transaction to ensure
-        all stats are saved atomically.
         """
-        # Since we no longer have a TeamStatsModel, we need to save the stats to the individual models
-        # For this implementation, we'll just return the team stats as is
-        # In a real implementation, you would need to save the stats to the individual models
-        # and then return the aggregated TeamStats entity
-
         # Check if team stats already exist for this team and season
-        existing_stats = await self.get_by_team_and_season(team_stats.team_id, team_stats.season)
+        # We need to check each model individually or assume they exist together
+        # For simplicity, we'll check hitting stats as the anchor
 
-        # For now, we'll just return the existing stats or the input stats
-        # In a real implementation, you would update the existing stats or create new ones
-        if existing_stats:
-            return existing_stats
+        # 1. Hitting Stats
+        hitting_stats = (
+            self.session.query(HittingStatsModel)
+            .filter(HittingStatsModel.team_id == team_stats.team_id, HittingStatsModel.season == team_stats.season)
+            .first()
+        )
 
-        # In a real implementation, you would create new stats models
-        # For now, we'll just return the input stats
-        return team_stats
+        if not hitting_stats:
+            hitting_stats = HittingStatsModel(team_id=team_stats.team_id, season=team_stats.season)
+            self.session.add(hitting_stats)
+
+        # Update fields
+        hitting_stats.games_played = team_stats.games_played
+        hitting_stats.runs_scored = team_stats.runs_scored
+        hitting_stats.hits = team_stats.hits
+        hitting_stats.home_runs = team_stats.home_runs
+        hitting_stats.batting_average = team_stats.batting_average
+        hitting_stats.on_base_percentage = team_stats.on_base_percentage
+        hitting_stats.slugging_percentage = team_stats.slugging_percentage
+        hitting_stats.ops = team_stats.ops
+        hitting_stats.stolen_bases = team_stats.stolen_bases
+
+        # 2. Pitching Stats
+        pitching_stats = (
+            self.session.query(PitchingStatsModel)
+            .filter(PitchingStatsModel.team_id == team_stats.team_id, PitchingStatsModel.season == team_stats.season)
+            .first()
+        )
+
+        if not pitching_stats:
+            pitching_stats = PitchingStatsModel(team_id=team_stats.team_id, season=team_stats.season)
+            self.session.add(pitching_stats)
+
+        # Update fields
+        pitching_stats.wins = team_stats.wins
+        pitching_stats.losses = team_stats.losses
+        pitching_stats.earned_run_average = team_stats.earned_run_average
+        pitching_stats.whip = team_stats.whip
+        pitching_stats.strikeouts_per_nine = team_stats.strikeouts_per_nine
+        pitching_stats.walks_per_nine = team_stats.walks_per_nine
+        pitching_stats.home_runs_allowed = team_stats.home_runs_allowed
+        pitching_stats.runs_allowed = team_stats.runs_allowed
+
+        # 3. Fielding Stats
+        fielding_stats = (
+            self.session.query(FieldingStatsModel)
+            .filter(FieldingStatsModel.team_id == team_stats.team_id, FieldingStatsModel.season == team_stats.season)
+            .first()
+        )
+
+        if not fielding_stats:
+            fielding_stats = FieldingStatsModel(team_id=team_stats.team_id, season=team_stats.season)
+            self.session.add(fielding_stats)
+
+        # Update fields
+        fielding_stats.fielding_percentage = team_stats.fielding_percentage
+        fielding_stats.errors = team_stats.errors
+        fielding_stats.double_plays = team_stats.double_plays
+
+        # Commit transaction
+        try:
+            self.session.commit()
+
+            # Refresh to get IDs and timestamps
+            self.session.refresh(hitting_stats)
+            self.session.refresh(pitching_stats)
+            self.session.refresh(fielding_stats)
+
+            # Update entity with ID and timestamps from hitting stats (as anchor)
+            team_stats.id = hitting_stats.id
+            team_stats.created_at = hitting_stats.created_at
+            team_stats.updated_at = hitting_stats.updated_at
+
+            return team_stats
+
+        except Exception as e:
+            self.session.rollback()
+            raise e
 
     async def update_stats(self, stats_id: int, updated_stats: Dict[str, Any]) -> Optional[TeamStats]:
         """
