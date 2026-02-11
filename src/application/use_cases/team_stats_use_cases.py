@@ -5,7 +5,6 @@ These define the application's business logic for team statistics operations.
 
 from typing import Any, Dict, List, Optional
 
-from src.application.ports.cache import CachePort
 from src.application.ports.mlb_api import MLBApiPort
 from src.application.ports.team_repository import TeamRepositoryPort
 from src.application.ports.team_stats_repository import TeamStatsRepositoryPort
@@ -16,8 +15,6 @@ from src.domain.value_objects.team_stats_category import TeamStatsCategory
 class GetTeamStatsUseCase:
     """Use case for getting team statistics."""
 
-    CACHE_TTL_SECONDS = 3600
-
     CATEGORY_KEYS = {
         TeamStatsCategory.HITTING: ("hitting_stats", "hitting"),
         TeamStatsCategory.PITCHING: ("pitching_stats", "pitching"),
@@ -25,9 +22,8 @@ class GetTeamStatsUseCase:
         TeamStatsCategory.CATCHING: ("catching_stats", "catching"),
     }
 
-    def __init__(self, team_stats_repository: TeamStatsRepositoryPort, cache: CachePort):
+    def __init__(self, team_stats_repository: TeamStatsRepositoryPort):
         self.team_stats_repository = team_stats_repository
-        self.cache = cache
 
     async def execute(
         self,
@@ -46,13 +42,6 @@ class GetTeamStatsUseCase:
         Returns:
             Aggregated statistics dictionary or None if not found
         """
-        cache_key = self._build_cache_key(team_id, season, category)
-
-        # Try to get from cache first
-        cached_stats = await self.cache.get(cache_key)
-        if cached_stats:
-            return cached_stats
-
         # Get from repository
         team_stats = await self.team_stats_repository.get_by_team_and_season(team_id, season)
 
@@ -61,16 +50,7 @@ class GetTeamStatsUseCase:
 
         filtered_stats = self._filter_by_category(team_stats, category)
 
-        # Cache the result if found
-        await self.cache.set(cache_key, filtered_stats, ttl=self.CACHE_TTL_SECONDS)
-
         return filtered_stats
-
-    def _build_cache_key(self, team_id: int, season: int, category: TeamStatsCategory) -> str:
-        base_key = f"team_stats:{team_id}:{season}"
-        if category is TeamStatsCategory.ALL:
-            return base_key
-        return f"{base_key}:{category.value}"
 
     def _filter_by_category(self, stats: Dict[str, Any], category: TeamStatsCategory) -> Dict[str, Any]:
         if category is TeamStatsCategory.ALL:
@@ -89,9 +69,8 @@ class GetTeamStatsUseCase:
 class ListTeamStatsBySeason:
     """Use case for listing team statistics by season."""
 
-    def __init__(self, team_stats_repository: TeamStatsRepositoryPort, cache: CachePort):
+    def __init__(self, team_stats_repository: TeamStatsRepositoryPort):
         self.team_stats_repository = team_stats_repository
-        self.cache = cache
 
     async def execute(self, season: int) -> List[TeamStats]:
         """
@@ -103,28 +82,14 @@ class ListTeamStatsBySeason:
         Returns:
             List of TeamStats entities
         """
-        cache_key = f"team_stats:season:{season}"
-
-        # Try to get from cache first
-        cached_stats = await self.cache.get(cache_key)
-        if cached_stats:
-            return cached_stats
-
-        # Get from repository
-        team_stats = await self.team_stats_repository.list_by_season(season)
-
-        # Cache the result
-        await self.cache.set(cache_key, team_stats, ttl=3600)  # Cache for 1 hour
-
-        return team_stats
+        return await self.team_stats_repository.list_by_season(season)
 
 
 class ListTopTeamsByStatUseCase:
     """Use case for listing top teams by a specific statistic."""
 
-    def __init__(self, team_stats_repository: TeamStatsRepositoryPort, cache: CachePort):
+    def __init__(self, team_stats_repository: TeamStatsRepositoryPort):
         self.team_stats_repository = team_stats_repository
-        self.cache = cache
 
     async def execute(self, season: int, stat_name: str, limit: int = 10, descending: bool = True) -> List[TeamStats]:
         """
@@ -139,20 +104,7 @@ class ListTopTeamsByStatUseCase:
         Returns:
             List of TeamStats entities
         """
-        cache_key = f"team_stats:top:{season}:{stat_name}:{limit}:{descending}"
-
-        # Try to get from cache first
-        cached_stats = await self.cache.get(cache_key)
-        if cached_stats:
-            return cached_stats
-
-        # Get from repository
-        team_stats = await self.team_stats_repository.list_top_teams_by_stat(season, stat_name, limit, descending)
-
-        # Cache the result
-        await self.cache.set(cache_key, team_stats, ttl=3600)  # Cache for 1 hour
-
-        return team_stats
+        return await self.team_stats_repository.list_top_teams_by_stat(season, stat_name, limit, descending)
 
 
 class IngestTeamStatsUseCase:
@@ -163,12 +115,10 @@ class IngestTeamStatsUseCase:
         team_stats_repository: TeamStatsRepositoryPort,
         team_repository: TeamRepositoryPort,
         mlb_api: MLBApiPort,
-        cache: CachePort,
     ):
         self.team_stats_repository = team_stats_repository
         self.team_repository = team_repository
         self.mlb_api = mlb_api
-        self.cache = cache
 
     async def execute(self, season: int) -> List[TeamStats]:
         """
@@ -225,18 +175,14 @@ class IngestTeamStatsUseCase:
             saved_stats = await self.team_stats_repository.save(team_stats)
             ingested_stats.append(saved_stats)
 
-        # Clear cache for team stats
-        await self.cache.clear(pattern="team_stats:*")
-
         return ingested_stats
 
 
 class UpdateTeamStatsUseCase:
     """Use case for updating specific team statistics."""
 
-    def __init__(self, team_stats_repository: TeamStatsRepositoryPort, cache: CachePort):
+    def __init__(self, team_stats_repository: TeamStatsRepositoryPort):
         self.team_stats_repository = team_stats_repository
-        self.cache = cache
 
     async def execute(self, stats_id: int, updated_stats: Dict[str, Any]) -> Optional[TeamStats]:
         """
@@ -253,9 +199,6 @@ class UpdateTeamStatsUseCase:
         updated_team_stats = await self.team_stats_repository.update_stats(stats_id, updated_stats)
 
         if updated_team_stats:
-            # Clear cache for this team stats
-            await self.cache.clear(pattern=f"team_stats:*{updated_team_stats.team_id}*")
-
             # Update run differential and Pythagorean expectation
             updated_team_stats.update_run_differential()
 

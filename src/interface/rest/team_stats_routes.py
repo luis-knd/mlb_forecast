@@ -17,7 +17,6 @@ from src.application.use_cases.team_stats_ingestion_use_cases import (
     IngestTeamHittingStatsUseCase,
     IngestTeamPitchingStatsUseCase,
 )
-from src.infrastructure.cache.cache_provider import get_cache_adapter
 from src.infrastructure.db.database import get_db
 from src.infrastructure.db.repositories.catching_stats_repository import CatchingStatsRepository
 from src.infrastructure.db.repositories.fielding_stats_repository import FieldingStatsRepository
@@ -49,13 +48,12 @@ def get_team_stats_ingestion_use_cases(db=Depends(get_db)):
 
     # Adapters
     mlb_api = MLBApiAdapter()
-    cache = get_cache_adapter()
 
     # Use cases
-    hitting_stats_use_case = IngestTeamHittingStatsUseCase(hitting_stats_repository, team_repository, mlb_api, cache)
-    pitching_stats_use_case = IngestTeamPitchingStatsUseCase(pitching_stats_repository, team_repository, mlb_api, cache)
-    fielding_stats_use_case = IngestTeamFieldingStatsUseCase(fielding_stats_repository, team_repository, mlb_api, cache)
-    catching_stats_use_case = IngestTeamCatchingStatsUseCase(catching_stats_repository, team_repository, mlb_api, cache)
+    hitting_stats_use_case = IngestTeamHittingStatsUseCase(hitting_stats_repository, team_repository, mlb_api)
+    pitching_stats_use_case = IngestTeamPitchingStatsUseCase(pitching_stats_repository, team_repository, mlb_api)
+    fielding_stats_use_case = IngestTeamFieldingStatsUseCase(fielding_stats_repository, team_repository, mlb_api)
+    catching_stats_use_case = IngestTeamCatchingStatsUseCase(catching_stats_repository, team_repository, mlb_api)
     all_stats_use_case = IngestAllTeamStatsUseCase(
         hitting_stats_use_case,
         pitching_stats_use_case,
