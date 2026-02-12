@@ -58,17 +58,15 @@ def get_data_ingestion_use_cases(db: Session = Depends(get_db)):
     mlb_api_adapter = MLBApiAdapter()
 
     # Granular team stats use cases
-    hitting_stats_use_case = IngestTeamHittingStatsUseCase(
-        hitting_stats_repository, team_repository, mlb_api_adapter, cache_adapter
-    )
+    hitting_stats_use_case = IngestTeamHittingStatsUseCase(hitting_stats_repository, team_repository, mlb_api_adapter)
     pitching_stats_use_case = IngestTeamPitchingStatsUseCase(
-        pitching_stats_repository, team_repository, mlb_api_adapter, cache_adapter
+        pitching_stats_repository, team_repository, mlb_api_adapter
     )
     fielding_stats_use_case = IngestTeamFieldingStatsUseCase(
-        fielding_stats_repository, team_repository, mlb_api_adapter, cache_adapter
+        fielding_stats_repository, team_repository, mlb_api_adapter
     )
     catching_stats_use_case = IngestTeamCatchingStatsUseCase(
-        catching_stats_repository, team_repository, mlb_api_adapter, cache_adapter
+        catching_stats_repository, team_repository, mlb_api_adapter
     )
 
     # Composite use case for all team stats

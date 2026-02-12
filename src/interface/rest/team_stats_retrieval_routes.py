@@ -5,15 +5,15 @@ REST API routes for team statistics retrieval operations.
 from datetime import datetime
 from typing import Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
+from src.application.ports.cache import CachePort
 from src.application.use_cases.team_stats_use_cases import GetTeamStatsUseCase
 from src.domain.value_objects.team_stats_category import TeamStatsCategory
 from src.infrastructure.cache.cache_provider import get_cache_adapter
 from src.infrastructure.db.database import get_db
-from src.infrastructure.db.repositories.cached_team_stats_repository import CachedTeamStatsRepository
 from src.infrastructure.db.repositories.team_stats_repository import TeamStatsRepository
 from src.interface.rest.adapters.mappers import to_team_stats_dto
 from src.interface.rest.exception_handlers import DomainExceptions
@@ -30,16 +30,15 @@ from src.interface.rest.response_handler import ResponseHandler
 router = APIRouter()
 
 
-def get_team_stats_use_cases(db: Session = Depends(get_db)):
+def get_team_stats_use_cases(
+    db: Session = Depends(get_db),
+    cache_adapter: CachePort = Depends(get_cache_adapter),
+):
     """Get team stats use cases with dependencies."""
     team_stats_repository = TeamStatsRepository(db)
-    cache_adapter = get_cache_adapter()
-
-    # Wrap with CachedTeamStatsRepository
-    cached_team_stats_repository = CachedTeamStatsRepository(team_stats_repository, cache_adapter)
 
     return {
-        "get_team_stats": GetTeamStatsUseCase(cached_team_stats_repository),
+        "get_team_stats": GetTeamStatsUseCase(team_stats_repository, cache_adapter),
     }
 
 
@@ -93,7 +92,7 @@ async def get_team_stats(
         season_year = int(season)
     except (TypeError, ValueError) as error:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=422,
             detail="season must be an integer year",
         ) from error
 
@@ -110,7 +109,7 @@ async def get_team_stats(
         except ValueError as error:
             allowed_values = ", ".join(TeamStatsCategory.allowed_values())
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=422,
                 detail=f"category must be one of: {allowed_values}",
             ) from error
 

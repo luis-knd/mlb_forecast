@@ -1,8 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock
 
 import pytest
 
+from src.application.dto.mlb_api_response import MLBPlayerDTO
 from src.application.use_cases.player_use_cases import (
     GetPlayerUseCase,
     IngestPlayersUseCase,
@@ -22,8 +23,8 @@ def sample_player() -> Player:
         first_name="Chris",
         last_name="Taylor",
         position="SS",
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
     )
 
 
@@ -206,13 +207,17 @@ class TestIngestPlayersUseCase:
         mlb_api = AsyncMock()
         mlb_api.get_players_by_team = AsyncMock(
             side_effect=lambda mlb_id: [
-                {
-                    "id": mlb_id * 100,
-                    "first_name": "Player",
-                    "last_name": str(mlb_id),
-                    "position": "SS",
-                    "active": True,
-                }
+                MLBPlayerDTO(
+                    id=mlb_id * 100,
+                    first_name="Player",
+                    last_name=str(mlb_id),
+                    position="SS",
+                    bats="",
+                    throws="",
+                    birth_date=None,
+                    active=True,
+                    current_team_id=None,
+                )
             ]
         )
 

@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 from contextlib import ExitStack, asynccontextmanager
+from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
@@ -13,7 +14,10 @@ from src.infrastructure.db.database import Base, get_db
 from src.infrastructure.db.models import TeamModel
 from src.interface.rest.main import app
 
-TEST_DATABASE_URL = "sqlite:///./tests/database/test.db"
+db_dir = Path(__file__).resolve().parents[1] / "database"
+db_dir.mkdir(parents=True, exist_ok=True)
+db_path = db_dir / "test.db"
+TEST_DATABASE_URL = f"sqlite:///{db_path}"
 test_engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 

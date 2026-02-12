@@ -179,14 +179,14 @@ class IngestPlayersUseCase:
             for player_data in players_data:
                 # Create Player entity
                 player = Player.create(
-                    mlb_id=player_data["id"],
-                    first_name=player_data["first_name"],
-                    last_name=player_data["last_name"],
-                    position=player_data["position"],
-                    bats=player_data.get("bats"),
-                    throws=player_data.get("throws"),
-                    birth_date=player_data.get("birth_date"),
-                    active=player_data.get("active", True),
+                    mlb_id=player_data.id,
+                    first_name=player_data.first_name,
+                    last_name=player_data.last_name,
+                    position=player_data.position,
+                    bats=player_data.bats or None,
+                    throws=player_data.throws or None,
+                    birth_date=player_data.birth_date,
+                    active=player_data.active,
                     current_team_id=team.id,
                 )
 
