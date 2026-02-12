@@ -92,7 +92,7 @@ test-coverage: ## Ejecuta pruebas con coverage
 lint: ## Ejecuta linters (flake8)
 	@echo "$(YELLOW)🔍 Ejecutando linters...$(NC)"
 	$(VENV_PIP) install flake8
-	$(VENV_PYTHON) -m flake8 src/ --max-line-length=120 --ignore=E203,W503
+	$(VENV_PYTHON) -m flake8 src/
 
 format: ## Formatea código con black
 	@echo "$(YELLOW)🎨 Formateando código...$(NC)"

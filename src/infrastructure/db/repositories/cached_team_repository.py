@@ -122,11 +122,11 @@ class CachedTeamRepository(TeamRepositoryPort):
 
     async def delete(self, team_id: int) -> bool:
         """Delete a team by its ID and invalidate cache."""
+        existing_team = await self.repository.get_by_id(team_id)
         success = await self.repository.delete(team_id)
         if success:
             await self.cache.delete(f"teams:id:{team_id}")
-            # We might not know the mlb_id easily without fetching, so we skip specific mlb_id invalidation
-            # or we could fetch before delete if strict consistency is needed.
-            # For now, just invalidate lists.
+            if existing_team and existing_team.mlb_id is not None:
+                await self.cache.delete(f"teams:mlb_id:{existing_team.mlb_id}")
             await self.cache.delete_pattern("teams:list:*")
         return success

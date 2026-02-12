@@ -2,6 +2,8 @@
 Pruebas básicas para verificar la funcionalidad del sistema.
 """
 
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -11,8 +13,10 @@ from src.infrastructure.config.settings import settings
 from src.infrastructure.db.database import Base, get_db
 from src.interface.rest.main import app
 
-# Base de datos de prueba en memoria
-SQLALCHEMY_DATABASE_URL = "sqlite:///./tests/database/test.db"
+db_dir = Path(__file__).resolve().parent / "database"
+db_dir.mkdir(parents=True, exist_ok=True)
+db_path = db_dir / "test.db"
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{db_path}"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
