@@ -13,6 +13,7 @@ from src.application.use_cases.team_stats_use_cases import GetTeamStatsUseCase
 from src.domain.value_objects.team_stats_category import TeamStatsCategory
 from src.infrastructure.cache.cache_provider import get_cache_adapter
 from src.infrastructure.db.database import get_db
+from src.infrastructure.db.repositories.cached_team_stats_repository import CachedTeamStatsRepository
 from src.infrastructure.db.repositories.team_stats_repository import TeamStatsRepository
 from src.interface.rest.adapters.mappers import to_team_stats_dto
 from src.interface.rest.exception_handlers import DomainExceptions
@@ -34,8 +35,11 @@ def get_team_stats_use_cases(db: Session = Depends(get_db)):
     team_stats_repository = TeamStatsRepository(db)
     cache_adapter = get_cache_adapter()
 
+    # Wrap with CachedTeamStatsRepository
+    cached_team_stats_repository = CachedTeamStatsRepository(team_stats_repository, cache_adapter)
+
     return {
-        "get_team_stats": GetTeamStatsUseCase(team_stats_repository, cache_adapter),
+        "get_team_stats": GetTeamStatsUseCase(cached_team_stats_repository),
     }
 
 
