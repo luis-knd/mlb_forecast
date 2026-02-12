@@ -26,6 +26,11 @@ class CachePort(ABC):
         pass
 
     @abstractmethod
+    async def delete_pattern(self, pattern: str) -> int:
+        """Delete values matching a pattern. Returns number of deleted keys."""
+        pass
+
+    @abstractmethod
     async def exists(self, key: str) -> bool:
         """Check if a key exists in the cache."""
         pass

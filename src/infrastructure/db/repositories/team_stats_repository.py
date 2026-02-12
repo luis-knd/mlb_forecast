@@ -9,15 +9,9 @@ from sqlalchemy import asc, desc
 from sqlalchemy.orm import Session, joinedload
 
 from src.application.ports.team_stats_repository import TeamStatsRepositoryPort
-from src.domain.entities.team import Team
 from src.domain.entities.team_stats import TeamStats
-from src.infrastructure.db.models import (
-    CatchingStatsModel,
-    FieldingStatsModel,
-    HittingStatsModel,
-    PitchingStatsModel,
-    TeamModel,
-)
+from src.infrastructure.db.models import CatchingStatsModel, FieldingStatsModel, HittingStatsModel, PitchingStatsModel
+from src.infrastructure.mappers.team_stats_mapper import TeamStatsMapper
 
 
 class TeamStatsRepository(TeamStatsRepositoryPort):
@@ -25,6 +19,7 @@ class TeamStatsRepository(TeamStatsRepositoryPort):
 
     def __init__(self, session: Session):
         self.session = session
+        self.mapper = TeamStatsMapper()
 
     async def get_by_id(self, stats_id: int) -> Optional[TeamStats]:
         """Get team statistics by its ID."""
@@ -66,7 +61,7 @@ class TeamStatsRepository(TeamStatsRepositoryPort):
         )
 
         # Aggregate stats into a TeamStats entity
-        return self._models_to_entity(hitting_stats, pitching_stats, fielding_stats)
+        return self.mapper.to_entity(hitting_stats, pitching_stats, fielding_stats)
 
     async def get_by_team_and_season(self, team_id: int, season: int):
         """Aggregate per-table stats into a composite structure the mapper understands."""
@@ -198,27 +193,69 @@ class TeamStatsRepository(TeamStatsRepositoryPort):
     async def save(self, team_stats: TeamStats) -> TeamStats:
         """
         Save team statistics (create or update).
-
-        Note: This method is now a facade that delegates to the individual stats repositories.
-        In a production environment, you would likely want to use a transaction to ensure
-        all stats are saved atomically.
         """
-        # Since we no longer have a TeamStatsModel, we need to save the stats to the individual models
-        # For this implementation, we'll just return the team stats as is
-        # In a real implementation, you would need to save the stats to the individual models
-        # and then return the aggregated TeamStats entity
-
         # Check if team stats already exist for this team and season
-        existing_stats = await self.get_by_team_and_season(team_stats.team_id, team_stats.season)
+        # We need to check each model individually or assume they exist together
+        # For simplicity, we'll check hitting stats as the anchor
 
-        # For now, we'll just return the existing stats or the input stats
-        # In a real implementation, you would update the existing stats or create new ones
-        if existing_stats:
-            return existing_stats
+        # 1. Hitting Stats
+        hitting_stats = (
+            self.session.query(HittingStatsModel)
+            .filter(HittingStatsModel.team_id == team_stats.team_id, HittingStatsModel.season == team_stats.season)
+            .first()
+        )
 
-        # In a real implementation, you would create new stats models
-        # For now, we'll just return the input stats
-        return team_stats
+        if not hitting_stats:
+            hitting_stats = self.mapper.update_hitting_model(team_stats)
+            self.session.add(hitting_stats)
+        else:
+            self.mapper.update_hitting_model(team_stats, hitting_stats)
+
+        # 2. Pitching Stats
+        pitching_stats = (
+            self.session.query(PitchingStatsModel)
+            .filter(PitchingStatsModel.team_id == team_stats.team_id, PitchingStatsModel.season == team_stats.season)
+            .first()
+        )
+
+        if not pitching_stats:
+            pitching_stats = self.mapper.update_pitching_model(team_stats)
+            self.session.add(pitching_stats)
+        else:
+            self.mapper.update_pitching_model(team_stats, pitching_stats)
+
+        # 3. Fielding Stats
+        fielding_stats = (
+            self.session.query(FieldingStatsModel)
+            .filter(FieldingStatsModel.team_id == team_stats.team_id, FieldingStatsModel.season == team_stats.season)
+            .first()
+        )
+
+        if not fielding_stats:
+            fielding_stats = self.mapper.update_fielding_model(team_stats)
+            self.session.add(fielding_stats)
+        else:
+            self.mapper.update_fielding_model(team_stats, fielding_stats)
+
+        # Commit transaction
+        try:
+            self.session.commit()
+
+            # Refresh to get IDs and timestamps
+            self.session.refresh(hitting_stats)
+            self.session.refresh(pitching_stats)
+            self.session.refresh(fielding_stats)
+
+            # Update entity with ID and timestamps from hitting stats (as anchor)
+            team_stats.id = hitting_stats.id
+            team_stats.created_at = hitting_stats.created_at
+            team_stats.updated_at = hitting_stats.updated_at
+
+            return team_stats
+
+        except Exception as e:
+            self.session.rollback()
+            raise e
 
     async def update_stats(self, stats_id: int, updated_stats: Dict[str, Any]) -> Optional[TeamStats]:
         """
@@ -314,113 +351,3 @@ class TeamStatsRepository(TeamStatsRepositoryPort):
 
         # No stats found with the given ID
         return False
-
-    def _models_to_entity(
-        self,
-        hitting_stats: HittingStatsModel,
-        pitching_stats: PitchingStatsModel,
-        fielding_stats: FieldingStatsModel,
-    ) -> TeamStats:
-        """
-        Aggregate stats from different models into a TeamStats entity.
-
-        Args:
-            hitting_stats: The hitting stats model
-            pitching_stats: The pitching stats model
-            fielding_stats: The fielding stats model
-
-        Returns:
-            A TeamStats entity with aggregated stats
-        """
-        # Use hitting stats as the base for team_id and season
-        team_id = hitting_stats.team_id
-        season = hitting_stats.season
-
-        # Get games_played from hitting stats
-        games_played = hitting_stats.games_played if hitting_stats else 0
-
-        # Get wins and losses from pitching stats
-        wins = pitching_stats.wins if pitching_stats else 0
-        losses = pitching_stats.losses if pitching_stats else 0
-
-        # Get offensive stats from hitting stats
-        runs_scored = hitting_stats.runs_scored if hitting_stats else 0
-        hits = hitting_stats.hits if hitting_stats else 0
-        home_runs = hitting_stats.home_runs if hitting_stats else 0
-        batting_average = hitting_stats.batting_average if hitting_stats else 0.0
-        on_base_percentage = hitting_stats.on_base_percentage if hitting_stats else 0.0
-        slugging_percentage = hitting_stats.slugging_percentage if hitting_stats else 0.0
-        ops = hitting_stats.ops if hitting_stats else 0.0
-        stolen_bases = hitting_stats.stolen_bases if hitting_stats else 0
-
-        # Get pitching stats
-        earned_run_average = pitching_stats.earned_run_average if pitching_stats else 0.0
-        whip = pitching_stats.whip if pitching_stats else 0.0
-        strikeouts_per_nine = pitching_stats.strikeouts_per_nine if pitching_stats else 0.0
-        walks_per_nine = pitching_stats.walks_per_nine if pitching_stats else 0.0
-        home_runs_allowed = pitching_stats.home_runs_allowed if pitching_stats else 0
-        runs_allowed = pitching_stats.runs_allowed if pitching_stats else 0
-
-        # Get fielding stats
-        fielding_percentage = fielding_stats.fielding_percentage if fielding_stats else 0.0
-        errors = fielding_stats.errors if fielding_stats else 0
-        double_plays = fielding_stats.double_plays if fielding_stats else 0
-
-        # Calculate run differential and Pythagorean expectation
-        run_differential = runs_scored - runs_allowed
-
-        pythagorean_expectation = 0.0
-        if runs_scored > 0 and runs_allowed > 0:
-            pythagorean_expectation = (runs_scored**2) / (runs_scored**2 + runs_allowed**2)
-
-        # Create TeamStats entity
-        team_stats = TeamStats(
-            id=hitting_stats.id,  # Use hitting stats ID as the team stats ID
-            team_id=team_id,
-            season=season,
-            games_played=games_played,
-            wins=wins,
-            losses=losses,
-            runs_scored=runs_scored,
-            hits=hits,
-            home_runs=home_runs,
-            batting_average=batting_average,
-            on_base_percentage=on_base_percentage,
-            slugging_percentage=slugging_percentage,
-            ops=ops,
-            stolen_bases=stolen_bases,
-            earned_run_average=earned_run_average,
-            whip=whip,
-            strikeouts_per_nine=strikeouts_per_nine,
-            walks_per_nine=walks_per_nine,
-            home_runs_allowed=home_runs_allowed,
-            runs_allowed=runs_allowed,
-            fielding_percentage=fielding_percentage,
-            errors=errors,
-            double_plays=double_plays,
-            run_differential=run_differential,
-            pythagorean_expectation=pythagorean_expectation,
-            created_at=hitting_stats.created_at,
-            updated_at=hitting_stats.updated_at,
-        )
-
-        # Set related team if loaded
-        if hasattr(hitting_stats, "team") and hitting_stats.team:
-            team_stats.team = self._team_model_to_entity(hitting_stats.team)
-
-        return team_stats
-
-    def _team_model_to_entity(self, model: TeamModel) -> Team:
-        """Convert a TeamModel to a Team entity."""
-        return Team(
-            id=model.id,
-            mlb_id=model.mlb_id,
-            name=model.name,
-            abbreviation=model.abbreviation,
-            city=model.city,
-            division=model.division,
-            league=model.league,
-            venue_name=model.venue_name,
-            created_at=model.created_at,
-            updated_at=model.updated_at,
-        )

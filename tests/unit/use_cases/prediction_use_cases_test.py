@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock
 
 import pytest
@@ -21,7 +21,7 @@ def sample_game() -> Game:
         mlb_game_id=20240101,
         home_team_id=1,
         away_team_id=2,
-        game_date=datetime.utcnow() + timedelta(days=1),
+        game_date=datetime.now(timezone.utc) + timedelta(days=1),
         status="scheduled",
     )
 
@@ -33,7 +33,7 @@ def completed_game() -> Game:
         mlb_game_id=20240101,
         home_team_id=1,
         away_team_id=2,
-        game_date=datetime.utcnow() - timedelta(days=1),
+        game_date=datetime.now(timezone.utc) - timedelta(days=1),
         status="completed",
         home_score=5,
         away_score=3,
@@ -43,7 +43,7 @@ def completed_game() -> Game:
 
 @pytest.fixture
 def sample_team_stats() -> TeamStats:
-    return TeamStats.create(team_id=1, season=datetime.utcnow().year, games_played=50, wins=30, losses=20)
+    return TeamStats.create(team_id=1, season=datetime.now(timezone.utc).year, games_played=50, wins=30, losses=20)
 
 
 @pytest.fixture
@@ -55,8 +55,8 @@ def sample_prediction() -> Prediction:
         home_win_probability=0.6,
         away_win_probability=0.4,
         model_version="v1",
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
     )
 
 
@@ -256,7 +256,7 @@ class TestListUpcomingPredictionsUseCase:
                 mlb_game_id=100,
                 home_team_id=1,
                 away_team_id=2,
-                game_date=datetime.utcnow() + timedelta(days=1),
+                game_date=datetime.now(timezone.utc) + timedelta(days=1),
                 status="scheduled",
             )
         ]
@@ -270,8 +270,8 @@ class TestListUpcomingPredictionsUseCase:
             home_win_probability=0.6,
             away_win_probability=0.4,
             model_version="v1",
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         )
         prediction_repository = AsyncMock()
         prediction_repository.list_by_game = AsyncMock(return_value=[prediction_with_timestamp])
@@ -353,8 +353,8 @@ class TestUpdatePredictionWithResultUseCase:
             model_version="v1",
             actual_result={"home_score": 5, "away_score": 3},
             prediction_accuracy=1.0,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         )
         prediction_repository.update_with_actual_result = AsyncMock(return_value=updated_prediction)
         game_repository = AsyncMock()

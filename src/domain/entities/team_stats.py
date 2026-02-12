@@ -84,9 +84,7 @@ class TeamStats:
         run_differential = runs_scored - runs_allowed
 
         # Simple Pythagorean expectation formula
-        pythagorean_expectation = 0.0
-        if runs_scored > 0 and runs_allowed > 0:
-            pythagorean_expectation = (runs_scored**2) / (runs_scored**2 + runs_allowed**2)
+        pythagorean_expectation = cls._calculate_pythagorean_expectation(runs_scored, runs_allowed)
 
         return cls(
             id=None,
@@ -129,7 +127,18 @@ class TeamStats:
         self.run_differential = self.runs_scored - self.runs_allowed
 
         # Update Pythagorean expectation
-        if self.runs_scored > 0 and self.runs_allowed > 0:
-            self.pythagorean_expectation = (self.runs_scored**2) / (self.runs_scored**2 + self.runs_allowed**2)
-        else:
-            self.pythagorean_expectation = 0.0
+        self.pythagorean_expectation = self._calculate_pythagorean_expectation(self.runs_scored, self.runs_allowed)
+
+    @staticmethod
+    def _calculate_pythagorean_expectation(runs_scored: int, runs_allowed: int) -> float:
+        """
+        Calculate Pythagorean expectation based on runs scored and allowed.
+
+        Formula: (runs_scored^2) / (runs_scored^2 + runs_allowed^2)
+        Handles edge cases where runs_allowed is 0.
+        """
+        if runs_scored == 0 and runs_allowed == 0:
+            return 0.0
+        if runs_allowed == 0:
+            return 1.0
+        return (runs_scored**2) / (runs_scored**2 + runs_allowed**2)

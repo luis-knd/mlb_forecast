@@ -50,6 +50,16 @@ repos:
     hooks:
       - id: openapi-spec-validator
 
+  - repo: local
+    hooks:
+      - id: pytest
+        name: Unit test
+        entry: bash -lc 'docker exec -i "${APP_CTN:-mlb_forecast_backend-app-1}" pytest -q tests/unit'
+        language: system
+        pass_filenames: false
+        files: ^src/
+        exclude: ^src/interface/rest/generated/
+
   # Secrets scanning
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0

@@ -2,7 +2,14 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.application.use_cases.team_use_cases import VALID_DIVISIONS, VALID_LEAGUES, ListTeamsUseCase
+from src.application.dto.mlb_api_response import MLBTeamDTO
+from src.application.use_cases.team_use_cases import (
+    VALID_DIVISIONS,
+    VALID_LEAGUES,
+    GetTeamUseCase,
+    IngestTeamsUseCase,
+    ListTeamsUseCase,
+)
 from src.domain.entities.team import Team
 from src.interface.rest.exception_handlers import DomainExceptions
 
@@ -15,14 +22,8 @@ class TestListTeamsUseCase:
         return AsyncMock()
 
     @pytest.fixture
-    def mock_cache(self):
-        cache = AsyncMock()
-        cache.get.return_value = None  # Cache miss
-        return cache
-
-    @pytest.fixture
-    def use_case(self, mock_repository, mock_cache):
-        return ListTeamsUseCase(mock_repository, mock_cache)
+    def use_case(self, mock_repository):
+        return ListTeamsUseCase(mock_repository)
 
     @pytest.fixture
     def american_west_teams(self):
@@ -42,8 +43,8 @@ class TestListTeamsUseCase:
         ]
 
     @pytest.mark.asyncio
-    async def test_execute_with_combined_filters(self, mock_repository, mock_cache, american_west_teams):
-        use_case = ListTeamsUseCase(mock_repository, mock_cache)
+    async def test_execute_with_combined_filters(self, mock_repository, american_west_teams):
+        use_case = ListTeamsUseCase(mock_repository)
 
         # Given
         mock_repository.list_by_league_and_division.return_value = american_west_teams
@@ -57,7 +58,7 @@ class TestListTeamsUseCase:
         assert all("American League" in team.league and "West" in team.division for team in result)
 
     @pytest.mark.asyncio
-    async def test_execute_league_filter_only(self, mock_repository, mock_cache):
+    async def test_execute_league_filter_only(self, mock_repository):
         # Given
         mock_teams = [
             Team.create(
@@ -71,7 +72,7 @@ class TestListTeamsUseCase:
             )
         ]
         mock_repository.list_by_league.return_value = mock_teams
-        use_case = ListTeamsUseCase(mock_repository, mock_cache)
+        use_case = ListTeamsUseCase(mock_repository)
 
         # When
         result = await use_case.execute(league="American")
@@ -81,7 +82,7 @@ class TestListTeamsUseCase:
         assert len(result) == 1
 
     @pytest.mark.asyncio
-    async def test_execute_division_filter_only(self, mock_repository, mock_cache):
+    async def test_execute_division_filter_only(self, mock_repository):
         # Given
         mock_teams = [
             Team.create(
@@ -95,7 +96,7 @@ class TestListTeamsUseCase:
             )
         ]
         mock_repository.list_by_division.return_value = mock_teams
-        use_case = ListTeamsUseCase(mock_repository, mock_cache)
+        use_case = ListTeamsUseCase(mock_repository)
 
         # When
         result = await use_case.execute(division="West")
@@ -105,10 +106,10 @@ class TestListTeamsUseCase:
         assert len(result) == 1
 
     @pytest.mark.asyncio
-    async def test_execute_no_filters(self, mock_repository, mock_cache, american_west_teams):
+    async def test_execute_no_filters(self, mock_repository, american_west_teams):
         # Given
         mock_repository.list_all.return_value = american_west_teams
-        use_case = ListTeamsUseCase(mock_repository, mock_cache)
+        use_case = ListTeamsUseCase(mock_repository)
 
         # When
         result = await use_case.execute()
@@ -118,11 +119,11 @@ class TestListTeamsUseCase:
         assert len(result) == 2
 
     @pytest.mark.asyncio
-    async def test_league_normalization(self, mock_repository, mock_cache):
+    async def test_league_normalization(self, mock_repository):
         # Given
         mock_teams = []
         mock_repository.list_by_league.return_value = mock_teams
-        use_case = ListTeamsUseCase(mock_repository, mock_cache)
+        use_case = ListTeamsUseCase(mock_repository)
 
         # When
         await use_case.execute(league="american")
@@ -131,9 +132,9 @@ class TestListTeamsUseCase:
         mock_repository.list_by_league.assert_called_once_with("American")
 
     @pytest.mark.asyncio
-    async def test_invalid_league_raises_error(self, mock_repository, mock_cache):
+    async def test_invalid_league_raises_error(self, mock_repository):
         # Given
-        use_case = ListTeamsUseCase(mock_repository, mock_cache)
+        use_case = ListTeamsUseCase(mock_repository)
         expected_error = f"Invalid league: `Invalid League`. Expected one of these values: {VALID_LEAGUES}"
 
         # When, Then
@@ -141,25 +142,95 @@ class TestListTeamsUseCase:
             await use_case.execute(league="Invalid League")
 
     @pytest.mark.asyncio
-    async def test_invalid_division_raises_error(self, mock_repository, mock_cache):
+    async def test_invalid_division_raises_error(self, mock_repository):
         # Given
-        use_case = ListTeamsUseCase(mock_repository, mock_cache)
+        use_case = ListTeamsUseCase(mock_repository)
         expected_error = f"Invalid division: `Invalid Division`. Expected one of these values: {VALID_DIVISIONS}"
 
         # When, Then
         with pytest.raises(DomainExceptions.InvalidDataError, match=expected_error):
             await use_case.execute(division="Invalid Division")
 
+
+class TestGetTeamUseCase:
+    """Unit tests for GetTeamUseCase"""
+
+    @pytest.fixture
+    def mock_repository(self):
+        return AsyncMock()
+
+    @pytest.fixture
+    def use_case(self, mock_repository):
+        return GetTeamUseCase(mock_repository)
+
     @pytest.mark.asyncio
-    async def test_cache_hit_returns_cached_data(self, mock_repository, mock_cache, american_west_teams):
+    async def test_execute_returns_team(self, mock_repository, use_case):
         # Given
-        mock_cache.get.return_value = american_west_teams
-        use_case = ListTeamsUseCase(mock_repository, mock_cache)
+        team = Team.create(1, "Team", "TM", "City", "Div", "Lg", "Venue")
+        mock_repository.get_by_id.return_value = team
 
         # When
-        result = await use_case.execute(league="American", division="West")
+        result = await use_case.execute(1)
 
         # Then
-        mock_cache.get.assert_called_once_with("teams:list:American:West")
-        mock_repository.list_by_league_and_division.assert_not_called()
-        assert result == american_west_teams
+        assert result == team
+        mock_repository.get_by_id.assert_called_once_with(1)
+
+    @pytest.mark.asyncio
+    async def test_execute_raises_error_invalid_id(self, use_case):
+        # When, Then
+        with pytest.raises(DomainExceptions.InvalidDataError, match="Invalid team ID"):
+            await use_case.execute(0)
+
+    @pytest.mark.asyncio
+    async def test_execute_raises_error_not_found(self, mock_repository, use_case):
+        # Given
+        mock_repository.get_by_id.return_value = None
+
+        # When, Then
+        with pytest.raises(DomainExceptions.TeamNotFoundError):
+            await use_case.execute(999)
+
+
+class TestIngestTeamsUseCase:
+    """Unit tests for IngestTeamsUseCase"""
+
+    @pytest.fixture
+    def mock_repository(self):
+        return AsyncMock()
+
+    @pytest.fixture
+    def mock_mlb_api(self):
+        return AsyncMock()
+
+    @pytest.fixture
+    def use_case(self, mock_repository, mock_mlb_api):
+        return IngestTeamsUseCase(mock_repository, mock_mlb_api)
+
+    @pytest.mark.asyncio
+    async def test_execute_ingests_teams(self, mock_repository, mock_mlb_api, use_case):
+        # Given
+        mlb_teams_dto = [
+            MLBTeamDTO(
+                id=1,
+                name="Team 1",
+                abbreviation="T1",
+                city="City 1",
+                division="Div 1",
+                league="Lg 1",
+                venue_name="Venue 1",
+            )
+        ]
+        mock_mlb_api.get_teams.return_value = mlb_teams_dto
+
+        saved_team = Team.create(1, "Team 1", "T1", "City 1", "Div 1", "Lg 1", "Venue 1")
+        mock_repository.save.return_value = saved_team
+
+        # When
+        result = await use_case.execute()
+
+        # Then
+        mock_mlb_api.get_teams.assert_called_once()
+        mock_repository.save.assert_called_once()
+        assert len(result) == 1
+        assert result[0] == saved_team

@@ -318,17 +318,17 @@ class SchedulerUseCases:
             teams_count = 0
             for team_data in teams_data:
                 # Create Team entity - ensure mlb_id is an int
-                mlb_id = team_data.get("id")
-                if mlb_id is None:
+                mlb_id = team_data.id
+                if mlb_id <= 0:
                     continue
 
                 team = Team.create(
-                    mlb_id=int(mlb_id),
-                    name=team_data.get("name", ""),
-                    abbreviation=team_data.get("abbreviation", ""),
-                    city=team_data.get("city", ""),
-                    division=team_data.get("division", ""),
-                    league=team_data.get("league", ""),
+                    mlb_id=mlb_id,
+                    name=team_data.name,
+                    abbreviation=team_data.abbreviation,
+                    city=team_data.city,
+                    division=team_data.division,
+                    league=team_data.league,
                 )
 
                 # Save to repository using save method instead of create_or_update
@@ -359,18 +359,16 @@ class SchedulerUseCases:
         games = []
         for game_data in games_data:
             # Validate required fields and ensure they can be converted to int
-            mlb_game_id = game_data.get("id")
-            home_team_id = game_data.get("home_team_id")
-            away_team_id = game_data.get("away_team_id")
-            game_date = game_data.get("game_date")
+            mlb_game_id = game_data.id
+            home_team_id = game_data.home_team_id
+            away_team_id = game_data.away_team_id
+            game_date = game_data.game_date
 
-            if not all([mlb_game_id, home_team_id, away_team_id, game_date]):
+            if not mlb_game_id or not home_team_id or not away_team_id or game_date is None:
                 continue
 
             # Convert to int safely with explicit None checks
             try:
-                if mlb_game_id is None or home_team_id is None or away_team_id is None:
-                    continue
                 mlb_game_id_int = int(mlb_game_id)
                 home_team_id_int = int(home_team_id)
                 away_team_id_int = int(away_team_id)
@@ -382,12 +380,12 @@ class SchedulerUseCases:
                 mlb_game_id=mlb_game_id_int,
                 home_team_id=home_team_id_int,
                 away_team_id=away_team_id_int,
-                game_date=(game_date if isinstance(game_date, datetime) else datetime.fromisoformat(str(game_date))),
-                status=game_data.get("status", "unknown"),
-                scheduled_innings=game_data.get("scheduled_innings", 9),
-                home_score=game_data.get("home_score"),
-                away_score=game_data.get("away_score"),
-                winning_team_id=game_data.get("winning_team_id"),
+                game_date=game_date,
+                status=game_data.status,
+                scheduled_innings=game_data.scheduled_innings,
+                home_score=game_data.home_score,
+                away_score=game_data.away_score,
+                winning_team_id=game_data.winning_team_id,
                 # Remove innings_played - not accepted by Game.create()
             )
 

@@ -1,18 +1,23 @@
 import asyncio
 import contextlib
-from contextlib import ExitStack
-from unittest.mock import AsyncMock, patch
+from contextlib import ExitStack, asynccontextmanager
+from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from src.infrastructure.cache.cache_provider import get_cache_adapter
 from src.infrastructure.db.database import Base, get_db
 from src.infrastructure.db.models import TeamModel
 from src.interface.rest.main import app
 
-TEST_DATABASE_URL = "sqlite:///./tests/database/test.db"
+db_dir = Path(__file__).resolve().parents[1] / "database"
+db_dir.mkdir(parents=True, exist_ok=True)
+db_path = db_dir / "test.db"
+TEST_DATABASE_URL = f"sqlite:///{db_path}"
 test_engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
@@ -85,25 +90,23 @@ def override_get_db():
 def integration_client(mock_cache_for_integration):
     """Create a test client with real database for integration tests."""
     # Override database dependency
-    app.dependency_overrides[get_db] = override_get_db
+    with ExitStack():
+        app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[get_cache_adapter] = lambda: mock_cache_for_integration
 
-    # Patch the cache provider to return our mock cache
-    cache_patch_targets = [
-        "src.infrastructure.cache.cache_provider.get_cache_adapter",
-        "src.interface.rest.team_routes.get_cache_adapter",
-        "src.interface.rest.game_routes.get_cache_adapter",
-        "src.interface.rest.data_ingestion_routes.get_cache_adapter",
-        "src.interface.rest.team_stats_routes.get_cache_adapter",
-        "src.interface.rest.team_stats_retrieval_routes.get_cache_adapter",
-        "src.interface.rest.prediction_routes.get_cache_adapter",
-        "src.interface.rest.system_routes.get_cache_adapter",
-    ]
+        # Override lifespan to prevent startup logic (DB connection, Cache, ML load)
+        @asynccontextmanager
+        async def dummy_lifespan(app):
+            yield
 
-    with ExitStack() as stack:
-        for target in cache_patch_targets:
-            stack.enter_context(patch(target, return_value=mock_cache_for_integration))
-        with TestClient(app) as test_client:
-            yield test_client
+        original_lifespan = app.router.lifespan_context
+        app.router.lifespan_context = dummy_lifespan
+
+        try:
+            with TestClient(app) as test_client:
+                yield test_client
+        finally:
+            app.router.lifespan_context = original_lifespan
 
     # Clear overrides after test
     app.dependency_overrides.clear()

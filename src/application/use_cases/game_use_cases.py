@@ -6,6 +6,7 @@ These define the application's business logic for game operations.
 from datetime import date, datetime, timedelta
 from typing import List, Optional
 
+from src.application.dto.mlb_api_response import MLBGameDTO
 from src.application.ports.cache import CachePort
 from src.application.ports.game_repository import GameRepositoryPort
 from src.application.ports.mlb_api import MLBApiPort
@@ -142,42 +143,42 @@ class IngestGamesUseCase:
 
         return ingested_games
 
-    async def _process_games_data(self, games_data: List[dict]) -> List[Game]:
+    async def _process_games_data(self, games_data: List["MLBGameDTO"]) -> List[Game]:
         """Process games data from the MLB API and save to repository."""
         processed_games = []
 
         for game_data in games_data:
             # Get team IDs from repository
-            home_team = await self.team_repository.get_by_mlb_id(game_data["home_team_id"])
-            away_team = await self.team_repository.get_by_mlb_id(game_data["away_team_id"])
+            home_team = await self.team_repository.get_by_mlb_id(game_data.home_team_id)
+            away_team = await self.team_repository.get_by_mlb_id(game_data.away_team_id)
 
             if not home_team or not away_team:
                 # Skip games with unknown teams
                 continue
 
             # Validate team IDs are not None before creating game
-            if home_team.id is None or away_team.id is None:
+            if home_team.id is None or away_team.id is None or game_data.game_date is None:
                 continue
 
             # Map winning team ID from MLB ID to internal ID if present
             winning_team_id = None
-            if game_data.get("winning_team_id") is not None:
-                mlb_winning_team_id = game_data["winning_team_id"]
-                if mlb_winning_team_id == game_data["home_team_id"]:
+            if game_data.winning_team_id is not None:
+                mlb_winning_team_id = game_data.winning_team_id
+                if mlb_winning_team_id == game_data.home_team_id:
                     winning_team_id = home_team.id
-                elif mlb_winning_team_id == game_data["away_team_id"]:
+                elif mlb_winning_team_id == game_data.away_team_id:
                     winning_team_id = away_team.id
 
             # Create game entity with all data from the adapter
             game = Game.create(
-                mlb_game_id=game_data["id"],
+                mlb_game_id=game_data.id,
                 home_team_id=home_team.id,
                 away_team_id=away_team.id,
-                game_date=game_data["game_date"],
-                status=game_data["status"],
-                scheduled_innings=game_data.get("scheduled_innings", 9),
-                home_score=game_data.get("home_score"),
-                away_score=game_data.get("away_score"),
+                game_date=game_data.game_date,
+                status=game_data.status,
+                scheduled_innings=game_data.scheduled_innings,
+                home_score=game_data.home_score,
+                away_score=game_data.away_score,
             )
 
             # Set the mapped winning team ID

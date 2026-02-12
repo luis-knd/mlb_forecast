@@ -5,7 +5,6 @@ These define the application's business logic for ingesting team statistics from
 
 from typing import Dict, List
 
-from src.application.ports.cache import CachePort
 from src.application.ports.catching_stats_repository import CatchingStatsRepositoryPort
 from src.application.ports.fielding_stats_repository import FieldingStatsRepositoryPort
 from src.application.ports.hitting_stats_repository import HittingStatsRepositoryPort
@@ -26,12 +25,10 @@ class IngestTeamHittingStatsUseCase:
         hitting_stats_repository: HittingStatsRepositoryPort,
         team_repository: TeamRepositoryPort,
         mlb_api: MLBApiPort,
-        cache: CachePort,
     ):
         self.hitting_stats_repository = hitting_stats_repository
         self.team_repository = team_repository
         self.mlb_api = mlb_api
-        self.cache = cache
 
     async def execute(self, season: int) -> List[HittingStats]:
         """
@@ -124,9 +121,6 @@ class IngestTeamHittingStatsUseCase:
                 saved_stats = await self.hitting_stats_repository.save(hitting_stats)
                 ingested_stats.append(saved_stats)
 
-        # Clear cache for hitting stats
-        await self.cache.clear(pattern="hitting_stats:*")
-
         return ingested_stats
 
     def _safe_int_conversion(self, value) -> int:
@@ -158,12 +152,10 @@ class IngestTeamPitchingStatsUseCase:
         pitching_stats_repository: PitchingStatsRepositoryPort,
         team_repository: TeamRepositoryPort,
         mlb_api: MLBApiPort,
-        cache: CachePort,
     ):
         self.pitching_stats_repository = pitching_stats_repository
         self.team_repository = team_repository
         self.mlb_api = mlb_api
-        self.cache = cache
 
     async def execute(self, season: int) -> List[PitchingStats]:
         """
@@ -274,8 +266,6 @@ class IngestTeamPitchingStatsUseCase:
                 saved_stats = await self.pitching_stats_repository.save(pitching_stats)
                 ingested_stats.append(saved_stats)
 
-        # Clear cache for pitching stats
-        await self.cache.clear(pattern="pitching_stats:*")
         return ingested_stats
 
     def _safe_int_conversion(self, value) -> int:
@@ -305,12 +295,10 @@ class IngestTeamFieldingStatsUseCase:
         fielding_stats_repository: FieldingStatsRepositoryPort,
         team_repository: TeamRepositoryPort,
         mlb_api: MLBApiPort,
-        cache: CachePort,
     ):
         self.fielding_stats_repository = fielding_stats_repository
         self.team_repository = team_repository
         self.mlb_api = mlb_api
-        self.cache = cache
 
     async def execute(self, season: int) -> List[FieldingStats]:
         """
@@ -381,8 +369,6 @@ class IngestTeamFieldingStatsUseCase:
                 saved_stats = await self.fielding_stats_repository.save(fielding_stats)
                 ingested_stats.append(saved_stats)
 
-        # Clear cache for fielding stats
-        await self.cache.clear(pattern="fielding_stats:*")
         return ingested_stats
 
     def _safe_int_conversion(self, value) -> int:
@@ -412,12 +398,10 @@ class IngestTeamCatchingStatsUseCase:
         catching_stats_repository: CatchingStatsRepositoryPort,
         team_repository: TeamRepositoryPort,
         mlb_api: MLBApiPort,
-        cache: CachePort,
     ):
         self.catching_stats_repository = catching_stats_repository
         self.team_repository = team_repository
         self.mlb_api = mlb_api
-        self.cache = cache
 
     async def execute(self, season: int) -> List[CatchingStats]:
         """
@@ -495,8 +479,6 @@ class IngestTeamCatchingStatsUseCase:
                 saved_stats = await self.catching_stats_repository.save(catching_stats)
                 ingested_stats.append(saved_stats)
 
-        # Clear cache for catching stats
-        await self.cache.clear(pattern="catching_stats:*")
         return ingested_stats
 
     def _safe_int_conversion(self, value) -> int:

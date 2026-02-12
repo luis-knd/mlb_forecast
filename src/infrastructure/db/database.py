@@ -5,7 +5,7 @@ This module defines the SQLAlchemy engine, session, and base class for the model
 
 import logging
 from contextlib import contextmanager
-from typing import Generator
+from typing import Any, Dict, Generator
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
@@ -13,13 +13,23 @@ from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from src.infrastructure.config.settings import settings
 
 # Create SQLAlchemy engine
-engine = create_engine(
-    settings.DATABASE_URL,
-    pool_pre_ping=True,
-    echo=settings.SQL_ECHO,
-    pool_size=settings.DB_POOL_SIZE,
-    max_overflow=settings.DB_MAX_OVERFLOW,
-)
+
+connect_args: Dict[str, Any] = {}
+engine_args: Dict[str, Any] = {
+    "pool_pre_ping": True,
+    "echo": settings.SQL_ECHO,
+}
+
+if "sqlite" in settings.DATABASE_URL:
+    connect_args["check_same_thread"] = False
+    engine_args["connect_args"] = connect_args
+else:
+    engine_args["pool_size"] = settings.DB_POOL_SIZE
+    engine_args["max_overflow"] = settings.DB_MAX_OVERFLOW
+
+# Create SQLAlchemy engine
+engine = create_engine(settings.DATABASE_URL, **engine_args)
+
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

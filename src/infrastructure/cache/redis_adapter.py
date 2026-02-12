@@ -131,6 +131,30 @@ class RedisAdapter(CachePort):
             logger.error(f"Error deleting from cache {key}: {e}")
             return False
 
+    async def delete_pattern(self, pattern: str) -> int:
+        """Delete values matching a pattern. Returns number of deleted keys."""
+        if not self.redis_client:
+            await self.connect()
+
+        try:
+            if not self.redis_client:
+                return 0
+
+            keys: List[str] = []
+            async for key in self.redis_client.scan_iter(match=pattern):
+                keys.append(key)
+
+            if not keys:
+                return 0
+
+            deleted: int = await self.redis_client.delete(*keys)
+            logger.debug(f"Deleted {deleted} keys matching pattern: {pattern}")
+            return deleted
+
+        except Exception as e:
+            logger.error(f"Error deleting pattern {pattern}: {e}")
+            return 0
+
     async def exists(self, key: str) -> bool:
         """Check if a key exists in the cache."""
         if not self.redis_client:

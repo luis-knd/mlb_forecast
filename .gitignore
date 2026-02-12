@@ -201,3 +201,5 @@ AGENTS.md
 context/
 .junie/
 /.agent/rules/general-rules.md
+.agent/**
+.agents/**
