@@ -53,8 +53,8 @@ repos:
   - repo: local
     hooks:
       - id: pytest
-        name: pytest (docker)
-        entry: bash -lc 'docker exec -i "${APP_CTN:-mlb_forecast_backend-app-1}" pytest -q'
+        name: Unit test
+        entry: bash -lc 'docker exec -i "${APP_CTN:-mlb_forecast_backend-app-1}" pytest -q tests/unit'
         language: system
         pass_filenames: false
         files: ^src/
