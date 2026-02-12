@@ -4,9 +4,11 @@ from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
+from src.application.ports.cache import CachePort
 from src.application.use_cases.team_use_cases import GetTeamUseCase, IngestTeamsUseCase, ListTeamsUseCase
 from src.infrastructure.cache.cache_provider import get_cache_adapter
 from src.infrastructure.db.database import get_db
+from src.infrastructure.db.repositories.cached_team_repository import CachedTeamRepository
 from src.infrastructure.db.repositories.team_repository import TeamRepository
 from src.infrastructure.mlb_api.adapter import MLBApiAdapter
 from src.interface.rest.adapters.mappers import to_team_dto, to_team_dto_list
@@ -27,14 +29,21 @@ from src.interface.rest.response_handler import ResponseHandler
 router = APIRouter()
 
 
-def get_team_use_cases(db: Session = Depends(get_db)):
+def get_team_use_cases(
+    db: Session = Depends(get_db),
+    cache: CachePort = Depends(get_cache_adapter),
+):
     team_repository = TeamRepository(db)
-    cache_adapter = get_cache_adapter()
+    # cache used from argument
+
+    # Use cached repository decorator
+    cached_team_repository = CachedTeamRepository(team_repository, cache)
+
     mlb_api_adapter = MLBApiAdapter()
     return {
-        "list_teams": ListTeamsUseCase(team_repository, cache_adapter),
-        "get_team": GetTeamUseCase(team_repository, cache_adapter),
-        "ingest_teams": IngestTeamsUseCase(team_repository, mlb_api_adapter, cache_adapter),
+        "list_teams": ListTeamsUseCase(cached_team_repository),
+        "get_team": GetTeamUseCase(cached_team_repository),
+        "ingest_teams": IngestTeamsUseCase(cached_team_repository, mlb_api_adapter),
     }
 
 

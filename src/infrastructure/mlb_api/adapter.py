@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
+from src.application.dto.mlb_api_response import MLBGameDTO, MLBPlayerDTO, MLBTeamDTO
 from src.application.ports.mlb_api import MLBApiPort
 from src.infrastructure.config.settings import settings
 
@@ -29,7 +30,7 @@ class MLBApiAdapter(MLBApiPort):
         self.api_version = settings.MLB_API_VERSION
         self.timeout = settings.MLB_API_TIMEOUT
 
-    async def get_teams(self) -> List[Dict[str, Any]]:
+    async def get_teams(self) -> List[MLBTeamDTO]:
         """Get all MLB teams from the API."""
         endpoint = f"/{self.api_version}/teams"
         params = {"sportId": 1}
@@ -40,7 +41,7 @@ class MLBApiAdapter(MLBApiPort):
         # Transform the data to match our domain model
         return [self._transform_team_data(team) for team in teams_data]
 
-    async def get_team_by_id(self, mlb_team_id: int) -> Optional[Dict[str, Any]]:
+    async def get_team_by_id(self, mlb_team_id: int) -> Optional[MLBTeamDTO]:
         """Get a specific team by its MLB ID."""
         endpoint = f"/{self.api_version}/teams/{mlb_team_id}"
 
@@ -56,7 +57,7 @@ class MLBApiAdapter(MLBApiPort):
             logger.warning(f"Team with MLB ID {mlb_team_id} not found")
             return None
 
-    async def get_games_by_date(self, game_date: date) -> List[Dict[str, Any]]:
+    async def get_games_by_date(self, game_date: date) -> List[MLBGameDTO]:
         """Get all games for a specific date."""
         endpoint = f"/{self.api_version}/schedule"
         params = {"sportId": 1, "date": game_date.strftime("%Y-%m-%d")}
@@ -72,7 +73,7 @@ class MLBApiAdapter(MLBApiPort):
 
         return games
 
-    async def get_game_by_id(self, mlb_game_id: int) -> Optional[Dict[str, Any]]:
+    async def get_game_by_id(self, mlb_game_id: int) -> Optional[MLBGameDTO]:
         """Get a specific game by its MLB ID."""
         endpoint = f"/{self.api_version}/game/{mlb_game_id}/feed/live"
 
@@ -106,7 +107,7 @@ class MLBApiAdapter(MLBApiPort):
             logger.warning(f"Stats not found: group={group}, team={mlb_team_id or 'all'}, season={season}")
             return None
 
-    async def get_player_by_id(self, mlb_player_id: int) -> Optional[Dict[str, Any]]:
+    async def get_player_by_id(self, mlb_player_id: int) -> Optional[MLBPlayerDTO]:
         """Get a specific player by its MLB ID."""
         endpoint = f"/{self.api_version}/people/{mlb_player_id}"
 
@@ -122,7 +123,7 @@ class MLBApiAdapter(MLBApiPort):
             logger.warning(f"Player with MLB ID {mlb_player_id} not found")
             return None
 
-    async def get_players_by_team(self, mlb_team_id: int) -> List[Dict[str, Any]]:
+    async def get_players_by_team(self, mlb_team_id: int) -> List[MLBPlayerDTO]:
         """Get all players for a specific team."""
         endpoint = f"/{self.api_version}/teams/{mlb_team_id}/roster"
         params = {"rosterType": "active"}
@@ -163,7 +164,7 @@ class MLBApiAdapter(MLBApiPort):
             logger.warning(f"Stats for player with MLB ID {mlb_player_id} and season {season} not found")
             return None
 
-    async def search_players(self, query: str) -> List[Dict[str, Any]]:
+    async def search_players(self, query: str) -> List[MLBPlayerDTO]:
         """Search for players by name or other criteria."""
         endpoint = f"/{self.api_version}/people/search"
         params = {"q": query}
@@ -196,23 +197,23 @@ class MLBApiAdapter(MLBApiPort):
             logger.error(f"Unexpected error in {url}: {e}")
             raise MLBApiException(f"Unexpected error: {e}")
 
-    def _transform_team_data(self, team_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _transform_team_data(self, team_data: Dict[str, Any]) -> MLBTeamDTO:
         """Transform team data from the MLB API to match our domain model."""
         division_info = team_data.get("division", {})
         league_info = team_data.get("league", {})
         venue_info = team_data.get("venue", {})
 
-        return {
-            "id": team_data.get("id"),
-            "name": team_data.get("name", ""),
-            "abbreviation": team_data.get("abbreviation", ""),
-            "city": team_data.get("locationName", ""),
-            "division": division_info.get("name", ""),
-            "league": league_info.get("name", ""),
-            "venue_name": venue_info.get("name", ""),
-        }
+        return MLBTeamDTO(
+            id=int(team_data.get("id", 0)),
+            name=team_data.get("name", ""),
+            abbreviation=team_data.get("abbreviation", ""),
+            city=team_data.get("locationName", ""),
+            division=division_info.get("name", ""),
+            league=league_info.get("name", ""),
+            venue_name=venue_info.get("name", ""),
+        )
 
-    def _transform_game_data(self, game_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _transform_game_data(self, game_data: Dict[str, Any]) -> MLBGameDTO:
         """Transform game data from the MLB API to match our domain model."""
         teams = game_data.get("teams", {})
         home_team_data = teams.get("home", {}).get("team", {})
@@ -259,17 +260,17 @@ class MLBApiAdapter(MLBApiPort):
             is_completed,
         )
 
-        return {
-            "id": game_data.get("gamePk"),
-            "home_team_id": home_team_data.get("id"),
-            "away_team_id": away_team_data.get("id"),
-            "game_date": game_date,
-            "status": normalized_status,
-            "scheduled_innings": game_data.get("scheduledInnings", 9),
-            "home_score": home_score,
-            "away_score": away_score,
-            "winning_team_id": winning_team_id,
-        }
+        return MLBGameDTO(
+            id=int(game_data.get("gamePk", 0)),
+            home_team_id=int(home_team_data.get("id", 0)),
+            away_team_id=int(away_team_data.get("id", 0)),
+            game_date=game_date,
+            status=normalized_status,
+            scheduled_innings=game_data.get("scheduledInnings", 9),
+            home_score=home_score,
+            away_score=away_score,
+            winning_team_id=winning_team_id,
+        )
 
     def _is_game_completed(self, detailed_state: str, abstract_state: str, coded_state: str) -> bool:
         """Determine if a game has been completed based on multiple status indicators."""
@@ -496,7 +497,7 @@ class MLBApiAdapter(MLBApiPort):
             except (ValueError, TypeError):
                 result["walks_per_nine"] = 0.0
 
-    def _transform_player_data(self, player_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _transform_player_data(self, player_data: Dict[str, Any]) -> MLBPlayerDTO:
         """Transform player data from the MLB API to match our domain model."""
         # Parse birth date if available
         birth_date = None
@@ -506,17 +507,17 @@ class MLBApiAdapter(MLBApiPort):
             except (ValueError, AttributeError):
                 logger.warning(f"Invalid birth date format: {player_data.get('birthDate')}")
 
-        return {
-            "id": player_data.get("id"),
-            "first_name": player_data.get("firstName", ""),
-            "last_name": player_data.get("lastName", ""),
-            "position": player_data.get("position", ""),
-            "bats": player_data.get("batSide", {}).get("code", ""),
-            "throws": player_data.get("pitchHand", {}).get("code", ""),
-            "birth_date": birth_date,
-            "active": player_data.get("active", True),
-            "current_team_id": player_data.get("currentTeam", {}).get("id"),
-        }
+        return MLBPlayerDTO(
+            id=int(player_data.get("id", 0)),
+            first_name=player_data.get("firstName", ""),
+            last_name=player_data.get("lastName", ""),
+            position=player_data.get("position", ""),
+            bats=player_data.get("batSide", {}).get("code", ""),
+            throws=player_data.get("pitchHand", {}).get("code", ""),
+            birth_date=birth_date,
+            active=player_data.get("active", True),
+            current_team_id=player_data.get("currentTeam", {}).get("id"),
+        )
 
     def _transform_player_stats_data(
         self, stats_data: Dict[str, Any], mlb_player_id: int, season: int

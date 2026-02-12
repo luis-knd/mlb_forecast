@@ -1,33 +1,30 @@
-"""
-MLB API port (interface) for the application layer.
-This defines how the application interacts with the external MLB API.
-"""
-
 from abc import ABC, abstractmethod
 from datetime import date
 from typing import Any, Dict, List, Optional
+
+from src.application.dto.mlb_api_response import MLBGameDTO, MLBPlayerDTO, MLBTeamDTO
 
 
 class MLBApiPort(ABC):
     """Interface for MLB API operations."""
 
     @abstractmethod
-    async def get_teams(self) -> List[Dict[str, Any]]:
+    async def get_teams(self) -> List[MLBTeamDTO]:
         """Get all MLB teams from the API."""
         pass
 
     @abstractmethod
-    async def get_team_by_id(self, mlb_team_id: int) -> Optional[Dict[str, Any]]:
+    async def get_team_by_id(self, mlb_team_id: int) -> Optional[MLBTeamDTO]:
         """Get a specific team by its MLB ID."""
         pass
 
     @abstractmethod
-    async def get_games_by_date(self, game_date: date) -> List[Dict[str, Any]]:
+    async def get_games_by_date(self, game_date: date) -> List[MLBGameDTO]:
         """Get all games for a specific date."""
         pass
 
     @abstractmethod
-    async def get_game_by_id(self, mlb_game_id: int) -> Optional[Dict[str, Any]]:
+    async def get_game_by_id(self, mlb_game_id: int) -> Optional[MLBGameDTO]:
         """Get a specific game by its MLB ID."""
         pass
 
@@ -39,12 +36,12 @@ class MLBApiPort(ABC):
         pass
 
     @abstractmethod
-    async def get_player_by_id(self, mlb_player_id: int) -> Optional[Dict[str, Any]]:
+    async def get_player_by_id(self, mlb_player_id: int) -> Optional[MLBPlayerDTO]:
         """Get a specific player by its MLB ID."""
         pass
 
     @abstractmethod
-    async def get_players_by_team(self, mlb_team_id: int) -> List[Dict[str, Any]]:
+    async def get_players_by_team(self, mlb_team_id: int) -> List[MLBPlayerDTO]:
         """Get all players for a specific team."""
         pass
 
@@ -54,6 +51,6 @@ class MLBApiPort(ABC):
         pass
 
     @abstractmethod
-    async def search_players(self, query: str) -> List[Dict[str, Any]]:
+    async def search_players(self, query: str) -> List[MLBPlayerDTO]:
         """Search for players by name or other criteria."""
         pass

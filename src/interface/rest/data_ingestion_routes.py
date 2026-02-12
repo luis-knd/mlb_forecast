@@ -20,6 +20,7 @@ from src.application.use_cases.team_stats_ingestion_use_cases import (
 from src.application.use_cases.team_use_cases import IngestTeamsUseCase
 from src.infrastructure.cache.cache_provider import get_cache_adapter
 from src.infrastructure.db.database import get_db
+from src.infrastructure.db.repositories.cached_team_repository import CachedTeamRepository
 from src.infrastructure.db.repositories.catching_stats_repository import CatchingStatsRepository
 from src.infrastructure.db.repositories.fielding_stats_repository import FieldingStatsRepository
 from src.infrastructure.db.repositories.game_repository import GameRepository
@@ -78,8 +79,11 @@ def get_data_ingestion_use_cases(db: Session = Depends(get_db)):
         catching_stats_use_case,
     )
 
+    # Use cached repository for teams
+    cached_team_repository = CachedTeamRepository(team_repository, cache_adapter)
+
     return {
-        "ingest_teams": IngestTeamsUseCase(team_repository, mlb_api_adapter, cache_adapter),
+        "ingest_teams": IngestTeamsUseCase(cached_team_repository, mlb_api_adapter),
         "ingest_games": IngestGamesUseCase(game_repository, team_repository, mlb_api_adapter, cache_adapter),
         "ingest_all_team_stats": all_team_stats_use_case,
     }
