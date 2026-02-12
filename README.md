@@ -89,6 +89,7 @@ mlb_forecast_backend/
 4. **Dependencias hacia adentro**: Las dependencias siempre apuntan hacia el dominio, nunca al revés.
 
 Esta arquitectura facilita:
+
 - **Testabilidad**: Podemos probar la lógica de negocio sin dependencias externas
 - **Mantenibilidad**: Cambiar una tecnología (como la base de datos) no afecta al dominio
 - **Evolución**: Podemos añadir nuevas funcionalidades sin modificar el código existente
@@ -346,11 +347,13 @@ except Exception as e:
 ## 🚀 Instalación y Configuración
 
 ### Prerrequisitos
+
 - **Python 3.10+** (instalación local opcional)
 - **Docker** y **Docker Compose**
 - **Git** (para clonar el repositorio)
 
 ### 🎯 Inicio Rápido con Instalador y Docker Compose
+
 Se recomienda usar Docker para aislar dependencias y evitar instalar requisitos locales:
 
 ### Clonar repositorio e iniciar setup
@@ -361,6 +364,7 @@ cd mlb_forecast_backend
 ```
 
 **Ejecutar script de inicio automático**
+
 ```bash
 python start.py
 ```
@@ -371,35 +375,38 @@ El script te guiará a través de las opciones disponibles:
 <summary><strong>Opción 1 → 🐳 Solo Docker (Recomendado)</strong>:</summary>
    Esta opción:
 
-   - Instala la python:3.11-slim.
-   - Instala las librerías necesarias en el contenedor.
-   - Crea automáticamente dento del contenedor un entorno virtual.
-   - Instala los requerimientos en el entorno virtual del contenedor.
-   - Ejecuta la aplicación.
+- Instala la python:3.11-slim.
+- Instala las librerías necesarias en el contenedor.
+- Crea automáticamente dento del contenedor un entorno virtual.
+- Instala los requerimientos en el entorno virtual del contenedor.
+- Ejecuta la aplicación.
 
-   La aplicación estará disponible en [localhost:8000](http://localhost:8000)
+La aplicación estará disponible en [localhost:8000](http://localhost:8000)
+
 </details>
 
 <details open>
 <summary><strong>Opción 2 → 🚀 Setup completo con entorno virtual local</strong>:</summary>
 
-   Esta opción:
+Esta opción:
 
-   La aplicación estará disponible en [localhost:8000](http://localhost:8000)
+La aplicación estará disponible en [localhost:8000](http://localhost:8000)
 
 </details>
 
 <details open>
 <summary><strong>Opción 3 → 🛠️ Setup Manual paso a paso</strong>:</summary>
 
-   Esta opción:
+Esta opción:
+
 </details>
 
 <details open>
 <summary><strong>Opción 4 →  ℹ️ Mostrar información del proyecto</strong>:</summary>
 
-   Esta opción:
-      No ejecuta nada, solo muestra la información del proyecto.
+Esta opción:
+No ejecuta nada, solo muestra la información del proyecto.
+
 </details>
 
 <details open>
@@ -410,36 +417,42 @@ El script te guiará a través de las opciones disponibles:
 ## 📊 Características Principales
 
 ### ⚾ Ingestión Automática de Datos
+
 - **APIs Oficiales MLB**: Integración completa con statsapi.mlb.com
 - **Datos en Tiempo Real**: Resultados, estadísticas y calendarios
 - **Procesamiento Inteligente**: Validación y limpieza automática
 - **Recuperación de Errores**: Sistema robusto ante fallos de API
 
 ### 🗄️ Almacenamiento Optimizado
+
 - **Esquema Normalizado**: Base de datos PostgreSQL optimizada
 - **Índices Estratégicos**: Consultas rápidas para análisis
 - **Datos Históricos**: Almacenamiento eficiente de múltiples temporadas
 - **Integridad Referencial**: Relaciones consistentes entre entidades
 
 ### ⚡ Sistema de Caché Inteligente
+
 - **Caché Multicapa**: Redis con diferentes TTL por tipo de dato
 - **Invalidación Inteligente**: Limpieza automática de datos obsoletos
 - **Precalentamiento**: Caché de datos frecuentemente accedidos
 - **Estadísticas de Uso**: Monitoreo de hit rates y rendimiento
 
 ### 🤖 Machine Learning Avanzado
+
 - **Predicciones Múltiples**: Ganador, runs totales, métricas personalizadas
 - **Entrenamiento Continuo**: Actualización automática con nuevos datos
 - **Evaluación de Modelos**: Métricas de rendimiento y comparación
 - **Características Avanzadas**: Ingeniería de features específicas para MLB
 
 ### 🔄 Automatización Completa
+
 - **Scheduler Robusto**: Tareas programadas con APScheduler
 - **Ingestión Periódica**: Datos actualizados automáticamente
 - **Reentrenamiento ML**: Modelos siempre actualizados
 - **Mantenimiento**: Limpieza automática de caché y datos
 
 ### 🌐 APIs REST Escalables
+
 - **FastAPI**: Documentación automática y alta performance
 - **Validación Automática**: Pydantic para request/response
 - **Manejo de Errores**: Respuestas consistentes y logging
@@ -448,6 +461,7 @@ El script te guiará a través de las opciones disponibles:
 ## 📋 Endpoints Principales
 
 ### Equipos y Estadísticas
+
 ```http
 GET /api/v1/teams                           # Lista de equipos
 GET /api/v1/teams/{team_id}                 # Equipo específico
@@ -455,12 +469,14 @@ GET /api/v1/teams/{team_id}/stats/{season}  # Estadísticas por temporada
 ```
 
 ### Juegos
+
 ```http
 GET /api/v1/games                           # Lista de juegos con filtros
 GET /api/v1/games/{game_id}                 # Juego específico
 ```
 
 ### Predicciones
+
 ```http
 POST /api/v1/predictions                    # Generar predicción
 GET /api/v1/predictions/{game_id}           # Predicciones existentes
@@ -468,6 +484,7 @@ GET /api/v1/predictions/upcoming            # Predicciones próximas
 ```
 
 ### Ingestión de Datos
+
 ```http
 POST /api/v1/data/ingest/teams              # Ingestar equipos
 POST /api/v1/data/ingest/games              # Ingestar juegos
@@ -475,6 +492,7 @@ POST /api/v1/data/ingest/full               # Ingestión completa
 ```
 
 ### Sistema y ML
+
 ```http
 POST /api/v1/ml/retrain                     # Reentrenar modelo
 GET /api/v1/cache/stats                     # Estadísticas de caché
@@ -546,6 +564,7 @@ curl -X POST http://localhost:8000/api/v1/ml/retrain
 ## 🔧 Configuración Avanzada
 
 ### Scheduler de Tareas
+
 ```bash
 # Ejecutar jobs independiente
 python -m src.interface.scheduler.main
@@ -564,6 +583,7 @@ python -m src.interface.scheduler.main
 ## 🎯 Ejemplos de Uso
 
 ### Generar Predicción
+
 ```python
 import httpx
 
@@ -578,6 +598,7 @@ print(f"Probabilidad local: {prediction['predictions']['outcome']['home_win_prob
 ```
 
 ### Consultar Juegos del Día
+
 ```python
 from datetime import datetime
 
@@ -591,6 +612,7 @@ for game in games:
 ```
 
 ### Ingestión Programática
+
 ```python
 # Ejecutar ingestión completa
 response = httpx.post("http://localhost:8000/api/v1/data/ingest/full?season=2024")
@@ -616,23 +638,27 @@ pytest --cov=app tests/
 ### Test en docker
 
 Ejecutar todos los tests
+
 ```bash
 docker exec -it mlb_forecast_backend-app-1 python -m pytest -v -W always
 ```
 
 Ejecutar test de un archivo
+
 ```bash
 docker exec -it mlb_forecast_backend-app-1 python -m pytest tests/integration/team_routes_test.py -v
 ```
 
 Ejecutar test puntual
-```bash
+
+`````bash
 docker exec -it mlb_forecast_backend-app-1 python -m pytest tests/t````est_basic.py::TestBasicEndpoints::test_health_endpoint -v -W always
-```
+`````
 
 ## 📈 Monitoreo y Logs
 
 ### Logs Estructurados
+
 ```bash
 # Ver logs en tiempo real
 docker-compose logs -f app
@@ -645,6 +671,7 @@ grep "ML" docker-compose logs
 ```
 
 ### Métricas de Rendimiento
+
 ```bash
 # Estado del sistema
 curl http://localhost:8000/api/v1/health
@@ -659,18 +686,21 @@ curl http://localhost:8000/info
 ## 🔒 Consideraciones de Producción
 
 ### Escalabilidad
+
 - **Horizontal**: Múltiples instancias de la aplicación
 - **Base de Datos**: Connection pooling y read replicas
 - **Caché**: Cluster Redis para alta disponibilidad
 - **Load Balancer**: NGINX o similar para distribución
 
 ### Seguridad
+
 - **Variables de Entorno**: Usar secretos seguros en producción
 - **Rate Limiting**: Configurar límites apropiados
 - **CORS**: Especificar dominios exactos
 - **HTTPS**: Terminar SSL en load balancer
 
 ### Monitoreo
+
 - **Logging**: Centralizar logs con ELK stack
 - **Métricas**: Prometheus + Grafana
 - **Alertas**: Configurar notificaciones de errores
@@ -679,12 +709,14 @@ curl http://localhost:8000/info
 ## 🛠️ Desarrollo y Contribución
 
 ### Estructura de Código
+
 - **Principios SOLID**: Cada clase tiene responsabilidad única
 - **Patrón Factory**: Para conexiones y servicios
 - **Strategy Pattern**: Para diferentes tipos de predicción
 - **Open/Closed**: Fácil extensión sin modificación
 
 ### Extensiones Futuras
+
 - **Nuevos Deportes**: Arquitectura preparada para otros deportes
 - **ML Avanzado**: Redes neuronales y deep learning
 - **Real-time**: WebSockets para actualizaciones en vivo
@@ -693,7 +725,7 @@ curl http://localhost:8000/info
 ## 📚 Documentación Adicional
 
 - **API Docs**: http://localhost:8000/docs (Swagger)
-- **Arquitectura**: Ver diagramas en `/docs/architecture/`
+- **Arquitectura**: Ver diagramas en [docs/diagrams/](docs/diagrams/)
 - **ML Models**: Documentación detallada en `/docs/ml/`
 
 ## 🆘 Troubleshooting
@@ -701,6 +733,7 @@ curl http://localhost:8000/info
 ### Problemas Comunes
 
 1. **Error de conexión a PostgreSQL**
+
    ```bash
    # Verificar que el servicio esté ejecutándose
    docker-compose ps postgres
@@ -710,12 +743,14 @@ curl http://localhost:8000/info
    ```
 
 2. **Redis no conecta**
+
    ```bash
    # Verificar conexión
    docker-compose exec redis redis-cli ping
    ```
 
 3. **Modelo ML no entrena**
+
    ```bash
    # Verificar datos suficientes
    curl http://localhost:8000/api/v1/games | jq length
