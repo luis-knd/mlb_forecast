@@ -40,6 +40,8 @@ class Settings(BaseSettings):
     MLB_API_BASE_URL: str = os.getenv("MLB_API_BASE_URL", "https://statsapi.mlb.com/api")
     MLB_API_VERSION: str = os.getenv("MLB_API_VERSION", "v1")
     MLB_API_TIMEOUT: int = int(os.getenv("MLB_API_TIMEOUT", "10"))
+    MLB_API_MAX_RETRIES: int = int(os.getenv("MLB_API_MAX_RETRIES", "2"))
+    MLB_API_BACKOFF_FACTOR: float = float(os.getenv("MLB_API_BACKOFF_FACTOR", "0.5"))
 
     # ML model settings
     MODEL_DIR: str = "models"  # TODO this does not exist yet

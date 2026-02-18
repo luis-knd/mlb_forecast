@@ -41,13 +41,31 @@ class MLBApiPort(ABC):
         pass
 
     @abstractmethod
-    async def get_players_by_team(self, mlb_team_id: int) -> List[MLBPlayerDTO]:
-        """Get all players for a specific team."""
+    async def get_players_by_team(
+        self,
+        mlb_team_id: int,
+        season: Optional[int] = None,
+        roster_type: str = "active",
+    ) -> List[MLBPlayerDTO]:
+        """Get players for a specific team, season and roster type."""
         pass
 
     @abstractmethod
-    async def get_player_stats(self, mlb_player_id: int, season: int) -> Optional[Dict[str, Any]]:
-        """Get statistics for a specific player and season."""
+    async def get_players_by_sport(self, sport_id: int = 1, season: Optional[int] = None) -> List[MLBPlayerDTO]:
+        """Get players by sport and optional season."""
+        pass
+
+    @abstractmethod
+    async def get_player_stats(
+        self,
+        mlb_player_id: int,
+        stats: str,
+        group: str,
+        season: Optional[int] = None,
+        game_type: Optional[str] = None,
+        days_back: Optional[int] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Get statistics for a specific player and filters."""
         pass
 
     @abstractmethod

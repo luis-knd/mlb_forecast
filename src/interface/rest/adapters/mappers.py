@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any, Iterable, List, Optional, Type
 
+from src.domain.entities.player import Player
 from src.domain.entities.team import Team
 from src.interface.rest.generated.models.models import (
     CatchingStatsDTO,
@@ -69,6 +70,28 @@ def to_team_dto(team: Team) -> TeamDTO:
 
 def to_team_dto_list(teams: Iterable[Team]) -> List[TeamDTO]:
     return [to_team_dto(t) for t in teams]
+
+
+def to_player_payload(player: Player) -> dict[str, Any]:
+    return {
+        "id": player.id,
+        "mlb_id": player.mlb_id,
+        "first_name": player.first_name,
+        "last_name": player.last_name,
+        "full_name": player.full_name(),
+        "position": player.position,
+        "bats": player.bats,
+        "throws": player.throws,
+        "birth_date": player.birth_date,
+        "active": player.active,
+        "current_team_id": player.current_team_id,
+        "created_at": player.created_at,
+        "updated_at": player.updated_at,
+    }
+
+
+def to_player_payload_list(players: Iterable[Player]) -> List[dict[str, Any]]:
+    return [to_player_payload(player) for player in players]
 
 
 def to_hitting_stats_dto(src: Any) -> HittingStatsDTO:

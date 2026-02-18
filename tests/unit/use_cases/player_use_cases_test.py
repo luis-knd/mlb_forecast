@@ -231,5 +231,7 @@ class TestIngestPlayersUseCase:
         mlb_api.get_players_by_team.assert_any_call(1)
         mlb_api.get_players_by_team.assert_any_call(2)
         assert player_repository.save.await_count == len(teams)
-        mock_cache.clear.assert_awaited_once_with(pattern="players:*")
+        assert mock_cache.clear.await_count == 2
+        mock_cache.clear.assert_any_await(pattern="players:*")
+        mock_cache.clear.assert_any_await(pattern="player_stats:*")
         assert all(isinstance(player, Player) for player in ingested_players)

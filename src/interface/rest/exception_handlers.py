@@ -134,6 +134,13 @@ class DomainExceptions:
             self.team_id = team_id
             super().__init__(f"Team with ID {team_id} not found")
 
+    class PlayerNotFoundError(Exception):
+        """Raised when a player is not found."""
+
+        def __init__(self, player_id: int) -> None:
+            self.player_id = player_id
+            super().__init__(f"Player with ID {player_id} not found")
+
     class GameNotFoundError(Exception):
         """Raised when a game is not found."""
 
@@ -168,6 +175,9 @@ async def domain_exception_handler(request: Request, exc: Exception) -> Response
     """
     if isinstance(exc, DomainExceptions.TeamNotFoundError):
         return ResponseHandler.not_found("Team", exc.team_id)
+
+    elif isinstance(exc, DomainExceptions.PlayerNotFoundError):
+        return ResponseHandler.not_found("Player", exc.player_id)
 
     elif isinstance(exc, DomainExceptions.GameNotFoundError):
         return ResponseHandler.not_found("Game", exc.game_id)

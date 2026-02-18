@@ -38,6 +38,19 @@ class PlayerRepositoryPort(ABC):
         pass
 
     @abstractmethod
+    async def list_players(
+        self,
+        team_id: Optional[int] = None,
+        position: Optional[str] = None,
+        name: Optional[str] = None,
+        active: Optional[bool] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> List[Player]:
+        """List players with optional filters and pagination."""
+        pass
+
+    @abstractmethod
     async def search_by_name(self, name: str) -> List[Player]:
         """Search players by name."""
         pass

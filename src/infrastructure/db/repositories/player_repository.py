@@ -74,6 +74,49 @@ class PlayerRepository(PlayerRepositoryPort):
         )
         return [self._model_to_entity(model) for model in player_models]
 
+    async def list_players(
+        self,
+        team_id: Optional[int] = None,
+        position: Optional[str] = None,
+        name: Optional[str] = None,
+        active: Optional[bool] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> List[Player]:
+        """List players applying optional filters and deterministic pagination."""
+        query = self.session.query(PlayerModel).options(joinedload(PlayerModel.current_team))
+
+        if team_id is not None:
+            query = query.filter(PlayerModel.current_team_id == team_id)
+
+        if position:
+            query = query.filter(PlayerModel.position.ilike(position.strip()))
+
+        if active is not None:
+            query = query.filter(PlayerModel.active == active)
+
+        if name:
+            normalized_name = name.strip()
+            search_terms = normalized_name.split()
+            if len(search_terms) == 1:
+                search_term = f"%{search_terms[0]}%"
+                query = query.filter(
+                    or_(
+                        PlayerModel.first_name.ilike(search_term),
+                        PlayerModel.last_name.ilike(search_term),
+                    )
+                )
+            else:
+                first_name_term = f"%{search_terms[0]}%"
+                last_name_term = f"%{' '.join(search_terms[1:])}%"
+                query = query.filter(
+                    PlayerModel.first_name.ilike(first_name_term),
+                    PlayerModel.last_name.ilike(last_name_term),
+                )
+
+        player_models = query.order_by(PlayerModel.id.asc()).offset(offset).limit(limit).all()
+        return [self._model_to_entity(model) for model in player_models]
+
     async def search_by_name(self, name: str) -> List[Player]:
         """Search players by name."""
         # Split the name to search in both first and last name
