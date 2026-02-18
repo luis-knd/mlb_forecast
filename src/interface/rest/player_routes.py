@@ -25,6 +25,9 @@ from src.interface.rest.generated.models.models import (
     DataIngestionResultDTO,
     InternalServerError,
     NotFound,
+    PlayerDetailResponse,
+    PlayerListResponse,
+    PlayerStatsResponse,
     ServiceUnavailable,
     UnprocessableEntity,
 )
@@ -57,6 +60,7 @@ def get_player_use_cases(
 @router.get(
     "/players",
     tags=["Players"],
+    response_model=PlayerListResponse,
     responses={
         "400": {"model": BadRequest},
         "404": {"model": NotFound},
@@ -96,6 +100,7 @@ async def list_players(
 @router.get(
     "/players/{player_id}",
     tags=["Players"],
+    response_model=PlayerDetailResponse,
     responses={
         "400": {"model": BadRequest},
         "404": {"model": NotFound},
@@ -124,6 +129,7 @@ async def get_player(
 @router.get(
     "/players/{player_id}/stats",
     tags=["Players", "Stats"],
+    response_model=PlayerStatsResponse,
     responses={
         "400": {"model": BadRequest},
         "404": {"model": NotFound},

@@ -18,6 +18,7 @@ from src.infrastructure.config.settings import settings
 from src.infrastructure.db.database import create_tables
 from src.infrastructure.ml.model_adapter import MLModelAdapter
 from src.interface.rest.exception_handlers import DomainExceptions, ExceptionHandlerMiddleware, domain_exception_handler
+from src.interface.rest.generated.models.models import RootResponse
 from src.interface.rest.response_handler import ResponseHandler
 from src.interface.rest.routes import router as api_router
 
@@ -168,7 +169,7 @@ logging.config.dictConfig(
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 
-@app.get("/")
+@app.get("/", response_model=RootResponse)
 async def root():
     """Root endpoint providing basic information about the API."""
     return ResponseHandler.success(
