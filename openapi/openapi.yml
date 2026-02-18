@@ -1154,7 +1154,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: { }
+              schema:
+                $ref: '#/components/schemas/MLRetrainResponse'
   /api/v1/data/ingest/team_stats:
     post:
       tags:
@@ -1942,7 +1943,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: { }
+              schema:
+                $ref: '#/components/schemas/RootResponse'
         '500':
           description: Internal Server Error
           content:
@@ -2007,6 +2009,71 @@ components:
           retrieved_at: '2025-07-25T18:30:15.123456Z'
         errors: [ ]
         message: Application information retrieved successfully
+    RootData:
+      properties:
+        message:
+          type: string
+          title: Message
+        version:
+          type: string
+          title: Version
+        environment:
+          type: string
+          title: Environment
+        docs:
+          type: string
+          title: Docs
+        health:
+          type: string
+          title: Health
+      type: object
+      required:
+        - message
+        - version
+        - environment
+        - docs
+        - health
+      title: RootData
+      description: Root endpoint payload.
+    RootResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          $ref: '#/components/schemas/RootData'
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+        - code
+        - data
+        - message
+      title: RootResponse
+      description: Response model for root endpoint.
+    MLRetrainResponse:
+      properties:
+        message:
+          type: string
+          title: Message
+          description: Retrain endpoint status message
+      type: object
+      required:
+        - message
+      title: MLRetrainResponse
+      description: Response model for ML retrain endpoint.
     CacheClearData:
       properties:
         operation:

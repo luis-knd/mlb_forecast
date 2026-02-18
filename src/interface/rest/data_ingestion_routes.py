@@ -34,6 +34,7 @@ from src.interface.rest.generated.models.models import (
     DataIngestionResultDTO,
     FullIngestionResponse,
     InternalServerError,
+    MLRetrainResponse,
     NotFound,
     ServiceUnavailable,
     UnprocessableEntity,
@@ -223,7 +224,7 @@ async def ingest_full_data(
         raise
 
 
-@router.post("/ml/retrain", tags=["ML Model"])
+@router.post("/ml/retrain", tags=["ML Model"], response_model=MLRetrainResponse)
 async def retrain_ml_model():
     """
     Retrain the Machine Learning model with new data.

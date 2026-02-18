@@ -23,6 +23,26 @@ class AppInfoResponse(BaseModel):
     message: str = Field('Application information retrieved successfully', title='Message')
 
 
+class RootData(BaseModel):
+    message: str = Field(..., title='Message')
+    version: str = Field(..., title='Version')
+    environment: str = Field(..., title='Environment')
+    docs: str = Field(..., title='Docs')
+    health: str = Field(..., title='Health')
+
+
+class RootResponse(BaseModel):
+    status: str = Field('success', title='Status')
+    code: int = Field(..., description='HTTP status code', title='Code')
+    data: RootData
+    errors: Optional[List[str]] = Field(None, description='List of error messages', title='Errors')
+    message: str = Field(..., title='Message')
+
+
+class MLRetrainResponse(BaseModel):
+    message: str = Field(..., description='Retrain endpoint status message', title='Message')
+
+
 class CacheClearData(BaseModel):
     operation: str = Field('cache_clear', title='Operation')
     pattern: Optional[str] = Field(None, title='Pattern')
@@ -224,6 +244,56 @@ class TeamListResponse(BaseModel):
     data: List[TeamDTO] = Field(..., description='List of teams', title='Data')
     errors: Optional[List[str]] = Field(None, description='List of error messages', title='Errors')
     message: str = Field(..., description='Success message', title='Message')
+
+
+class PlayerDTO(BaseModel):
+    id: Optional[int] = Field(None, description='Internal player ID', title='Id')
+    mlb_id: int = Field(..., description='Official MLB player ID (personId)', title='Mlb Id')
+    first_name: str = Field(..., title='First Name')
+    last_name: str = Field(..., title='Last Name')
+    full_name: str = Field(..., title='Full Name')
+    position: str = Field(..., title='Position')
+    bats: Optional[str] = Field(None, title='Bats')
+    throws: Optional[str] = Field(None, title='Throws')
+    birth_date: Optional[datetime] = Field(None, title='Birth Date')
+    active: bool = Field(..., title='Active')
+    current_team_id: Optional[int] = Field(None, title='Current Team Id')
+    created_at: Optional[datetime] = Field(None, title='Created At')
+    updated_at: Optional[datetime] = Field(None, title='Updated At')
+
+
+class PlayerDetailResponse(BaseModel):
+    status: str = Field('success', title='Status')
+    code: int = Field(..., description='HTTP status code', title='Code')
+    data: PlayerDTO = Field(..., description='Player details')
+    errors: Optional[List[str]] = Field(None, description='List of error messages', title='Errors')
+    message: str = Field(..., description='Success message', title='Message')
+
+
+class PlayerListResponse(BaseModel):
+    status: str = Field('success', title='Status')
+    code: int = Field(..., description='HTTP status code', title='Code')
+    data: List[PlayerDTO] = Field(..., description='List of players', title='Data')
+    errors: Optional[List[str]] = Field(None, description='List of error messages', title='Errors')
+    message: str = Field(..., description='Success message', title='Message')
+
+
+class PlayerStatsData(BaseModel):
+    player_id: int = Field(..., title='Player Id')
+    stats: str = Field(..., title='Stats')
+    group: str = Field(..., title='Group')
+    season: Optional[int] = Field(None, title='Season')
+    game_type: Optional[str] = Field(None, title='Game Type')
+    days_back: Optional[int] = Field(None, title='Days Back')
+    stats_data: List[Dict[str, Any]] = Field(..., title='Stats Data')
+
+
+class PlayerStatsResponse(BaseModel):
+    status: str = Field('success', title='Status')
+    code: int = Field(..., description='HTTP status code', title='Code')
+    data: PlayerStatsData
+    errors: Optional[List[str]] = Field(None, description='List of error messages', title='Errors')
+    message: Optional[str] = Field(None, title='Message')
 
 
 class HittingStatsDTO(BaseModel):
