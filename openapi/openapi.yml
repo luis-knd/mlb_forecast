@@ -1550,6 +1550,388 @@ paths:
               schema:
                 $ref: '#/components/schemas/ServiceUnavailable'
                 description: Service Unavailable
+  /api/v1/players:
+    get:
+      tags:
+        - Players
+      summary: List Players
+      description: Retrieve players with optional filters and pagination.
+      operationId: list_players_api_v1_players_get
+      parameters:
+        - name: team_id
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: integer
+              - type: 'null'
+            title: Team Id
+          description: Filter by internal team ID
+        - name: position
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            title: Position
+          description: Filter by position abbreviation
+        - name: name
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            title: Name
+          description: Filter by player first or last name
+        - name: active
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: boolean
+              - type: 'null'
+            title: Active
+          description: Filter by active status
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+            title: Limit
+          description: Maximum number of players to return
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+            title: Offset
+          description: Pagination offset
+      responses:
+        '200':
+          description: Response successfully to retrieve players list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerListResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/players/{player_id}:
+    get:
+      tags:
+        - Players
+      summary: Get Player
+      description: Get a player by MLB personId.
+      operationId: get_player_api_v1_players__player_id__get
+      parameters:
+        - name: player_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            title: Player Id
+            description: MLB personId
+          description: MLB personId
+      responses:
+        '200':
+          description: Successfully retrieved player details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerDetailResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/players/{player_id}/stats:
+    get:
+      tags:
+        - Players
+        - Stats
+      summary: Get Player Stats
+      description: Get player statistics from MLB StatsAPI with validated filters.
+      operationId: get_player_stats_api_v1_players__player_id__stats_get
+      parameters:
+        - name: player_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            title: Player Id
+            description: MLB personId
+          description: MLB personId
+        - name: stats
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - season
+              - career
+              - yearByYear
+              - gameLog
+              - statSplits
+              - seasonAdvanced
+            title: Stats
+          description: Stats type
+        - name: group
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - hitting
+              - pitching
+              - fielding
+              - catching
+              - running
+            title: Group
+          description: Stats group
+        - name: season
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: integer
+              - type: 'null'
+            title: Season
+          description: Season year
+        - name: gameType
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            title: Game Type
+          description: Game type (R, S, P, W, A)
+        - name: daysBack
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: integer
+              - type: 'null'
+            title: Days Back
+          description: Rolling days back
+      responses:
+        '200':
+          description: Successfully retrieved player stats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerStatsResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
+  /api/v1/data/ingest/players:
+    post:
+      tags:
+        - Players
+        - Data Ingestion
+      summary: Ingest Players
+      description: Ingest players using one of the supported source modes from MLB StatsAPI.
+      operationId: ingest_players_api_v1_data_ingest_players_post
+      parameters:
+        - name: source
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - team_roster
+              - sport_players
+              - search
+            default: sport_players
+            title: Source
+          description: Source mode for ingestion
+        - name: season
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: integer
+              - type: 'null'
+            title: Season
+          description: Season year
+        - name: teamId
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: integer
+              - type: 'null'
+            title: Team Id
+          description: MLB team ID required when source=team_roster
+        - name: rosterType
+          in: query
+          required: false
+          schema:
+            type: string
+            default: active
+            title: Roster Type
+          description: Roster type used when source=team_roster
+        - name: sportId
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            title: Sport Id
+          description: Sport ID used when source=sport_players
+        - name: q
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            title: Query
+          description: Search query required when source=search
+      responses:
+        '201':
+          description: Successfully ingested player data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerIngestionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+                description: Bad Request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+                description: Not Found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+                description: Unprocessable Entity
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+                description: Internal Server Error
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+                description: Service Unavailable
   /:
     get:
       summary: Root
@@ -2708,6 +3090,248 @@ components:
             created_at: '2025-07-25T17:58:28.656583Z'
         errors: [ ]
         message: Retrieved 2 team successfully
+    PlayerDTO:
+      properties:
+        id:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Id
+          description: Internal player ID
+        mlb_id:
+          type: integer
+          title: Mlb Id
+          description: Official MLB player ID (personId)
+        first_name:
+          type: string
+          title: First Name
+        last_name:
+          type: string
+          title: Last Name
+        full_name:
+          type: string
+          title: Full Name
+        position:
+          type: string
+          title: Position
+        bats:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Bats
+        throws:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Throws
+        birth_date:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Birth Date
+        active:
+          type: boolean
+          title: Active
+        current_team_id:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Current Team Id
+        created_at:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Created At
+        updated_at:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Updated At
+      type: object
+      required:
+        - mlb_id
+        - first_name
+        - last_name
+        - full_name
+        - position
+        - active
+      title: PlayerDTO
+      description: Data Transfer Object for Player entity.
+    PlayerDetailResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          $ref: '#/components/schemas/PlayerDTO'
+          description: Player details
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+          description: Success message
+      type: object
+      required:
+        - code
+        - data
+        - message
+      title: PlayerDetailResponse
+      description: Response model for single player endpoints.
+    PlayerListResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          items:
+            $ref: '#/components/schemas/PlayerDTO'
+          type: array
+          title: Data
+          description: List of players
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+          description: Success message
+      type: object
+      required:
+        - code
+        - data
+        - message
+      title: PlayerListResponse
+      description: Response model for player list endpoints.
+    PlayerStatsData:
+      properties:
+        player_id:
+          type: integer
+          title: Player Id
+        stats:
+          type: string
+          title: Stats
+        group:
+          type: string
+          title: Group
+        season:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Season
+        game_type:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Game Type
+        days_back:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Days Back
+        stats_data:
+          type: array
+          title: Stats Data
+          items:
+            type: object
+            additionalProperties: true
+      type: object
+      required:
+        - player_id
+        - stats
+        - group
+        - stats_data
+      title: PlayerStatsData
+      description: Normalized player stats payload from MLB StatsAPI.
+    PlayerStatsResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          $ref: '#/components/schemas/PlayerStatsData'
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+        - code
+        - data
+      title: PlayerStatsResponse
+      description: Response model for player stats endpoint.
+    PlayerIngestionData:
+      properties:
+        ingestion_summary:
+          $ref: '#/components/schemas/DataIngestionResultDTO'
+          description: Ingestion operation summary
+        sample_players:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerDTO'
+          description: Sample of ingested players
+      type: object
+      required:
+        - ingestion_summary
+      title: PlayerIngestionData
+      description: Data model for player ingestion responses.
+    PlayerIngestionResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          $ref: '#/components/schemas/PlayerIngestionData'
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+        - code
+        - data
+      title: PlayerIngestionResponse
+      description: Response model for player ingestion endpoint.
     TeamSeasonStatsDTO:
       type: object
       title: TeamSeasonStatsDTO

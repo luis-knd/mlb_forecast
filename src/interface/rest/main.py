@@ -191,6 +191,7 @@ app.add_exception_handler(SQLAlchemyError, ExceptionHandlerMiddleware.sqlalchemy
 # Domain exceptions
 for exception_class in [
     DomainExceptions.TeamNotFoundError,
+    DomainExceptions.PlayerNotFoundError,
     DomainExceptions.GameNotFoundError,
     DomainExceptions.InvalidDataError,
     DomainExceptions.ExternalServiceError,

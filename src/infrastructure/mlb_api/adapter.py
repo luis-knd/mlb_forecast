@@ -3,6 +3,7 @@ MLB API adapter implementation.
 This module implements the MLBApiPort interface using httpx for HTTP requests.
 """
 
+import asyncio
 import logging
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional
@@ -29,6 +30,8 @@ class MLBApiAdapter(MLBApiPort):
         self.base_url = settings.MLB_API_BASE_URL
         self.api_version = settings.MLB_API_VERSION
         self.timeout = settings.MLB_API_TIMEOUT
+        self.max_retries = settings.MLB_API_MAX_RETRIES
+        self.backoff_factor = settings.MLB_API_BACKOFF_FACTOR
 
     async def get_teams(self) -> List[MLBTeamDTO]:
         """Get all MLB teams from the API."""
@@ -123,10 +126,17 @@ class MLBApiAdapter(MLBApiPort):
             logger.warning(f"Player with MLB ID {mlb_player_id} not found")
             return None
 
-    async def get_players_by_team(self, mlb_team_id: int) -> List[MLBPlayerDTO]:
-        """Get all players for a specific team."""
+    async def get_players_by_team(
+        self,
+        mlb_team_id: int,
+        season: Optional[int] = None,
+        roster_type: str = "active",
+    ) -> List[MLBPlayerDTO]:
+        """Get players for a specific team/season and roster type."""
         endpoint = f"/{self.api_version}/teams/{mlb_team_id}/roster"
-        params = {"rosterType": "active"}
+        params: Dict[str, Any] = {"rosterType": roster_type}
+        if season is not None:
+            params["season"] = season
 
         try:
             data = await self._make_request(endpoint, params)
@@ -147,21 +157,61 @@ class MLBApiAdapter(MLBApiPort):
             logger.warning(f"Roster for team with MLB ID {mlb_team_id} not found")
             return []
 
-    async def get_player_stats(self, mlb_player_id: int, season: int) -> Optional[Dict[str, Any]]:
-        """Get statistics for a specific player and season."""
-        endpoint = f"/{self.api_version}/people/{mlb_player_id}/stats"
-        params = {
-            "season": season,
-            "sportId": 1,
-            "group": "hitting,pitching",
-            "stats": "season",
-        }
+    async def get_players_by_sport(self, sport_id: int = 1, season: Optional[int] = None) -> List[MLBPlayerDTO]:
+        """Get players by sport and optional season."""
+        endpoint = f"/{self.api_version}/sports/{sport_id}/players"
+        params: Dict[str, Any] = {}
+        if season is not None:
+            params["season"] = season
 
         try:
             data = await self._make_request(endpoint, params)
-            return self._transform_player_stats_data(data, mlb_player_id, season)
+            people_data = data.get("people", [])
+            return [self._transform_player_data(player) for player in people_data]
         except MLBApiException:
-            logger.warning(f"Stats for player with MLB ID {mlb_player_id} and season {season} not found")
+            logger.warning(f"Players not found for sport={sport_id}, season={season}")
+            return []
+
+    async def get_player_stats(
+        self,
+        mlb_player_id: int,
+        stats: str,
+        group: str,
+        season: Optional[int] = None,
+        game_type: Optional[str] = None,
+        days_back: Optional[int] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Get player statistics using StatsAPI filters."""
+        endpoint = f"/{self.api_version}/people/{mlb_player_id}/stats"
+        params: Dict[str, Any] = {"stats": stats, "group": group}
+        if season is not None:
+            params["season"] = season
+        if game_type:
+            params["gameType"] = game_type
+        if days_back is not None:
+            params["daysBack"] = days_back
+
+        try:
+            data = await self._make_request(endpoint, params)
+            return self._transform_player_stats_data(
+                stats_data=data,
+                mlb_player_id=mlb_player_id,
+                stats=stats,
+                group=group,
+                season=season,
+                game_type=game_type,
+                days_back=days_back,
+            )
+        except MLBApiException:
+            logger.warning(
+                "Stats not found for player_id=%s, stats=%s, group=%s, season=%s, game_type=%s, days_back=%s",
+                mlb_player_id,
+                stats,
+                group,
+                season,
+                game_type,
+                days_back,
+            )
             return None
 
     async def search_players(self, query: str) -> List[MLBPlayerDTO]:
@@ -179,23 +229,35 @@ class MLBApiAdapter(MLBApiPort):
             return []
 
     async def _make_request(self, endpoint: str, params: Optional[Dict] = None) -> Dict[str, Any]:
-        """Make a request to the MLB API."""
+        """Make a request to the MLB API with retry/backoff for transient failures."""
         url = f"{self.base_url}{endpoint}"
+        attempts = self.max_retries + 1
 
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.get(url, params=params or {})
-                response.raise_for_status()
-                return response.json()
-        except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error in {url}: {e.response.status_code}")
-            raise MLBApiException(f"HTTP error: {e.response.status_code}")
-        except httpx.RequestError as e:
-            logger.error(f"Connection error in {url}: {e}")
-            raise MLBApiException(f"Connection error: {e}")
-        except Exception as e:
-            logger.error(f"Unexpected error in {url}: {e}")
-            raise MLBApiException(f"Unexpected error: {e}")
+        for attempt in range(1, attempts + 1):
+            try:
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    response = await client.get(url, params=params or {})
+                    response.raise_for_status()
+                    return response.json()
+            except httpx.HTTPStatusError as error:
+                status_code = error.response.status_code
+                should_retry = status_code in {429, 500, 502, 503, 504}
+                if should_retry and attempt < attempts:
+                    await asyncio.sleep(self.backoff_factor * (2 ** (attempt - 1)))
+                    continue
+                logger.error("HTTP error in %s: %s", url, status_code)
+                raise MLBApiException(f"HTTP error: {status_code}") from error
+            except httpx.RequestError as error:
+                if attempt < attempts:
+                    await asyncio.sleep(self.backoff_factor * (2 ** (attempt - 1)))
+                    continue
+                logger.error("Connection error in %s: %s", url, error)
+                raise MLBApiException(f"Connection error: {error}") from error
+            except Exception as error:
+                logger.error("Unexpected error in %s: %s", url, error)
+                raise MLBApiException(f"Unexpected error: {error}") from error
+
+        raise MLBApiException(f"Unexpected retry exhaustion for endpoint: {endpoint}")
 
     def _transform_team_data(self, team_data: Dict[str, Any]) -> MLBTeamDTO:
         """Transform team data from the MLB API to match our domain model."""
@@ -507,11 +569,24 @@ class MLBApiAdapter(MLBApiPort):
             except (ValueError, AttributeError):
                 logger.warning(f"Invalid birth date format: {player_data.get('birthDate')}")
 
+        first_name = player_data.get("firstName", "")
+        last_name = player_data.get("lastName", "")
+        if (not first_name or not last_name) and player_data.get("fullName"):
+            full_name = str(player_data.get("fullName", "")).strip()
+            split_name = full_name.split()
+            if split_name:
+                first_name = first_name or split_name[0]
+                last_name = last_name or " ".join(split_name[1:]) if len(split_name) > 1 else ""
+
+        position = player_data.get("position", "")
+        if isinstance(position, dict):
+            position = position.get("abbreviation", "") or position.get("code", "") or position.get("name", "")
+
         return MLBPlayerDTO(
             id=int(player_data.get("id", 0)),
-            first_name=player_data.get("firstName", ""),
-            last_name=player_data.get("lastName", ""),
-            position=player_data.get("position", ""),
+            first_name=first_name,
+            last_name=last_name,
+            position=position,
             bats=player_data.get("batSide", {}).get("code", ""),
             throws=player_data.get("pitchHand", {}).get("code", ""),
             birth_date=birth_date,
@@ -520,12 +595,26 @@ class MLBApiAdapter(MLBApiPort):
         )
 
     def _transform_player_stats_data(
-        self, stats_data: Dict[str, Any], mlb_player_id: int, season: int
+        self,
+        stats_data: Dict[str, Any],
+        mlb_player_id: int,
+        stats: str,
+        group: str,
+        season: Optional[int] = None,
+        game_type: Optional[str] = None,
+        days_back: Optional[int] = None,
     ) -> Dict[str, Any]:
-        """Transform player stats data from the MLB API to match our domain model."""
-        # This would be a more complex transformation depending on the specific player stats needed
-        # For now, we'll return a simplified version
-        return {"player_id": mlb_player_id, "season": season, "stats_data": stats_data}
+        """Transform player stats data from the MLB API to a normalized response payload."""
+        stats_blocks = stats_data.get("stats", [])
+        return {
+            "player_id": mlb_player_id,
+            "stats": stats,
+            "group": group,
+            "season": season,
+            "game_type": game_type,
+            "days_back": days_back,
+            "stats_data": stats_blocks,
+        }
 
     def _transform_fielding_stats_data(
         self, stats_data: Dict[str, Any], mlb_team_id: int, season: int

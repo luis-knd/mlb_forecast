@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from src.interface.rest.data_ingestion_routes import router as data_ingestion_router
 from src.interface.rest.game_routes import router as game_router
+from src.interface.rest.player_routes import router as player_router
 from src.interface.rest.prediction_routes import router as prediction_router
 from src.interface.rest.system_routes import router as system_router
 from src.interface.rest.team_routes import router as team_router
@@ -12,6 +13,7 @@ router = APIRouter()
 router.include_router(team_router, tags=["Teams"])
 router.include_router(team_stats_retrieval_router, tags=["Teams", "Stats"])
 router.include_router(game_router, tags=["Games"])
+router.include_router(player_router, tags=["Players"])
 router.include_router(prediction_router, tags=["Predictions"])
 router.include_router(system_router, tags=["System"])
 router.include_router(data_ingestion_router, tags=["Data Ingestion"])
