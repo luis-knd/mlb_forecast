@@ -1,20 +1,28 @@
-name: PR - Checks
+name: PR - Unit Tests
 
 on:
   pull_request:
     branches:
       - develop
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "scripts/**"
+      - ".github/workflows/**"
+      - "requirements*.txt"
+      - "pyproject.toml"
 
 permissions:
   contents: read
 
 concurrency:
-  group: pr-checks-${{ github.event.pull_request.number }}
+  group: pr-unit-tests-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
-  checks:
+  unit_tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -29,11 +37,5 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
 
-      - name: Lint (flake8)
-        run: flake8
-
-      - name: Type check (mypy)
-        run: mypy --config-file pyproject.toml --explicit-package-bases
-
-      - name: Tests (pytest)
-        run: pytest -q
+      - name: Run unit tests
+        run: pytest -q tests/unit

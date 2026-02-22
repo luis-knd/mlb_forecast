@@ -215,64 +215,60 @@ class UpdatePredictionWithResultUseCase:
         Returns:
             Updated Prediction entity or None if update failed
         """
-        # Get the prediction
         prediction = await self.prediction_repository.get_by_id(prediction_id)
-        if not prediction:
+        if prediction is None:
             return None
 
-        # Get the game
-        game = await self.game_repository.get_by_id(prediction.game_id)
-        if not game:
+        game = await self._get_completed_game(prediction.game_id)
+        if game is None:
             return None
 
-        # Check if game is completed
-        if not game.is_completed():
-            return None
+        actual_result = self._build_actual_result(game)
+        accuracy = self._calculate_accuracy(prediction, game)
+        updated_prediction = await self.prediction_repository.update_with_actual_result(
+            prediction_id, actual_result, accuracy
+        )
+        await self.cache.clear(pattern=f"predictions:game:{prediction.game_id}*")
+        return updated_prediction
 
-        # Prepare actual result data
-        actual_result = {
+    async def _get_completed_game(self, game_id: int) -> Optional[Any]:
+        game = await self.game_repository.get_by_id(game_id)
+        if game is None or not game.is_completed():
+            return None
+        return game
+
+    @staticmethod
+    def _build_actual_result(game: Any) -> Dict[str, Any]:
+        return {
             "home_score": game.home_score,
             "away_score": game.away_score,
             "winning_team_id": game.winning_team_id,
         }
 
-        # Calculate accuracy based on prediction type
-        accuracy = 0.0
+    def _calculate_accuracy(self, prediction: Prediction, game: Any) -> float:
         if prediction.prediction_type == "winner":
-            # Check if the predicted winner matches the actual winner
-            predicted_winner = prediction.get_predicted_winner()
-            if (
-                predicted_winner == "home"
-                and game.home_score is not None
-                and game.away_score is not None
-                and game.home_score > game.away_score
-            ):
-                accuracy = 1.0
-            elif (
-                predicted_winner == "away"
-                and game.home_score is not None
-                and game.away_score is not None
-                and game.away_score > game.home_score
-            ):
-                accuracy = 1.0
-        elif (
-            prediction.prediction_type == "total_runs"
-            and prediction.total_runs_prediction is not None
-            and game.home_score is not None
-            and game.away_score is not None
-        ):
-            # Calculate accuracy based on how close the predicted total runs is to the actual total
-            actual_total = game.home_score + game.away_score
-            error = abs(prediction.total_runs_prediction - actual_total)
-            # Simple accuracy formula: 1 - (error / actual_total), capped at 0
-            accuracy = max(0.0, 1.0 - (error / actual_total))
+            return self._winner_accuracy(prediction, game)
+        if prediction.prediction_type == "total_runs":
+            return self._total_runs_accuracy(prediction, game)
+        return 0.0
 
-        # Update prediction with actual result
-        updated_prediction = await self.prediction_repository.update_with_actual_result(
-            prediction_id, actual_result, accuracy
-        )
+    @staticmethod
+    def _winner_accuracy(prediction: Prediction, game: Any) -> float:
+        if game.home_score is None or game.away_score is None:
+            return 0.0
+        predicted_winner = prediction.get_predicted_winner()
+        if predicted_winner == "home" and game.home_score > game.away_score:
+            return 1.0
+        if predicted_winner == "away" and game.away_score > game.home_score:
+            return 1.0
+        return 0.0
 
-        # Clear cache for predictions
-        await self.cache.clear(pattern=f"predictions:game:{prediction.game_id}*")
-
-        return updated_prediction
+    @staticmethod
+    def _total_runs_accuracy(prediction: Prediction, game: Any) -> float:
+        if prediction.total_runs_prediction is None or game.home_score is None or game.away_score is None:
+            return 0.0
+        actual_total = game.home_score + game.away_score
+        if actual_total <= 0:
+            return 1.0 if prediction.total_runs_prediction == actual_total else 0.0
+        error = abs(prediction.total_runs_prediction - actual_total)
+        return max(0.0, 1.0 - (error / actual_total))

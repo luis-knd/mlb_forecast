@@ -200,16 +200,12 @@ async def ingest_players(
 ) -> JSONResponse:
     start_time = datetime.now()
     current_year = datetime.now().year
-
     if season is not None and (season < 1876 or season > current_year + 1):
         raise DomainExceptions.InvalidDataError(f"season must be between 1876 and {current_year + 1}")
-
     if team_id is not None and team_id <= 0:
         raise DomainExceptions.InvalidDataError("teamId must be a positive integer")
-
     if sport_id <= 0:
         raise DomainExceptions.InvalidDataError("sportId must be a positive integer")
-
     try:
         players = await use_cases["ingest_players_by_source"].execute(
             source=source,
@@ -221,10 +217,8 @@ async def ingest_players(
         )
     except ValueError as error:
         raise DomainExceptions.InvalidDataError(str(error)) from error
-
     end_time = datetime.now()
     duration = (end_time - start_time).total_seconds()
-
     ingestion_result = DataIngestionResultDTO(
         operation="player_ingestion",
         records_processed=len(players),
@@ -234,7 +228,6 @@ async def ingest_players(
         duration_seconds=duration,
         timestamp=end_time,
     )
-
     return ResponseHandler.created(
         data={
             "ingestion_summary": ingestion_result,

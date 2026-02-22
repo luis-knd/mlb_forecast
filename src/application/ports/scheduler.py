@@ -26,7 +26,13 @@ class SchedulerPort(ABC):
         pass
 
     @abstractmethod
-    async def add_job(self, job_id: str, func: Any, trigger_type: str, **trigger_args: Any) -> None:
+    async def add_job(
+        self,
+        job_id: str,
+        func: Any,
+        trigger_type: str,
+        **_trigger_args: Any,
+    ) -> None:
         """
         Add a job to the jobs.
 
@@ -34,7 +40,7 @@ class SchedulerPort(ABC):
             job_id: Unique identifier for the job
             func: Function to execute
             trigger_type: Type of trigger (interval, cron, date)
-            trigger_args: Arguments for the trigger
+            _trigger_args: Arguments for the trigger
         """
         pass
 

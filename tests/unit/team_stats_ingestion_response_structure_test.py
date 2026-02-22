@@ -7,7 +7,10 @@ from src.interface.rest.response_handler import ResponseHandler
 @pytest.mark.parametrize(
     "data, message",
     [
-        ({"hitting_stats_count": 30, "season": 2025}, "Team hitting statistics ingested successfully for season 2025"),
+        (
+            {"hitting_stats_count": 30, "season": 2025},
+            "Team hitting statistics ingested successfully for season 2025",
+        ),
         (
             {"pitching_stats_count": 28, "season": 2025},
             "Team pitching statistics ingested successfully for season 2025",

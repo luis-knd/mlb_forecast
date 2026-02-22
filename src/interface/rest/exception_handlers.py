@@ -10,6 +10,13 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
+from src.domain.exceptions import (
+    ExternalServiceError,
+    GameNotFoundError,
+    InvalidDataError,
+    PlayerNotFoundError,
+    TeamNotFoundError,
+)
 from src.interface.rest.response_handler import ResponseHandler
 
 
@@ -127,39 +134,11 @@ class ExceptionHandlerMiddleware:
 class DomainExceptions:
     """Domain-specific exceptions for business logic errors."""
 
-    class TeamNotFoundError(Exception):
-        """Raised when a team is not found."""
-
-        def __init__(self, team_id: int) -> None:
-            self.team_id = team_id
-            super().__init__(f"Team with ID {team_id} not found")
-
-    class PlayerNotFoundError(Exception):
-        """Raised when a player is not found."""
-
-        def __init__(self, player_id: int) -> None:
-            self.player_id = player_id
-            super().__init__(f"Player with ID {player_id} not found")
-
-    class GameNotFoundError(Exception):
-        """Raised when a game is not found."""
-
-        def __init__(self, game_id: int) -> None:
-            self.game_id = game_id
-            super().__init__(f"Game with ID {game_id} not found")
-
-    class InvalidDataError(Exception):
-        """Raised when invalid data is provided."""
-
-        def __init__(self, message: str) -> None:
-            super().__init__(message)
-
-    class ExternalServiceError(Exception):
-        """Raised when external service fails."""
-
-        def __init__(self, service: str, message: str) -> None:
-            self.service = service
-            super().__init__(f"{service} service error: {message}")
+    TeamNotFoundError = TeamNotFoundError
+    PlayerNotFoundError = PlayerNotFoundError
+    GameNotFoundError = GameNotFoundError
+    InvalidDataError = InvalidDataError
+    ExternalServiceError = ExternalServiceError
 
 
 async def domain_exception_handler(request: Request, exc: Exception) -> Response:

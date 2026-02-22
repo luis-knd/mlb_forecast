@@ -191,71 +191,34 @@ class TeamStatsRepository(TeamStatsRepositoryPort):
         return team_stats_list
 
     async def save(self, team_stats: TeamStats) -> TeamStats:
-        """
-        Save team statistics (create or update).
-        """
-        # Check if team stats already exist for this team and season
-        # We need to check each model individually or assume they exist together
-        # For simplicity, we'll check hitting stats as the anchor
-
-        # 1. Hitting Stats
-        hitting_stats = (
-            self.session.query(HittingStatsModel)
-            .filter(HittingStatsModel.team_id == team_stats.team_id, HittingStatsModel.season == team_stats.season)
-            .first()
-        )
-
-        if not hitting_stats:
-            hitting_stats = self.mapper.update_hitting_model(team_stats)
-            self.session.add(hitting_stats)
-        else:
-            self.mapper.update_hitting_model(team_stats, hitting_stats)
-
-        # 2. Pitching Stats
-        pitching_stats = (
-            self.session.query(PitchingStatsModel)
-            .filter(PitchingStatsModel.team_id == team_stats.team_id, PitchingStatsModel.season == team_stats.season)
-            .first()
-        )
-
-        if not pitching_stats:
-            pitching_stats = self.mapper.update_pitching_model(team_stats)
-            self.session.add(pitching_stats)
-        else:
-            self.mapper.update_pitching_model(team_stats, pitching_stats)
-
-        # 3. Fielding Stats
-        fielding_stats = (
-            self.session.query(FieldingStatsModel)
-            .filter(FieldingStatsModel.team_id == team_stats.team_id, FieldingStatsModel.season == team_stats.season)
-            .first()
-        )
-
-        if not fielding_stats:
-            fielding_stats = self.mapper.update_fielding_model(team_stats)
-            self.session.add(fielding_stats)
-        else:
-            self.mapper.update_fielding_model(team_stats, fielding_stats)
-
-        # Commit transaction
+        hitting_stats = self._upsert_model(HittingStatsModel, self.mapper.update_hitting_model, team_stats)
+        pitching_stats = self._upsert_model(PitchingStatsModel, self.mapper.update_pitching_model, team_stats)
+        fielding_stats = self._upsert_model(FieldingStatsModel, self.mapper.update_fielding_model, team_stats)
         try:
             self.session.commit()
-
-            # Refresh to get IDs and timestamps
             self.session.refresh(hitting_stats)
             self.session.refresh(pitching_stats)
             self.session.refresh(fielding_stats)
-
-            # Update entity with ID and timestamps from hitting stats (as anchor)
             team_stats.id = hitting_stats.id
             team_stats.created_at = hitting_stats.created_at
             team_stats.updated_at = hitting_stats.updated_at
-
             return team_stats
-
         except Exception as e:
             self.session.rollback()
             raise e
+
+    def _upsert_model(self, model_class, model_updater, team_stats: TeamStats):
+        model = (
+            self.session.query(model_class)
+            .filter(model_class.team_id == team_stats.team_id, model_class.season == team_stats.season)
+            .first()
+        )
+        if model is None:
+            model = model_updater(team_stats)
+            self.session.add(model)
+            return model
+        model_updater(team_stats, model)
+        return model
 
     async def update_stats(self, stats_id: int, updated_stats: Dict[str, Any]) -> Optional[TeamStats]:
         """

@@ -5,7 +5,7 @@ This module implements the CachePort interface using Redis.
 
 import logging
 import pickle
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Protocol
 
 import redis.asyncio as redis
 
@@ -21,7 +21,84 @@ class CacheException(Exception):
     pass
 
 
-class RedisAdapter(CachePort):
+class _RedisIntrospectionContext(Protocol):
+    redis_client: Optional[redis.Redis]
+
+    async def connect(self) -> None: ...
+
+
+class _RedisIntrospectionMixin:
+    async def get_stats(self: _RedisIntrospectionContext) -> Dict[str, Any]:
+        """Get cache statistics."""
+        if not self.redis_client:
+            await self.connect()
+
+        try:
+            if self.redis_client:
+                info: Dict[str, Any] = dict(await self.redis_client.info())
+                hits: int = info.get("keyspace_hits", 0)
+                misses: int = info.get("keyspace_misses", 0)
+                total: int = hits + misses
+                hit_rate_percentage: float = round((hits / total) * 100, 2) if total > 0 else 0.0
+                return {
+                    "connected_clients": info.get("connected_clients", 0),
+                    "used_memory": info.get("used_memory", 0),
+                    "used_memory_human": info.get("used_memory_human", "0B"),
+                    "used_memory_peak": info.get("used_memory_peak", 0),
+                    "used_memory_peak_human": info.get("used_memory_peak_human", "0B"),
+                    "total_connections_received": info.get("total_connections_received", 0),
+                    "total_commands_processed": info.get("total_commands_processed", 0),
+                    "keyspace_hits": hits,
+                    "keyspace_misses": misses,
+                    "expired_keys": info.get("expired_keys", 0),
+                    "evicted_keys": info.get("evicted_keys", 0),
+                    "uptime_in_seconds": info.get("uptime_in_seconds", 0),
+                    "redis_version": info.get("redis_version", "unknown"),
+                    "hit_rate_percentage": hit_rate_percentage,
+                }
+            return {}
+        except Exception as e:
+            logger.error(f"Error getting cache statistics: {e}")
+            return {"error": str(e)}
+
+    async def count_keys(self: _RedisIntrospectionContext) -> Optional[int]:
+        """Return total amount of keys in the selected Redis database."""
+        if not self.redis_client:
+            await self.connect()
+
+        try:
+            if not self.redis_client:
+                return None
+            return int(await self.redis_client.dbsize())
+        except Exception as e:
+            logger.error(f"Error counting keys in cache: {e}")
+            return None
+
+    async def list_keys(self: _RedisIntrospectionContext, pattern: str = "*", limit: int = 100) -> List[str]:
+        """Return up to `limit` keys matching `pattern` using SCAN to avoid blocking."""
+        if not self.redis_client:
+            await self.connect()
+
+        keys: List[str] = []
+        try:
+            if not self.redis_client:
+                return keys
+
+            async for key in self.redis_client.scan_iter(match=pattern, count=min(limit, 1000)):
+                try:
+                    normalized_key = key.decode("utf-8") if isinstance(key, (bytes, bytearray)) else str(key)
+                except Exception:
+                    normalized_key = str(key)
+                keys.append(normalized_key)
+                if len(keys) >= limit:
+                    break
+            return keys
+        except Exception as e:
+            logger.error(f"Error listing keys with pattern {pattern}: {e}")
+            return keys
+
+
+class RedisAdapter(_RedisIntrospectionMixin, CachePort):
     """Implementation of the CachePort interface using Redis."""
 
     def __init__(self) -> None:
@@ -140,9 +217,7 @@ class RedisAdapter(CachePort):
             if not self.redis_client:
                 return 0
 
-            keys: List[str] = []
-            async for key in self.redis_client.scan_iter(match=pattern):
-                keys.append(key)
+            keys: List[str] = [key async for key in self.redis_client.scan_iter(match=pattern)]
 
             if not keys:
                 return 0
@@ -301,65 +376,3 @@ class RedisAdapter(CachePort):
         except Exception as e:
             logger.error(f"Error decrementing {key}: {e}")
             return 0
-
-    async def get_stats(self) -> Dict[str, Any]:
-        """Get cache statistics."""
-        if not self.redis_client:
-            await self.connect()
-
-        try:
-            if self.redis_client:
-                info: Dict[str, Any] = dict(await self.redis_client.info())
-
-                # Calculate hit rate
-                hits: int = info.get("keyspace_hits", 0)
-                misses: int = info.get("keyspace_misses", 0)
-                total: int = hits + misses
-                hit_rate: float = round((hits / total) * 100, 2) if total > 0 else 0.0
-
-                return {
-                    "used_memory": info.get("used_memory_human", "N/A"),
-                    "connected_clients": info.get("connected_clients", 0),
-                    "total_commands_processed": info.get("total_commands_processed", 0),
-                    "keyspace_hits": hits,
-                    "keyspace_misses": misses,
-                    "hit_rate": hit_rate,
-                }
-            return {}
-
-        except Exception as e:
-            logger.error(f"Error getting cache statistics: {e}")
-            return {"error": str(e)}
-
-    async def list_keys(self, pattern: str = "*", limit: int = 100) -> List[str]:
-        """Return up to `limit` keys matching `pattern` using SCAN to avoid blocking.
-
-        Args:
-            pattern: Match pattern, e.g. 'mlb:*' (defaults to '*')
-            limit: Maximum number of keys to return (defaults to 100)
-
-        Returns:
-            List of key names as strings (UTF-8 decoded)
-        """
-        if not self.redis_client:
-            await self.connect()
-
-        keys: List[str] = []
-        try:
-            if not self.redis_client:
-                return keys
-
-            # Use non-blocking iterator
-            async for key in self.redis_client.scan_iter(match=pattern, count=min(limit, 1000)):
-                # Keys are bytes because decode_responses=False
-                try:
-                    keys.append(key.decode("utf-8") if isinstance(key, (bytes, bytearray)) else str(key))
-                except Exception:
-                    keys.append(str(key))
-                if len(keys) >= limit:
-                    break
-
-            return keys
-        except Exception as e:
-            logger.error(f"Error listing keys with pattern {pattern}: {e}")
-            return keys

@@ -3,7 +3,7 @@ Use cases for team statistics ingestion operations.
 These define the application's business logic for ingesting team statistics from the MLB API.
 """
 
-from typing import Dict, List
+from typing import Any, Dict, Iterable, List
 
 from src.application.ports.catching_stats_repository import CatchingStatsRepositoryPort
 from src.application.ports.fielding_stats_repository import FieldingStatsRepositoryPort
@@ -15,6 +15,88 @@ from src.domain.entities.catching_stats import CatchingStats
 from src.domain.entities.fielding_stats import FieldingStats
 from src.domain.entities.hitting_stats import HittingStats
 from src.domain.entities.pitching_stats import PitchingStats
+
+
+def _build_team_mapping(teams: Iterable[Any]) -> Dict[int, int]:
+    return {team.mlb_id: team.id for team in teams if team.id is not None}
+
+
+def _iter_team_stat_splits(
+    stats_data: Dict[str, Any],
+    team_mapping: Dict[int, int],
+) -> Iterable[tuple[int, Dict[str, Any]]]:
+    for group in stats_data.get("stats", []):
+        for split in group.get("splits", []):
+            mlb_team_id = split.get("team", {}).get("id")
+            team_id = team_mapping.get(mlb_team_id)
+            if team_id is None:
+                continue
+            yield team_id, split.get("stat", {})
+
+
+PITCHING_INT_FIELDS = {
+    "games_played": "gamesPlayed",
+    "wins": "wins",
+    "losses": "losses",
+    "saves": "saves",
+    "save_opportunities": "saveOpportunities",
+    "holds": "holds",
+    "blown_saves": "blownSaves",
+    "batters_faced": "battersFaced",
+    "hits_allowed": "hits",
+    "runs_allowed": "runs",
+    "earned_runs": "earnedRuns",
+    "home_runs_allowed": "homeRuns",
+    "strikeouts": "strikeOuts",
+    "base_on_balls": "baseOnBalls",
+    "intentional_walks": "intentionalWalks",
+    "hit_batsmen": "hitBatsmen",
+    "wild_pitches": "wildPitches",
+    "balks": "balks",
+    "number_of_pitches": "numberOfPitches",
+    "complete_games": "completeGames",
+    "shutouts": "shutouts",
+    "games_started": "gamesStarted",
+    "ground_outs": "groundOuts",
+    "air_outs": "airOuts",
+    "doubles": "doubles",
+    "triples": "triples",
+    "at_bats": "atBats",
+    "outs": "outs",
+    "strikes": "strikes",
+    "pickoffs": "pickoffs",
+    "total_bases": "totalBases",
+    "games_finished": "gamesFinished",
+    "catchers_interference": "catchersInterference",
+    "sacrifice_bunts": "sacBunts",
+    "sacrifice_flies": "sacFlies",
+    "ground_into_double_play": "groundIntoDoublePlay",
+    "caught_stealing": "caughtStealing",
+    "inherited_runners": "inheritedRunners",
+    "inherited_runners_scored": "inheritedRunnersScored",
+    "quality_starts": "qualityStarts",
+}
+
+PITCHING_FLOAT_FIELDS = {
+    "innings_pitched": "inningsPitched",
+    "earned_run_average": "era",
+    "whip": "whip",
+    "strikeouts_per_nine": "strikeoutsPer9Inn",
+    "walks_per_nine": "walksPer9Inn",
+    "hits_per_nine": "hitsPer9Inn",
+    "home_runs_per_nine": "homeRunsPer9",
+    "strikeout_to_walk_ratio": "strikeoutWalkRatio",
+    "ground_outs_to_airouts": "groundOutsToAirouts",
+    "pitches_per_inning": "pitchesPerInning",
+    "batting_average_against": "avg",
+    "on_base_percentage": "obp",
+    "slugging_percentage": "slg",
+    "ops": "ops",
+    "stolen_base_percentage": "stolenBasePercentage",
+    "strike_percentage": "strikePercentage",
+    "win_percentage": "winPercentage",
+    "runs_scored_per_nine": "runsScoredPer9",
+}
 
 
 class IngestTeamHittingStatsUseCase:
@@ -40,88 +122,65 @@ class IngestTeamHittingStatsUseCase:
         Returns:
             List of ingested HittingStats entities
         """
-        # Get all teams for mapping MLB IDs to our team IDs
         teams = await self.team_repository.list_all()
-        team_mapping = {team.mlb_id: team.id for team in teams}
-
-        # Get stats data from MLB API for the hitting group
+        team_mapping = _build_team_mapping(teams)
         stats_data = await self.mlb_api.get_team_stats(season=season, group="hitting")
         if not stats_data:
             return []
-
-        # Extract hitting stats from the API response
         ingested_stats = []
-        stats_groups = stats_data.get("stats", [])
-        for group in stats_groups:
-            splits = group.get("splits", [])
-            for split in splits:
-                # Get team info from the split
-                team_info = split.get("team", {})
-                mlb_team_id = team_info.get("id")
-
-                # Skip if we don't have this team in our database
-                if mlb_team_id not in team_mapping:
-                    continue
-
-                team_id = team_mapping[mlb_team_id]
-                stat_data = split.get("stat", {})
-
-                # Validate that we have meaningful statistical data
-                # Skip teams with no games played or completely empty stats
-                games_played = self._safe_int_conversion(stat_data.get("gamesPlayed"))
-                at_bats = self._safe_int_conversion(stat_data.get("atBats"))
-
-                # For future seasons or teams with no data, skip the ingestion
-                # rather than creating records with all zeros
-                if games_played == 0 and at_bats == 0:
-                    continue
-
-                # Validate team_id is not None before creating HittingStats
-                if team_id is None:
-                    continue
-
-                # Create HittingStats entity with improved data validation
-                hitting_stats = HittingStats.create(
-                    team_id=team_id,
-                    season=season,
-                    games_played=games_played,
-                    at_bats=at_bats,
-                    plate_appearances=self._safe_int_conversion(stat_data.get("plateAppearances")),
-                    hits=self._safe_int_conversion(stat_data.get("hits")),
-                    doubles=self._safe_int_conversion(stat_data.get("doubles")),
-                    triples=self._safe_int_conversion(stat_data.get("triples")),
-                    home_runs=self._safe_int_conversion(stat_data.get("homeRuns")),
-                    runs_scored=self._safe_int_conversion(stat_data.get("runs")),
-                    runs_batted_in=self._safe_int_conversion(stat_data.get("rbi")),
-                    stolen_bases=self._safe_int_conversion(stat_data.get("stolenBases")),
-                    caught_stealing=self._safe_int_conversion(stat_data.get("caughtStealing")),
-                    base_on_balls=self._safe_int_conversion(stat_data.get("baseOnBalls")),
-                    strikeouts=self._safe_int_conversion(stat_data.get("strikeOuts")),
-                    hit_by_pitch=self._safe_int_conversion(stat_data.get("hitByPitch")),
-                    sacrifice_hits=self._safe_int_conversion(stat_data.get("sacBunts")),
-                    sacrifice_flies=self._safe_int_conversion(stat_data.get("sacFlies")),
-                    ground_into_double_play=self._safe_int_conversion(stat_data.get("groundIntoDoublePlay")),
-                    left_on_base=self._safe_int_conversion(stat_data.get("leftOnBase")),
-                    batting_average=self._safe_float_conversion(stat_data.get("avg")),
-                    on_base_percentage=self._safe_float_conversion(stat_data.get("obp")),
-                    slugging_percentage=self._safe_float_conversion(stat_data.get("slg")),
-                    ops=self._safe_float_conversion(stat_data.get("ops")),
-                    babip=self._safe_float_conversion(stat_data.get("babip")),
-                    total_bases=self._safe_int_conversion(stat_data.get("totalBases")),
-                    at_bats_per_home_run=self._safe_float_conversion(stat_data.get("atBatsPerHomeRun")),
-                    stolen_base_percentage=self._safe_float_conversion(stat_data.get("stolenBasePercentage")),
-                    ground_outs=self._safe_int_conversion(stat_data.get("groundOuts")),
-                    air_outs=self._safe_int_conversion(stat_data.get("airOuts")),
-                    ground_outs_to_airouts=self._safe_float_conversion(stat_data.get("groundOutsToAirouts")),
-                    number_of_pitches=self._safe_int_conversion(stat_data.get("numberOfPitches")),
-                    intentional_walks=self._safe_int_conversion(stat_data.get("intentionalWalks")),
-                )
-
-                # Save to repository
-                saved_stats = await self.hitting_stats_repository.save(hitting_stats)
-                ingested_stats.append(saved_stats)
-
+        for team_id, stat_data in _iter_team_stat_splits(stats_data, team_mapping):
+            games_played = self._safe_int_conversion(stat_data.get("gamesPlayed"))
+            at_bats = self._safe_int_conversion(stat_data.get("atBats"))
+            if games_played == 0 and at_bats == 0:
+                continue
+            hitting_stats = self._build_hitting_stats(team_id, season, stat_data, games_played, at_bats)
+            saved_stats = await self.hitting_stats_repository.save(hitting_stats)
+            ingested_stats.append(saved_stats)
         return ingested_stats
+
+    def _build_hitting_stats(
+        self,
+        team_id: int,
+        season: int,
+        stat_data: Dict[str, Any],
+        games_played: int,
+        at_bats: int,
+    ) -> HittingStats:
+        return HittingStats.create(
+            team_id=team_id,
+            season=season,
+            games_played=games_played,
+            at_bats=at_bats,
+            plate_appearances=self._safe_int_conversion(stat_data.get("plateAppearances")),
+            hits=self._safe_int_conversion(stat_data.get("hits")),
+            doubles=self._safe_int_conversion(stat_data.get("doubles")),
+            triples=self._safe_int_conversion(stat_data.get("triples")),
+            home_runs=self._safe_int_conversion(stat_data.get("homeRuns")),
+            runs_scored=self._safe_int_conversion(stat_data.get("runs")),
+            runs_batted_in=self._safe_int_conversion(stat_data.get("rbi")),
+            stolen_bases=self._safe_int_conversion(stat_data.get("stolenBases")),
+            caught_stealing=self._safe_int_conversion(stat_data.get("caughtStealing")),
+            base_on_balls=self._safe_int_conversion(stat_data.get("baseOnBalls")),
+            strikeouts=self._safe_int_conversion(stat_data.get("strikeOuts")),
+            hit_by_pitch=self._safe_int_conversion(stat_data.get("hitByPitch")),
+            sacrifice_hits=self._safe_int_conversion(stat_data.get("sacBunts")),
+            sacrifice_flies=self._safe_int_conversion(stat_data.get("sacFlies")),
+            ground_into_double_play=self._safe_int_conversion(stat_data.get("groundIntoDoublePlay")),
+            left_on_base=self._safe_int_conversion(stat_data.get("leftOnBase")),
+            batting_average=self._safe_float_conversion(stat_data.get("avg")),
+            on_base_percentage=self._safe_float_conversion(stat_data.get("obp")),
+            slugging_percentage=self._safe_float_conversion(stat_data.get("slg")),
+            ops=self._safe_float_conversion(stat_data.get("ops")),
+            babip=self._safe_float_conversion(stat_data.get("babip")),
+            total_bases=self._safe_int_conversion(stat_data.get("totalBases")),
+            at_bats_per_home_run=self._safe_float_conversion(stat_data.get("atBatsPerHomeRun")),
+            stolen_base_percentage=self._safe_float_conversion(stat_data.get("stolenBasePercentage")),
+            ground_outs=self._safe_int_conversion(stat_data.get("groundOuts")),
+            air_outs=self._safe_int_conversion(stat_data.get("airOuts")),
+            ground_outs_to_airouts=self._safe_float_conversion(stat_data.get("groundOutsToAirouts")),
+            number_of_pitches=self._safe_int_conversion(stat_data.get("numberOfPitches")),
+            intentional_walks=self._safe_int_conversion(stat_data.get("intentionalWalks")),
+        )
 
     def _safe_int_conversion(self, value) -> int:
         """Safely convert a value to int, handling None values and invalid data."""
@@ -167,106 +226,27 @@ class IngestTeamPitchingStatsUseCase:
         Returns:
             List of ingested PitchingStats entities
         """
-        # Get all teams for mapping MLB IDs to our team IDs
         teams = await self.team_repository.list_all()
-        team_mapping = {team.mlb_id: team.id for team in teams}
-
-        # Get stats data from MLB API for the pitching group
+        team_mapping = _build_team_mapping(teams)
         stats_data = await self.mlb_api.get_team_stats(season=season, group="pitching")
         if not stats_data:
             return []
-
         ingested_stats = []
-        stats_groups = stats_data.get("stats", [])
-        for group in stats_groups:
-            splits = group.get("splits", [])
-            for split in splits:
-                team_info = split.get("team", {})
-                mlb_team_id = team_info.get("id")
-
-                if mlb_team_id not in team_mapping:
-                    continue
-
-                team_id = team_mapping[mlb_team_id]
-                stat_data = split.get("stat", {})
-
-                if self._safe_int_conversion(stat_data.get("gamesPlayed")) == 0:
-                    continue
-
-                # Validate team_id is not None before creating PitchingStats
-                if team_id is None:
-                    continue
-
-                pitching_stats = PitchingStats.create(
-                    team_id=team_id,
-                    season=season,
-                    games_played=self._safe_int_conversion(stat_data.get("gamesPlayed")),
-                    wins=self._safe_int_conversion(stat_data.get("wins")),
-                    losses=self._safe_int_conversion(stat_data.get("losses")),
-                    saves=self._safe_int_conversion(stat_data.get("saves")),
-                    save_opportunities=self._safe_int_conversion(stat_data.get("saveOpportunities")),
-                    holds=self._safe_int_conversion(stat_data.get("holds")),
-                    blown_saves=self._safe_int_conversion(stat_data.get("blownSaves")),
-                    innings_pitched=self._safe_float_conversion(stat_data.get("inningsPitched")),
-                    batters_faced=self._safe_int_conversion(stat_data.get("battersFaced")),
-                    hits_allowed=self._safe_int_conversion(stat_data.get("hits")),
-                    runs_allowed=self._safe_int_conversion(stat_data.get("runs")),
-                    earned_runs=self._safe_int_conversion(stat_data.get("earnedRuns")),
-                    home_runs_allowed=self._safe_int_conversion(stat_data.get("homeRuns")),
-                    strikeouts=self._safe_int_conversion(stat_data.get("strikeOuts")),
-                    base_on_balls=self._safe_int_conversion(stat_data.get("baseOnBalls")),
-                    intentional_walks=self._safe_int_conversion(stat_data.get("intentionalWalks")),
-                    hit_batsmen=self._safe_int_conversion(stat_data.get("hitBatsmen")),
-                    wild_pitches=self._safe_int_conversion(stat_data.get("wildPitches")),
-                    balks=self._safe_int_conversion(stat_data.get("balks")),
-                    number_of_pitches=self._safe_int_conversion(stat_data.get("numberOfPitches")),
-                    complete_games=self._safe_int_conversion(stat_data.get("completeGames")),
-                    shutouts=self._safe_int_conversion(stat_data.get("shutouts")),
-                    games_started=self._safe_int_conversion(stat_data.get("gamesStarted")),
-                    ground_outs=self._safe_int_conversion(stat_data.get("groundOuts")),
-                    air_outs=self._safe_int_conversion(stat_data.get("airOuts")),
-                    # Additional basic stats from MLB API
-                    doubles=self._safe_int_conversion(stat_data.get("doubles")),
-                    triples=self._safe_int_conversion(stat_data.get("triples")),
-                    at_bats=self._safe_int_conversion(stat_data.get("atBats")),
-                    outs=self._safe_int_conversion(stat_data.get("outs")),
-                    strikes=self._safe_int_conversion(stat_data.get("strikes")),
-                    pickoffs=self._safe_int_conversion(stat_data.get("pickoffs")),
-                    total_bases=self._safe_int_conversion(stat_data.get("totalBases")),
-                    games_finished=self._safe_int_conversion(stat_data.get("gamesFinished")),
-                    catchers_interference=self._safe_int_conversion(stat_data.get("catchersInterference")),
-                    sacrifice_bunts=self._safe_int_conversion(stat_data.get("sacBunts")),
-                    sacrifice_flies=self._safe_int_conversion(stat_data.get("sacFlies")),
-                    ground_into_double_play=self._safe_int_conversion(stat_data.get("groundIntoDoublePlay")),
-                    caught_stealing=self._safe_int_conversion(stat_data.get("caughtStealing")),
-                    # Advanced stats
-                    earned_run_average=self._safe_float_conversion(stat_data.get("era")),
-                    whip=self._safe_float_conversion(stat_data.get("whip")),
-                    strikeouts_per_nine=self._safe_float_conversion(stat_data.get("strikeoutsPer9Inn")),
-                    walks_per_nine=self._safe_float_conversion(stat_data.get("walksPer9Inn")),
-                    hits_per_nine=self._safe_float_conversion(stat_data.get("hitsPer9Inn")),
-                    home_runs_per_nine=self._safe_float_conversion(stat_data.get("homeRunsPer9")),
-                    strikeout_to_walk_ratio=self._safe_float_conversion(stat_data.get("strikeoutWalkRatio")),
-                    ground_outs_to_airouts=self._safe_float_conversion(stat_data.get("groundOutsToAirouts")),
-                    pitches_per_inning=self._safe_float_conversion(stat_data.get("pitchesPerInning")),
-                    batting_average_against=self._safe_float_conversion(stat_data.get("avg")),
-                    inherited_runners=self._safe_int_conversion(stat_data.get("inheritedRunners")),
-                    inherited_runners_scored=self._safe_int_conversion(stat_data.get("inheritedRunnersScored")),
-                    quality_starts=self._safe_int_conversion(stat_data.get("qualityStarts")),
-                    # Additional advanced stats from MLB API
-                    on_base_percentage=self._safe_float_conversion(stat_data.get("obp")),
-                    slugging_percentage=self._safe_float_conversion(stat_data.get("slg")),
-                    ops=self._safe_float_conversion(stat_data.get("ops")),
-                    stolen_base_percentage=self._safe_float_conversion(stat_data.get("stolenBasePercentage")),
-                    strike_percentage=self._safe_float_conversion(stat_data.get("strikePercentage")),
-                    win_percentage=self._safe_float_conversion(stat_data.get("winPercentage")),
-                    runs_scored_per_nine=self._safe_float_conversion(stat_data.get("runsScoredPer9")),
-                )
-
-                saved_stats = await self.pitching_stats_repository.save(pitching_stats)
-                ingested_stats.append(saved_stats)
-
+        for team_id, stat_data in _iter_team_stat_splits(stats_data, team_mapping):
+            if self._safe_int_conversion(stat_data.get("gamesPlayed")) == 0:
+                continue
+            pitching_stats = self._build_pitching_stats(team_id, season, stat_data)
+            saved_stats = await self.pitching_stats_repository.save(pitching_stats)
+            ingested_stats.append(saved_stats)
         return ingested_stats
+
+    def _build_pitching_stats(self, team_id: int, season: int, stat_data: Dict[str, Any]) -> PitchingStats:
+        numeric_values: Dict[str, int | float] = {}
+        for field_name, source_key in PITCHING_INT_FIELDS.items():
+            numeric_values[field_name] = self._safe_int_conversion(stat_data.get(source_key))
+        for field_name, source_key in PITCHING_FLOAT_FIELDS.items():
+            numeric_values[field_name] = self._safe_float_conversion(stat_data.get(source_key))
+        return PitchingStats.create(team_id=team_id, season=season, **numeric_values)
 
     def _safe_int_conversion(self, value) -> int:
         """Safely convert a value to int, handling None values and invalid data."""
@@ -311,65 +291,46 @@ class IngestTeamFieldingStatsUseCase:
             List of ingested FieldingStats entities
         """
         teams = await self.team_repository.list_all()
-        team_mapping = {team.mlb_id: team.id for team in teams}
-
-        # Get stats data from MLB API for the fielding group
+        team_mapping = _build_team_mapping(teams)
         stats_data = await self.mlb_api.get_team_stats(season=season, group="fielding")
         if not stats_data:
             return []
-
         ingested_stats = []
-        stats_groups = stats_data.get("stats", [])
-        for group in stats_groups:
-            splits = group.get("splits", [])
-            for split in splits:
-                team_info = split.get("team", {})
-                mlb_team_id = team_info.get("id")
-
-                if mlb_team_id not in team_mapping:
-                    continue
-
-                team_id = team_mapping[mlb_team_id]
-                stat_data = split.get("stat", {})
-
-                if self._safe_int_conversion(stat_data.get("gamesPlayed")) == 0:
-                    continue
-
-                # Validate team_id is not None before creating FieldingStats
-                if team_id is None:
-                    continue
-
-                fielding_stats = FieldingStats.create(
-                    team_id=team_id,
-                    season=season,
-                    games_played=self._safe_int_conversion(stat_data.get("gamesPlayed")),
-                    games_started=self._safe_int_conversion(stat_data.get("gamesStarted")),
-                    innings_played=self._safe_float_conversion(stat_data.get("innings")),
-                    total_chances=self._safe_int_conversion(stat_data.get("chances")),
-                    putouts=self._safe_int_conversion(stat_data.get("putOuts")),
-                    assists=self._safe_int_conversion(stat_data.get("assists")),
-                    errors=self._safe_int_conversion(stat_data.get("errors")),
-                    throwing_errors=self._safe_int_conversion(stat_data.get("throwingErrors")),
-                    double_plays=self._safe_int_conversion(stat_data.get("doublePlays")),
-                    triple_plays=self._safe_int_conversion(stat_data.get("triplePlays")),
-                    fielding_percentage=self._safe_float_conversion(stat_data.get("fielding")),
-                    defensive_efficiency_ratio=self._safe_float_conversion(stat_data.get("defensiveEfficiency")),
-                    range_factor_per_game=self._safe_float_conversion(stat_data.get("rangeFactorPerGame")),
-                    range_factor_per_nine=self._safe_float_conversion(stat_data.get("rangeFactorPer9Inn")),
-                    outfield_assists=self._safe_int_conversion(stat_data.get("outfieldAssists")),
-                    passed_balls=self._safe_int_conversion(stat_data.get("passedBall")),
-                    wild_pitches=self._safe_int_conversion(stat_data.get("wildPitches")),
-                    stolen_bases_allowed=self._safe_int_conversion(stat_data.get("stolenBases")),
-                    caught_stealing=self._safe_int_conversion(stat_data.get("caughtStealing")),
-                    stolen_base_percentage=self._safe_float_conversion(stat_data.get("stolenBasePercentage")),
-                    catchers_interference=self._safe_int_conversion(stat_data.get("catchersInterference")),
-                    pickoffs=self._safe_int_conversion(stat_data.get("pickoffs")),
-                )
-
-                saved_stats = await self.fielding_stats_repository.save(fielding_stats)
-                ingested_stats.append(saved_stats)
-
+        for team_id, stat_data in _iter_team_stat_splits(stats_data, team_mapping):
+            if self._safe_int_conversion(stat_data.get("gamesPlayed")) == 0:
+                continue
+            fielding_stats = self._build_fielding_stats(team_id, season, stat_data)
+            saved_stats = await self.fielding_stats_repository.save(fielding_stats)
+            ingested_stats.append(saved_stats)
         return ingested_stats
+
+    def _build_fielding_stats(self, team_id: int, season: int, stat_data: Dict[str, Any]) -> FieldingStats:
+        return FieldingStats.create(
+            team_id=team_id,
+            season=season,
+            games_played=self._safe_int_conversion(stat_data.get("gamesPlayed")),
+            games_started=self._safe_int_conversion(stat_data.get("gamesStarted")),
+            innings_played=self._safe_float_conversion(stat_data.get("innings")),
+            total_chances=self._safe_int_conversion(stat_data.get("chances")),
+            putouts=self._safe_int_conversion(stat_data.get("putOuts")),
+            assists=self._safe_int_conversion(stat_data.get("assists")),
+            errors=self._safe_int_conversion(stat_data.get("errors")),
+            throwing_errors=self._safe_int_conversion(stat_data.get("throwingErrors")),
+            double_plays=self._safe_int_conversion(stat_data.get("doublePlays")),
+            triple_plays=self._safe_int_conversion(stat_data.get("triplePlays")),
+            fielding_percentage=self._safe_float_conversion(stat_data.get("fielding")),
+            defensive_efficiency_ratio=self._safe_float_conversion(stat_data.get("defensiveEfficiency")),
+            range_factor_per_game=self._safe_float_conversion(stat_data.get("rangeFactorPerGame")),
+            range_factor_per_nine=self._safe_float_conversion(stat_data.get("rangeFactorPer9Inn")),
+            outfield_assists=self._safe_int_conversion(stat_data.get("outfieldAssists")),
+            passed_balls=self._safe_int_conversion(stat_data.get("passedBall")),
+            wild_pitches=self._safe_int_conversion(stat_data.get("wildPitches")),
+            stolen_bases_allowed=self._safe_int_conversion(stat_data.get("stolenBases")),
+            caught_stealing=self._safe_int_conversion(stat_data.get("caughtStealing")),
+            stolen_base_percentage=self._safe_float_conversion(stat_data.get("stolenBasePercentage")),
+            catchers_interference=self._safe_int_conversion(stat_data.get("catchersInterference")),
+            pickoffs=self._safe_int_conversion(stat_data.get("pickoffs")),
+        )
 
     def _safe_int_conversion(self, value) -> int:
         """Safely convert a value to int, handling None values and invalid data."""
@@ -414,72 +375,53 @@ class IngestTeamCatchingStatsUseCase:
             List of ingested CatchingStats entities
         """
         teams = await self.team_repository.list_all()
-        team_mapping = {team.mlb_id: team.id for team in teams}
-
-        # Get stats data from MLB API for the catching group
+        team_mapping = _build_team_mapping(teams)
         stats_data = await self.mlb_api.get_team_stats(season=season, group="catching")
         if not stats_data:
             return []
-
         ingested_stats = []
-        stats_groups = stats_data.get("stats", [])
-        for group in stats_groups:
-            splits = group.get("splits", [])
-            for split in splits:
-                team_info = split.get("team", {})
-                mlb_team_id = team_info.get("id")
-
-                if mlb_team_id not in team_mapping:
-                    continue
-
-                team_id = team_mapping[mlb_team_id]
-                stat_data = split.get("stat", {})
-
-                if self._safe_int_conversion(stat_data.get("gamesPlayed")) == 0:
-                    continue
-
-                # Validate team_id is not None before creating CatchingStats
-                if team_id is None:
-                    continue
-
-                catching_stats = CatchingStats.create(
-                    team_id=team_id,
-                    season=season,
-                    games_played=self._safe_int_conversion(stat_data.get("gamesPlayed")),
-                    games_pitched=self._safe_int_conversion(stat_data.get("gamesPitched")),
-                    at_bats=self._safe_int_conversion(stat_data.get("atBats")),
-                    hits=self._safe_int_conversion(stat_data.get("hits")),
-                    runs=self._safe_int_conversion(stat_data.get("runs")),
-                    home_runs=self._safe_int_conversion(stat_data.get("homeRuns")),
-                    strikeouts=self._safe_int_conversion(stat_data.get("strikeOuts")),
-                    base_on_balls=self._safe_int_conversion(stat_data.get("baseOnBalls")),
-                    intentional_walks=self._safe_int_conversion(stat_data.get("intentionalWalks")),
-                    hit_by_pitch=self._safe_int_conversion(stat_data.get("hitByPitch")),
-                    total_bases=self._safe_int_conversion(stat_data.get("totalBases")),
-                    sacrifice_bunts=self._safe_int_conversion(stat_data.get("sacBunts")),
-                    sacrifice_flies=self._safe_int_conversion(stat_data.get("sacFlies")),
-                    batting_average=self._safe_float_conversion(stat_data.get("avg")),
-                    on_base_percentage=self._safe_float_conversion(stat_data.get("obp")),
-                    slugging_percentage=self._safe_float_conversion(stat_data.get("slg")),
-                    ops=self._safe_float_conversion(stat_data.get("ops")),
-                    passed_balls=self._safe_int_conversion(stat_data.get("passedBall")),
-                    wild_pitches=self._safe_int_conversion(stat_data.get("wildPitches")),
-                    stolen_bases_allowed=self._safe_int_conversion(stat_data.get("stolenBases")),
-                    caught_stealing=self._safe_int_conversion(stat_data.get("caughtStealing")),
-                    stolen_base_percentage=self._safe_float_conversion(stat_data.get("stolenBasePercentage")),
-                    pickoffs=self._safe_int_conversion(stat_data.get("pickoffs")),
-                    pickoff_attempts=self._safe_int_conversion(stat_data.get("pickoffAttempts")),
-                    catchers_interference=self._safe_int_conversion(stat_data.get("catchersInterference")),
-                    earned_runs=self._safe_int_conversion(stat_data.get("earnedRuns")),
-                    batters_faced=self._safe_int_conversion(stat_data.get("battersFaced")),
-                    hit_batsmen=self._safe_int_conversion(stat_data.get("hitBatsmen")),
-                    strikeout_walk_ratio=self._safe_float_conversion(stat_data.get("strikeoutWalkRatio")),
-                )
-
-                saved_stats = await self.catching_stats_repository.save(catching_stats)
-                ingested_stats.append(saved_stats)
-
+        for team_id, stat_data in _iter_team_stat_splits(stats_data, team_mapping):
+            if self._safe_int_conversion(stat_data.get("gamesPlayed")) == 0:
+                continue
+            catching_stats = self._build_catching_stats(team_id, season, stat_data)
+            saved_stats = await self.catching_stats_repository.save(catching_stats)
+            ingested_stats.append(saved_stats)
         return ingested_stats
+
+    def _build_catching_stats(self, team_id: int, season: int, stat_data: Dict[str, Any]) -> CatchingStats:
+        return CatchingStats.create(
+            team_id=team_id,
+            season=season,
+            games_played=self._safe_int_conversion(stat_data.get("gamesPlayed")),
+            games_pitched=self._safe_int_conversion(stat_data.get("gamesPitched")),
+            at_bats=self._safe_int_conversion(stat_data.get("atBats")),
+            hits=self._safe_int_conversion(stat_data.get("hits")),
+            runs=self._safe_int_conversion(stat_data.get("runs")),
+            home_runs=self._safe_int_conversion(stat_data.get("homeRuns")),
+            strikeouts=self._safe_int_conversion(stat_data.get("strikeOuts")),
+            base_on_balls=self._safe_int_conversion(stat_data.get("baseOnBalls")),
+            intentional_walks=self._safe_int_conversion(stat_data.get("intentionalWalks")),
+            hit_by_pitch=self._safe_int_conversion(stat_data.get("hitByPitch")),
+            total_bases=self._safe_int_conversion(stat_data.get("totalBases")),
+            sacrifice_bunts=self._safe_int_conversion(stat_data.get("sacBunts")),
+            sacrifice_flies=self._safe_int_conversion(stat_data.get("sacFlies")),
+            batting_average=self._safe_float_conversion(stat_data.get("avg")),
+            on_base_percentage=self._safe_float_conversion(stat_data.get("obp")),
+            slugging_percentage=self._safe_float_conversion(stat_data.get("slg")),
+            ops=self._safe_float_conversion(stat_data.get("ops")),
+            passed_balls=self._safe_int_conversion(stat_data.get("passedBall")),
+            wild_pitches=self._safe_int_conversion(stat_data.get("wildPitches")),
+            stolen_bases_allowed=self._safe_int_conversion(stat_data.get("stolenBases")),
+            caught_stealing=self._safe_int_conversion(stat_data.get("caughtStealing")),
+            stolen_base_percentage=self._safe_float_conversion(stat_data.get("stolenBasePercentage")),
+            pickoffs=self._safe_int_conversion(stat_data.get("pickoffs")),
+            pickoff_attempts=self._safe_int_conversion(stat_data.get("pickoffAttempts")),
+            catchers_interference=self._safe_int_conversion(stat_data.get("catchersInterference")),
+            earned_runs=self._safe_int_conversion(stat_data.get("earnedRuns")),
+            batters_faced=self._safe_int_conversion(stat_data.get("battersFaced")),
+            hit_batsmen=self._safe_int_conversion(stat_data.get("hitBatsmen")),
+            strikeout_walk_ratio=self._safe_float_conversion(stat_data.get("strikeoutWalkRatio")),
+        )
 
     def _safe_int_conversion(self, value) -> int:
         """Safely convert a value to int, handling None values and invalid data."""

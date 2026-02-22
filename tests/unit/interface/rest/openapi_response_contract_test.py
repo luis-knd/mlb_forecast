@@ -5,11 +5,12 @@ def test_all_json_responses_have_structured_schema():
     # Given
     openapi_schema = app.openapi()
     invalid_responses = []
+    allowed_methods = {"get", "post", "put", "patch", "delete", "options", "head"}
 
     # When
     for path, path_item in openapi_schema.get("paths", {}).items():
         for method, operation in path_item.items():
-            if method not in {"get", "post", "put", "patch", "delete", "options", "head"}:
+            if method not in allowed_methods:
                 continue
 
             responses = operation.get("responses", {})
@@ -30,4 +31,4 @@ def test_all_json_responses_have_structured_schema():
                     invalid_responses.append((path, method, status_code, "string_schema"))
 
     # Then
-    assert not invalid_responses, f"Invalid OpenAPI JSON schemas detected: {invalid_responses}"
+    assert not invalid_responses, "Invalid OpenAPI JSON schemas detected: " f"{invalid_responses}"

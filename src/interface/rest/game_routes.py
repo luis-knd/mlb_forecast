@@ -196,35 +196,27 @@ async def ingest_games(
         DomainExceptions.ExternalServiceError: If MLB API is unavailable
     """
     start_time = datetime.now()
-
     game_date = None
     if date:
         try:
             game_date = datetime.strptime(date, "%Y-%m-%d").date()
         except ValueError:
             raise DomainExceptions.InvalidDataError("Date must be in YYYY-MM-DD format")
-
     if days_back < 1 or days_back > 30:
         raise DomainExceptions.InvalidDataError("Days back must be between 1 and 30")
-
     try:
         ingest_games_use_case = use_cases["ingest_games"]
-
         if game_date:
             ingested_games = await ingest_games_use_case.execute(game_date=game_date)
             operation_desc = f"date {date}"
         else:
             ingested_games = await ingest_games_use_case.execute(days_back=days_back)
             operation_desc = f"last {days_back} days"
-
         end_time = datetime.now()
         duration = (end_time - start_time).total_seconds()
-
-        # Convert sample games to DTOs
         from src.interface.rest.adapters.mappers import to_game_dto_list
 
         games_dto = to_game_dto_list(ingested_games[:5])
-
         ingestion_result = DataIngestionResultDTO(
             operation="game_ingestion",
             records_processed=len(ingested_games),
@@ -234,12 +226,10 @@ async def ingest_games(
             duration_seconds=duration,
             timestamp=end_time,
         )
-
         return ResponseHandler.created(
             data={"ingestion_summary": ingestion_result, "sample_games": games_dto},
             message=f"Successfully ingested {len(ingested_games)} games for {operation_desc}",
         )
-
     except Exception as e:
         if "MLB API" in str(e) or "api" in str(e).lower():
             raise DomainExceptions.ExternalServiceError("MLB API", str(e))

@@ -4,6 +4,35 @@ from src.domain.entities.team import Team
 from src.domain.entities.team_stats import TeamStats
 from src.infrastructure.db.models import FieldingStatsModel, HittingStatsModel, PitchingStatsModel, TeamModel
 
+HITTING_TO_TEAM_STATS_FIELDS = {
+    "games_played": "games_played",
+    "runs_scored": "runs_scored",
+    "hits": "hits",
+    "home_runs": "home_runs",
+    "batting_average": "batting_average",
+    "on_base_percentage": "on_base_percentage",
+    "slugging_percentage": "slugging_percentage",
+    "ops": "ops",
+    "stolen_bases": "stolen_bases",
+}
+
+PITCHING_TO_TEAM_STATS_FIELDS = {
+    "wins": "wins",
+    "losses": "losses",
+    "earned_run_average": "earned_run_average",
+    "whip": "whip",
+    "strikeouts_per_nine": "strikeouts_per_nine",
+    "walks_per_nine": "walks_per_nine",
+    "home_runs_allowed": "home_runs_allowed",
+    "runs_allowed": "runs_allowed",
+}
+
+FIELDING_TO_TEAM_STATS_FIELDS = {
+    "fielding_percentage": "fielding_percentage",
+    "errors": "errors",
+    "double_plays": "double_plays",
+}
+
 
 class TeamStatsMapper:
     """Mapper for converting between TeamStats entities and database models."""
@@ -28,82 +57,22 @@ class TeamStatsMapper:
         if not hitting_stats:
             return None
 
-        # Use hitting stats as the base for team_id and season
-        team_id = hitting_stats.team_id
-        season = hitting_stats.season
-
-        # Get games_played from hitting stats
-        games_played = hitting_stats.games_played
-
-        # Get wins and losses from pitching stats
-        wins = pitching_stats.wins if pitching_stats else 0
-        losses = pitching_stats.losses if pitching_stats else 0
-
-        # Get offensive stats from hitting stats
-        runs_scored = hitting_stats.runs_scored
-        hits = hitting_stats.hits
-        home_runs = hitting_stats.home_runs
-        batting_average = hitting_stats.batting_average
-        on_base_percentage = hitting_stats.on_base_percentage
-        slugging_percentage = hitting_stats.slugging_percentage
-        ops = hitting_stats.ops
-        stolen_bases = hitting_stats.stolen_bases
-
-        # Get pitching stats
-        earned_run_average = pitching_stats.earned_run_average if pitching_stats else 0.0
-        whip = pitching_stats.whip if pitching_stats else 0.0
-        strikeouts_per_nine = pitching_stats.strikeouts_per_nine if pitching_stats else 0.0
-        walks_per_nine = pitching_stats.walks_per_nine if pitching_stats else 0.0
-        home_runs_allowed = pitching_stats.home_runs_allowed if pitching_stats else 0
-        runs_allowed = pitching_stats.runs_allowed if pitching_stats else 0
-
-        # Get fielding stats
-        fielding_percentage = fielding_stats.fielding_percentage if fielding_stats else 0.0
-        errors = fielding_stats.errors if fielding_stats else 0
-        double_plays = fielding_stats.double_plays if fielding_stats else 0
-
-        # Calculate run differential
-        run_differential = runs_scored - runs_allowed
-
-        # Calculate Pythagorean expectation using the shared domain logic
-        pythagorean_expectation = TeamStats._calculate_pythagorean_expectation(runs_scored, runs_allowed)
-
-        # Create TeamStats entity
-        team_stats = TeamStats(
-            id=hitting_stats.id,  # Use hitting stats ID as the team stats ID
-            team_id=team_id,
-            season=season,
-            games_played=games_played,
-            wins=wins,
-            losses=losses,
-            runs_scored=runs_scored,
-            hits=hits,
-            home_runs=home_runs,
-            batting_average=batting_average,
-            on_base_percentage=on_base_percentage,
-            slugging_percentage=slugging_percentage,
-            ops=ops,
-            stolen_bases=stolen_bases,
-            earned_run_average=earned_run_average,
-            whip=whip,
-            strikeouts_per_nine=strikeouts_per_nine,
-            walks_per_nine=walks_per_nine,
-            home_runs_allowed=home_runs_allowed,
-            runs_allowed=runs_allowed,
-            fielding_percentage=fielding_percentage,
-            errors=errors,
-            double_plays=double_plays,
-            run_differential=run_differential,
-            pythagorean_expectation=pythagorean_expectation,
-            created_at=hitting_stats.created_at,
-            updated_at=hitting_stats.updated_at,
-        )
-
-        # Set related team if loaded
+        payload = TeamStatsMapper._extract_fields(hitting_stats, HITTING_TO_TEAM_STATS_FIELDS)
+        payload.update(TeamStatsMapper._extract_fields(pitching_stats, PITCHING_TO_TEAM_STATS_FIELDS))
+        payload.update(TeamStatsMapper._extract_fields(fielding_stats, FIELDING_TO_TEAM_STATS_FIELDS))
+        team_stats = TeamStats.create(team_id=hitting_stats.team_id, season=hitting_stats.season, **payload)
+        team_stats.id = hitting_stats.id
+        team_stats.created_at = hitting_stats.created_at
+        team_stats.updated_at = hitting_stats.updated_at
         if hasattr(hitting_stats, "team") and hitting_stats.team:
             team_stats.team = TeamStatsMapper._team_model_to_entity(hitting_stats.team)
-
         return team_stats
+
+    @staticmethod
+    def _extract_fields(model: object | None, field_map: dict[str, str]) -> dict[str, int | float]:
+        if model is None:
+            return {}
+        return {target: getattr(model, source, 0) for target, source in field_map.items()}
 
     @staticmethod
     def _team_model_to_entity(model: TeamModel) -> Team:

@@ -61,14 +61,25 @@ class TestGetPlayerByMlbIdUseCase:
 
 class TestListPlayersUseCase:
     @pytest.mark.asyncio
-    async def test_lists_players_with_filters_and_sets_cache(self, sample_player, mock_cache):
+    async def test_lists_players_with_filters_and_sets_cache(
+        self,
+        sample_player,
+        mock_cache,
+    ):
         # Given
         player_repository = AsyncMock()
         player_repository.list_players = AsyncMock(return_value=[sample_player])
         use_case = ListPlayersUseCase(player_repository, mock_cache)
 
         # When
-        result = await use_case.execute(team_id=1, position="DH", name="sho", active=True, limit=20, offset=0)
+        result = await use_case.execute(
+            team_id=1,
+            position="DH",
+            name="sho",
+            active=True,
+            limit=20,
+            offset=0,
+        )
 
         # Then
         assert result == [sample_player]
@@ -135,7 +146,12 @@ class TestIngestPlayersBySourceUseCase:
         player_repository = AsyncMock()
         team_repository = AsyncMock()
         mlb_api = AsyncMock()
-        use_case = IngestPlayersBySourceUseCase(player_repository, team_repository, mlb_api, mock_cache)
+        use_case = IngestPlayersBySourceUseCase(
+            player_repository,
+            team_repository,
+            mlb_api,
+            mock_cache,
+        )
 
         # When / Then
         with pytest.raises(ValueError, match="teamId is required"):
@@ -176,7 +192,12 @@ class TestIngestPlayersBySourceUseCase:
             ]
         )
 
-        use_case = IngestPlayersBySourceUseCase(player_repository, team_repository, mlb_api, mock_cache)
+        use_case = IngestPlayersBySourceUseCase(
+            player_repository,
+            team_repository,
+            mlb_api,
+            mock_cache,
+        )
 
         # When
         result = await use_case.execute(source="search", query="ohtani")

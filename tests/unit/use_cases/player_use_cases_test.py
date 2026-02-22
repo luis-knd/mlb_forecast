@@ -55,7 +55,11 @@ class TestGetPlayerUseCase:
         assert result is sample_player
 
     @pytest.mark.asyncio
-    async def test_fetches_from_repository_when_cache_misses(self, sample_player, mock_cache):
+    async def test_fetches_from_repository_when_cache_misses(
+        self,
+        sample_player,
+        mock_cache,
+    ):
         # Given
         player_repository = AsyncMock()
         player_repository.get_by_id = AsyncMock(return_value=sample_player)
@@ -67,7 +71,11 @@ class TestGetPlayerUseCase:
         # Then
         mock_cache.get.assert_called_once_with(f"players:id:{sample_player.id}")
         player_repository.get_by_id.assert_called_once_with(sample_player.id)
-        mock_cache.set.assert_called_once_with(f"players:id:{sample_player.id}", sample_player, ttl=3600)
+        mock_cache.set.assert_called_once_with(
+            f"players:id:{sample_player.id}",
+            sample_player,
+            ttl=3600,
+        )
         assert result is sample_player
 
     @pytest.mark.asyncio
@@ -115,7 +123,11 @@ class TestListPlayersByTeamUseCase:
         # Then
         mock_cache.get.assert_called_once_with("players:team:7")
         player_repository.list_by_team.assert_called_once_with(7)
-        mock_cache.set.assert_called_once_with("players:team:7", [sample_player], ttl=3600)
+        mock_cache.set.assert_called_once_with(
+            "players:team:7",
+            [sample_player],
+            ttl=3600,
+        )
         assert result == [sample_player]
 
 
@@ -149,7 +161,11 @@ class TestListPlayersByPositionUseCase:
         # Then
         mock_cache.get.assert_called_once_with("players:position:SS")
         player_repository.list_by_position.assert_called_once_with("SS")
-        mock_cache.set.assert_called_once_with("players:position:SS", [sample_player], ttl=3600)
+        mock_cache.set.assert_called_once_with(
+            "players:position:SS",
+            [sample_player],
+            ttl=3600,
+        )
         assert result == [sample_player]
 
 
@@ -183,7 +199,11 @@ class TestSearchPlayersUseCase:
         # Then
         mock_cache.get.assert_called_once_with("players:search:taylor")
         player_repository.search_by_name.assert_called_once_with("taylor")
-        mock_cache.set.assert_called_once_with("players:search:taylor", [sample_player], ttl=3600)
+        mock_cache.set.assert_called_once_with(
+            "players:search:taylor",
+            [sample_player],
+            ttl=3600,
+        )
         assert result == [sample_player]
 
 
@@ -195,8 +215,22 @@ class TestIngestPlayersUseCase:
         player_repository.save = AsyncMock(side_effect=lambda player: player)
 
         teams = [
-            Team.create(mlb_id=1, name="A", abbreviation="A", city="CityA", division="DivA", league="LeagueA"),
-            Team.create(mlb_id=2, name="B", abbreviation="B", city="CityB", division="DivB", league="LeagueB"),
+            Team.create(
+                mlb_id=1,
+                name="A",
+                abbreviation="A",
+                city="CityA",
+                division="DivA",
+                league="LeagueA",
+            ),
+            Team.create(
+                mlb_id=2,
+                name="B",
+                abbreviation="B",
+                city="CityB",
+                division="DivB",
+                league="LeagueB",
+            ),
         ]
         for idx, team in enumerate(teams, start=1):
             team.id = idx
@@ -221,7 +255,12 @@ class TestIngestPlayersUseCase:
             ]
         )
 
-        use_case = IngestPlayersUseCase(player_repository, team_repository, mlb_api, mock_cache)
+        use_case = IngestPlayersUseCase(
+            player_repository,
+            team_repository,
+            mlb_api,
+            mock_cache,
+        )
 
         # When
         ingested_players = await use_case.execute()

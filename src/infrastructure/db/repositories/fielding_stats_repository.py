@@ -9,8 +9,37 @@ from sqlalchemy.orm import Session, joinedload
 
 from src.application.ports.fielding_stats_repository import FieldingStatsRepositoryPort
 from src.domain.entities.fielding_stats import FieldingStats
-from src.domain.entities.team import Team
 from src.infrastructure.db.models import FieldingStatsModel
+from src.infrastructure.db.repositories.entity_mapping_helpers import delete_model_by_id, team_model_to_entity
+
+FIELDING_STAT_FIELDS = (
+    "games_played",
+    "games_started",
+    "innings_played",
+    "total_chances",
+    "putouts",
+    "assists",
+    "errors",
+    "throwing_errors",
+    "double_plays",
+    "triple_plays",
+    "fielding_percentage",
+    "defensive_efficiency_ratio",
+    "range_factor_per_game",
+    "range_factor_per_nine",
+    "outfield_assists",
+    "passed_balls",
+    "wild_pitches",
+    "stolen_bases_allowed",
+    "caught_stealing",
+    "stolen_base_percentage",
+    "catchers_interference",
+    "pickoffs",
+)
+
+
+def _fielding_payload_from_entity(entity: FieldingStats) -> dict[str, Any]:
+    return {field_name: getattr(entity, field_name) for field_name in FIELDING_STAT_FIELDS}
 
 
 class FieldingStatsRepository(FieldingStatsRepositoryPort):
@@ -93,19 +122,27 @@ class FieldingStatsRepository(FieldingStatsRepositoryPort):
 
     async def save(self, fielding_stats: FieldingStats) -> FieldingStats:
         """Save fielding statistics (create or update)."""
-        # Check if fielding stats already exists
+        stats_model = self._get_existing_model(fielding_stats)
+        if stats_model is None:
+            stats_model = FieldingStatsModel(
+                team_id=fielding_stats.team_id,
+                season=fielding_stats.season,
+                **_fielding_payload_from_entity(fielding_stats),
+            )
+            self.session.add(stats_model)
+        else:
+            self._update_stats_model(stats_model, fielding_stats)
+        self.session.commit()
+        return await self.get_by_id(stats_model.id)
+
+    def _get_existing_model(self, fielding_stats: FieldingStats) -> Optional[FieldingStatsModel]:
         if fielding_stats.id:
             stats_model = (
                 self.session.query(FieldingStatsModel).filter(FieldingStatsModel.id == fielding_stats.id).first()
             )
-            if stats_model:
-                # Update existing fielding stats
-                self._update_stats_model(stats_model, fielding_stats)
-                self.session.commit()
-                return await self.get_by_id(stats_model.id)
-
-        # Check if fielding stats exists by team_id and season
-        stats_model = (
+            if stats_model is not None:
+                return stats_model
+        return (
             self.session.query(FieldingStatsModel)
             .filter(
                 FieldingStatsModel.team_id == fielding_stats.team_id,
@@ -113,43 +150,6 @@ class FieldingStatsRepository(FieldingStatsRepositoryPort):
             )
             .first()
         )
-        if stats_model:
-            # Update existing fielding stats
-            self._update_stats_model(stats_model, fielding_stats)
-            self.session.commit()
-            return await self.get_by_id(stats_model.id)
-
-        # Create new fielding stats
-        stats_model = FieldingStatsModel(
-            team_id=fielding_stats.team_id,
-            season=fielding_stats.season,
-            games_played=fielding_stats.games_played,
-            games_started=fielding_stats.games_started,
-            innings_played=fielding_stats.innings_played,
-            total_chances=fielding_stats.total_chances,
-            putouts=fielding_stats.putouts,
-            assists=fielding_stats.assists,
-            errors=fielding_stats.errors,
-            throwing_errors=fielding_stats.throwing_errors,
-            double_plays=fielding_stats.double_plays,
-            triple_plays=fielding_stats.triple_plays,
-            fielding_percentage=fielding_stats.fielding_percentage,
-            defensive_efficiency_ratio=fielding_stats.defensive_efficiency_ratio,
-            range_factor_per_game=fielding_stats.range_factor_per_game,
-            range_factor_per_nine=fielding_stats.range_factor_per_nine,
-            outfield_assists=fielding_stats.outfield_assists,
-            passed_balls=fielding_stats.passed_balls,
-            wild_pitches=fielding_stats.wild_pitches,
-            stolen_bases_allowed=fielding_stats.stolen_bases_allowed,
-            caught_stealing=fielding_stats.caught_stealing,
-            stolen_base_percentage=fielding_stats.stolen_base_percentage,
-            catchers_interference=fielding_stats.catchers_interference,
-            pickoffs=fielding_stats.pickoffs,
-        )
-        self.session.add(stats_model)
-        self.session.commit()
-        self.session.refresh(stats_model)
-        return await self.get_by_id(stats_model.id)
 
     async def update_stats(self, stats_id: int, updated_stats: Dict[str, Any]) -> Optional[FieldingStats]:
         """Update specific fielding statistics for a team."""
@@ -167,30 +167,11 @@ class FieldingStatsRepository(FieldingStatsRepositoryPort):
 
     async def delete(self, stats_id: int) -> bool:
         """Delete fielding statistics by its ID."""
-        stats_model = self.session.query(FieldingStatsModel).filter(FieldingStatsModel.id == stats_id).first()
-        if not stats_model:
-            return False
-
-        self.session.delete(stats_model)
-        self.session.commit()
-        return True
+        return delete_model_by_id(self.session, FieldingStatsModel, stats_id)
 
     def _model_to_entity(self, model: FieldingStatsModel) -> FieldingStats:
         """Convert a FieldingStatsModel to a FieldingStats entity."""
-        team = None
-        if model.team:
-            team = Team(
-                id=model.team.id,
-                mlb_id=model.team.mlb_id,
-                name=model.team.name,
-                abbreviation=model.team.abbreviation,
-                city=model.team.city,
-                division=model.team.division,
-                league=model.team.league,
-                venue_name=model.team.venue_name,
-                created_at=model.team.created_at,
-                updated_at=model.team.updated_at,
-            )
+        team = team_model_to_entity(model.team)
 
         return FieldingStats(
             id=model.id,
@@ -227,25 +208,5 @@ class FieldingStatsRepository(FieldingStatsRepositoryPort):
         """Update a FieldingStatsModel with values from a FieldingStats entity."""
         model.team_id = entity.team_id
         model.season = entity.season
-        model.games_played = entity.games_played
-        model.games_started = entity.games_started
-        model.innings_played = entity.innings_played
-        model.total_chances = entity.total_chances
-        model.putouts = entity.putouts
-        model.assists = entity.assists
-        model.errors = entity.errors
-        model.throwing_errors = entity.throwing_errors
-        model.double_plays = entity.double_plays
-        model.triple_plays = entity.triple_plays
-        model.fielding_percentage = entity.fielding_percentage
-        model.defensive_efficiency_ratio = entity.defensive_efficiency_ratio
-        model.range_factor_per_game = entity.range_factor_per_game
-        model.range_factor_per_nine = entity.range_factor_per_nine
-        model.outfield_assists = entity.outfield_assists
-        model.passed_balls = entity.passed_balls
-        model.wild_pitches = entity.wild_pitches
-        model.stolen_bases_allowed = entity.stolen_bases_allowed
-        model.caught_stealing = entity.caught_stealing
-        model.stolen_base_percentage = entity.stolen_base_percentage
-        model.catchers_interference = entity.catchers_interference
-        model.pickoffs = entity.pickoffs
+        for field_name, value in _fielding_payload_from_entity(entity).items():
+            setattr(model, field_name, value)
