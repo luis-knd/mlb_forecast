@@ -14,8 +14,10 @@ from src.application.use_cases.system_use_cases import (
     GetAppInfoUseCase,
     GetCacheStatsUseCase,
     HealthCheckUseCase,
+    SystemRuntimeConfig,
 )
 from src.infrastructure.cache.cache_provider import get_cache_adapter
+from src.infrastructure.config.settings import settings
 from src.infrastructure.db.database import get_db
 from src.interface.rest.exception_handlers import DomainExceptions
 from src.interface.rest.generated.models.models import (
@@ -38,12 +40,22 @@ router = APIRouter()
 def get_system_use_cases(db: Session = Depends(get_db)):
     """Get system use cases with dependencies."""
     cache_adapter = get_cache_adapter()
+    runtime_config = SystemRuntimeConfig(
+        app_name=settings.APP_NAME,
+        api_version=settings.API_VERSION,
+        environment=settings.ENVIRONMENT,
+        debug=settings.DEBUG,
+        api_prefix=settings.API_V1_STR,
+        cache_default_ttl=settings.CACHE_DEFAULT_TTL,
+        mlb_api_base_url=settings.MLB_API_BASE_URL,
+        mlb_api_version=settings.MLB_API_VERSION,
+    )
 
     return {
         "get_cache_stats": GetCacheStatsUseCase(cache_adapter),
         "clear_cache": ClearCacheUseCase(cache_adapter),
-        "health_check": HealthCheckUseCase(cache_adapter),
-        "get_app_info": GetAppInfoUseCase(cache_adapter),
+        "health_check": HealthCheckUseCase(cache_adapter, runtime_config),
+        "get_app_info": GetAppInfoUseCase(cache_adapter, runtime_config),
     }
 
 

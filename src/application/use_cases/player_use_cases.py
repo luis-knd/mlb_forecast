@@ -242,27 +242,20 @@ class GetPlayerStatsUseCase:
         normalized_group = group.strip().lower()
         normalized_game_type = game_type.strip().upper() if game_type else None
 
-        if normalized_stats not in ALLOWED_PLAYER_STATS:
-            raise ValueError(f"stats must be one of: {', '.join(sorted(ALLOWED_PLAYER_STATS))}")
-
-        if normalized_group not in ALLOWED_PLAYER_GROUPS:
-            raise ValueError(f"group must be one of: {', '.join(sorted(ALLOWED_PLAYER_GROUPS))}")
-
-        if season is not None and season < 1876:
-            raise ValueError("season must be greater than or equal to 1876")
-
-        if normalized_game_type and normalized_game_type not in ALLOWED_GAME_TYPES:
-            raise ValueError(f"gameType must be one of: {', '.join(sorted(ALLOWED_GAME_TYPES))}")
-
-        if days_back is not None and (days_back < 1 or days_back > 366):
-            raise ValueError("daysBack must be between 1 and 366")
-
-        cache_key = (
-            "player_stats:"
-            f"player={mlb_player_id}:stats={normalized_stats}:group={normalized_group}:"
-            f"season={season if season is not None else 'none'}:"
-            f"gameType={normalized_game_type if normalized_game_type else 'none'}:"
-            f"daysBack={days_back if days_back is not None else 'none'}"
+        self._validate_query(
+            normalized_stats=normalized_stats,
+            normalized_group=normalized_group,
+            season=season,
+            normalized_game_type=normalized_game_type,
+            days_back=days_back,
+        )
+        cache_key = self._build_cache_key(
+            mlb_player_id=mlb_player_id,
+            normalized_stats=normalized_stats,
+            normalized_group=normalized_group,
+            season=season,
+            normalized_game_type=normalized_game_type,
+            days_back=days_back,
         )
 
         cached_stats = await self.cache.get(cache_key)
@@ -282,6 +275,42 @@ class GetPlayerStatsUseCase:
             await self.cache.set(cache_key, player_stats, ttl=PLAYER_STATS_TTL_SECONDS)
 
         return player_stats
+
+    def _validate_query(
+        self,
+        normalized_stats: str,
+        normalized_group: str,
+        season: Optional[int],
+        normalized_game_type: Optional[str],
+        days_back: Optional[int],
+    ) -> None:
+        if normalized_stats not in ALLOWED_PLAYER_STATS:
+            raise ValueError(f"stats must be one of: {', '.join(sorted(ALLOWED_PLAYER_STATS))}")
+        if normalized_group not in ALLOWED_PLAYER_GROUPS:
+            raise ValueError(f"group must be one of: {', '.join(sorted(ALLOWED_PLAYER_GROUPS))}")
+        if season is not None and season < 1876:
+            raise ValueError("season must be greater than or equal to 1876")
+        if normalized_game_type and normalized_game_type not in ALLOWED_GAME_TYPES:
+            raise ValueError(f"gameType must be one of: {', '.join(sorted(ALLOWED_GAME_TYPES))}")
+        if days_back is not None and not 1 <= days_back <= 366:
+            raise ValueError("daysBack must be between 1 and 366")
+
+    def _build_cache_key(
+        self,
+        mlb_player_id: int,
+        normalized_stats: str,
+        normalized_group: str,
+        season: Optional[int],
+        normalized_game_type: Optional[str],
+        days_back: Optional[int],
+    ) -> str:
+        return (
+            "player_stats:"
+            f"player={mlb_player_id}:stats={normalized_stats}:group={normalized_group}:"
+            f"season={season if season is not None else 'none'}:"
+            f"gameType={normalized_game_type if normalized_game_type else 'none'}:"
+            f"daysBack={days_back if days_back is not None else 'none'}"
+        )
 
 
 class IngestPlayersUseCase:
@@ -367,29 +396,16 @@ class IngestPlayersBySourceUseCase:
         normalized_source = source.strip().lower()
         if normalized_source not in ALLOWED_INGEST_SOURCES:
             raise ValueError(f"source must be one of: {', '.join(sorted(ALLOWED_INGEST_SOURCES))}")
-
         if season is not None and season < 1876:
             raise ValueError("season must be greater than or equal to 1876")
-
-        if normalized_source == "team_roster":
-            if team_mlb_id is None:
-                raise ValueError("teamId is required when source=team_roster")
-            players_dto = await self.mlb_api.get_players_by_team(
-                mlb_team_id=team_mlb_id,
-                season=season,
-                roster_type=roster_type,
-            )
-            default_team_mlb_id = team_mlb_id
-        elif normalized_source == "sport_players":
-            players_dto = await self.mlb_api.get_players_by_sport(sport_id=sport_id, season=season)
-            default_team_mlb_id = None
-        else:
-            normalized_query = query.strip() if query else ""
-            if not normalized_query:
-                raise ValueError("q is required when source=search")
-            players_dto = await self.mlb_api.search_players(query=normalized_query)
-            default_team_mlb_id = None
-
+        players_dto, default_team_mlb_id = await self._get_players_by_source(
+            normalized_source=normalized_source,
+            season=season,
+            team_mlb_id=team_mlb_id,
+            roster_type=roster_type,
+            sport_id=sport_id,
+            query=query,
+        )
         team_id_cache: Dict[int, Optional[int]] = {}
         ingested_players: List[Player] = []
 
@@ -414,8 +430,38 @@ class IngestPlayersBySourceUseCase:
 
         await self.cache.clear(pattern="players:*")
         await self.cache.clear(pattern="player_stats:*")
-
         return ingested_players
+
+    async def _get_players_by_source(
+        self,
+        normalized_source: str,
+        season: Optional[int],
+        team_mlb_id: Optional[int],
+        roster_type: str,
+        sport_id: int,
+        query: Optional[str],
+    ) -> tuple[List, Optional[int]]:
+        if normalized_source == "team_roster":
+            if team_mlb_id is None:
+                raise ValueError("teamId is required when source=team_roster")
+            players_dto = await self.mlb_api.get_players_by_team(
+                mlb_team_id=team_mlb_id,
+                season=season,
+                roster_type=roster_type,
+            )
+            return players_dto, team_mlb_id
+        if normalized_source == "sport_players":
+            players_dto = await self.mlb_api.get_players_by_sport(
+                sport_id=sport_id,
+                season=season,
+            )
+            return players_dto, None
+
+        normalized_query = query.strip() if query else ""
+        if not normalized_query:
+            raise ValueError("q is required when source=search")
+        players_dto = await self.mlb_api.search_players(query=normalized_query)
+        return players_dto, None
 
     async def _resolve_internal_team_id(
         self,

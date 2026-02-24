@@ -3,7 +3,7 @@ from typing import List, Optional
 from src.application.ports.mlb_api import MLBApiPort
 from src.application.ports.team_repository import TeamRepositoryPort
 from src.domain.entities.team import Team
-from src.interface.rest.exception_handlers import DomainExceptions
+from src.domain.exceptions import InvalidDataError, TeamNotFoundError
 
 VALID_LEAGUES = {"American League", "American", "National League", "National"}
 VALID_DIVISIONS = {"East", "West", "Central"}
@@ -36,9 +36,7 @@ class ListTeamsUseCase:
 
         league_clean = league.strip().title()
         if league_clean not in VALID_LEAGUES:
-            raise DomainExceptions.InvalidDataError(
-                f"Invalid league: `{league}`. Expected one of these values: {VALID_LEAGUES}"
-            )
+            raise InvalidDataError(f"Invalid league: `{league}`. Expected one of these values: {VALID_LEAGUES}")
 
         return league_clean
 
@@ -48,9 +46,7 @@ class ListTeamsUseCase:
 
         division_clean = division.strip().title()
         if division_clean not in VALID_DIVISIONS:
-            raise DomainExceptions.InvalidDataError(
-                f"Invalid division: `{division}`. Expected one of these values: {VALID_DIVISIONS}"
-            )
+            raise InvalidDataError(f"Invalid division: `{division}`. Expected one of these values: {VALID_DIVISIONS}")
 
         return division_clean
 
@@ -62,12 +58,12 @@ class GetTeamUseCase:
 
     async def execute(self, team_id: int) -> Optional[Team]:
         if team_id is None or team_id <= 0:
-            raise DomainExceptions.InvalidDataError("Invalid team ID. Must be a positive integer")
+            raise InvalidDataError("Invalid team ID. Must be a positive integer")
 
         team = await self.team_repository.get_by_id(team_id)
 
         if not team:
-            raise DomainExceptions.TeamNotFoundError(team_id)
+            raise TeamNotFoundError(team_id)
 
         return team
 

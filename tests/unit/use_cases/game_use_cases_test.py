@@ -29,12 +29,28 @@ class TestIngestGamesUseCase:
         return AsyncMock()
 
     @pytest.fixture
-    def use_case(self, mock_game_repository, mock_team_repository, mock_mlb_api, mock_cache):
-        return IngestGamesUseCase(mock_game_repository, mock_team_repository, mock_mlb_api, mock_cache)
+    def use_case(
+        self,
+        mock_game_repository,
+        mock_team_repository,
+        mock_mlb_api,
+        mock_cache,
+    ):
+        return IngestGamesUseCase(
+            mock_game_repository,
+            mock_team_repository,
+            mock_mlb_api,
+            mock_cache,
+        )
 
     @pytest.mark.asyncio
     async def test_execute_ingests_games_successfully(
-        self, use_case, mock_mlb_api, mock_team_repository, mock_game_repository, mock_cache
+        self,
+        use_case,
+        mock_mlb_api,
+        mock_team_repository,
+        mock_game_repository,
+        mock_cache,
     ):
         # Given
         game_date = date(2025, 6, 4)
@@ -75,7 +91,8 @@ class TestIngestGamesUseCase:
             venue_name="Venue",
         )
 
-        mock_team_repository.get_by_mlb_id.side_effect = lambda mlb_id: {101: home_team, 102: away_team}.get(mlb_id)
+        teams_by_mlb_id = {101: home_team, 102: away_team}
+        mock_team_repository.get_by_mlb_id.side_effect = lambda mlb_id: teams_by_mlb_id.get(mlb_id)
 
         # Mock Game Repository save
         expected_game = Game.create(

@@ -3,7 +3,7 @@ REST API routes for data ingestion and machine learning operations.
 """
 
 from datetime import datetime
-from typing import Dict, Union
+from typing import Any, Awaitable, Callable, Dict, Union
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
@@ -42,6 +42,10 @@ from src.interface.rest.generated.models.models import (
 from src.interface.rest.response_handler import ResponseHandler
 
 router = APIRouter()
+MIN_SUPPORTED_SEASON = 1900
+MAX_DAYS_BACK = 30
+MAX_SEASON_OFFSET = 1
+StepExecutor = Callable[[], Awaitable[Any]]
 
 
 def get_data_ingestion_use_cases(db: Session = Depends(get_db)):
@@ -88,6 +92,110 @@ def get_data_ingestion_use_cases(db: Session = Depends(get_db)):
     }
 
 
+def _validate_ingestion_params(season: int, days_back: int) -> None:
+    current_year = datetime.now().year
+    max_supported_season = current_year + MAX_SEASON_OFFSET
+    if season < MIN_SUPPORTED_SEASON or season > max_supported_season:
+        raise DomainExceptions.InvalidDataError(
+            f"Season must be between {MIN_SUPPORTED_SEASON} and {max_supported_season}"
+        )
+    if days_back < 1 or days_back > MAX_DAYS_BACK:
+        raise DomainExceptions.InvalidDataError(f"Days back must be between 1 and {MAX_DAYS_BACK}")
+
+
+def _new_ingestion_results() -> Dict[str, Dict[str, Union[bool, int, str, None]]]:
+    return {
+        "teams": {"success": False, "count": 0, "error": None},
+        "games": {"success": False, "count": 0, "error": None},
+        "team_stats": {"success": False, "count": 0, "error": None},
+    }
+
+
+def _count_team_stats_payload(team_stats: Any) -> int:
+    if not isinstance(team_stats, dict):
+        return 0
+    return sum(
+        len(team_stats.get(section, []))
+        for section in ("hitting_stats", "pitching_stats", "fielding_stats", "catching_stats")
+    )
+
+
+async def _run_ingestion_step(
+    step_key: str,
+    executor: StepExecutor,
+    ingestion_results: Dict[str, Dict[str, Union[bool, int, str, None]]],
+    errors: list[str],
+    count_extractor: Callable[[Any], int] = len,
+) -> int:
+    try:
+        result = await executor()
+        count = count_extractor(result)
+        ingestion_results[step_key]["success"] = True
+        ingestion_results[step_key]["count"] = count
+        return count
+    except Exception as exc:
+        ingestion_results[step_key]["error"] = str(exc)
+        errors.append(f"{step_key.replace('_', ' ').title()} ingestion failed: {exc}")
+        return 0
+
+
+async def _collect_ingestion_results(
+    use_cases: Dict[str, Any],
+    season: int,
+    days_back: int,
+) -> tuple[Dict[str, Dict[str, Union[bool, int, str, None]]], int, list[str]]:
+    ingestion_results = _new_ingestion_results()
+    errors: list[str] = []
+    total_records = 0
+    total_records += await _run_ingestion_step("teams", use_cases["ingest_teams"].execute, ingestion_results, errors)
+    total_records += await _run_ingestion_step(
+        "games",
+        lambda: use_cases["ingest_games"].execute(days_back=days_back),
+        ingestion_results,
+        errors,
+    )
+    total_records += await _run_ingestion_step(
+        "team_stats",
+        lambda: use_cases["ingest_all_team_stats"].execute(season=season),
+        ingestion_results,
+        errors,
+        _count_team_stats_payload,
+    )
+    return ingestion_results, total_records, errors
+
+
+def _build_ingestion_response(
+    season: int,
+    start_time: datetime,
+    ingestion_results: Dict[str, Dict[str, Union[bool, int, str, None]]],
+    total_records: int,
+    errors: list[str],
+) -> JSONResponse:
+    end_time = datetime.now()
+    ingestion_summary = DataIngestionResultDTO(
+        operation="full_data_ingestion",
+        records_processed=total_records,
+        records_created=total_records,
+        records_updated=0,
+        errors=errors,
+        duration_seconds=(end_time - start_time).total_seconds(),
+        timestamp=end_time,
+    )
+    overall_success = all(result["success"] for result in ingestion_results.values())
+    if not overall_success and errors:
+        raise DomainExceptions.ExternalServiceError("Data Ingestion", "; ".join(errors))
+    return ResponseHandler.created(
+        data={
+            "overall_summary": ingestion_summary,
+            "teams_ingested": ingestion_results["teams"]["count"],
+            "games_ingested": ingestion_results["games"]["count"],
+            "stats_ingested": ingestion_results["team_stats"]["count"],
+            "breakdown": ingestion_results,
+        },
+        message=f"Full data ingestion completed successfully for season {season}",
+    )
+
+
 @router.post(
     "/data/ingest/full",
     tags=["Data Ingestion"],
@@ -124,100 +232,15 @@ async def ingest_full_data(
         DomainExceptions.InvalidDataError: If season or days_back is invalid
         DomainExceptions.ExternalServiceError: If MLB API is unavailable
     """
-    # Validate inputs
-    current_year = datetime.now().year
-    if season < 1900 or season > current_year + 1:
-        raise DomainExceptions.InvalidDataError(f"Season must be between 1900 and {current_year + 1}")
-
-    if days_back < 1 or days_back > 30:
-        raise DomainExceptions.InvalidDataError("Days back must be between 1 and 30")
-
+    _validate_ingestion_params(season, days_back)
     start_time = datetime.now()
-
-    # Define proper type structure for ingestion results
-    ingestion_results: Dict[str, Dict[str, Union[bool, int, str, None]]] = {
-        "teams": {"success": False, "count": 0, "error": None},
-        "games": {"success": False, "count": 0, "error": None},
-        "team_stats": {"success": False, "count": 0, "error": None},
-    }
-
-    total_records = 0
-    errors = []
-
     try:
-        # Step 1: Ingest teams
-        try:
-            ingest_teams_use_case = use_cases["ingest_teams"]
-            teams = await ingest_teams_use_case.execute()
-            ingestion_results["teams"]["success"] = True
-            ingestion_results["teams"]["count"] = len(teams)
-            total_records += len(teams)
-        except Exception as e:
-            ingestion_results["teams"]["error"] = str(e)
-            errors.append(f"Teams ingestion failed: {str(e)}")
-
-        # Step 2: Ingest games
-        try:
-            ingest_games_use_case = use_cases["ingest_games"]
-            games = await ingest_games_use_case.execute(days_back=days_back)
-            ingestion_results["games"]["success"] = True
-            ingestion_results["games"]["count"] = len(games)
-            total_records += len(games)
-        except Exception as e:
-            ingestion_results["games"]["error"] = str(e)
-            errors.append(f"Games ingestion failed: {str(e)}")
-
-        # Step 3: Ingest team stats
-        try:
-            ingest_all_team_stats_use_case = use_cases["ingest_all_team_stats"]
-            team_stats = await ingest_all_team_stats_use_case.execute(season=season)
-
-            stats_count = (
-                len(team_stats.get("hitting_stats", []))
-                + len(team_stats.get("pitching_stats", []))
-                + len(team_stats.get("fielding_stats", []))
-                + len(team_stats.get("catching_stats", []))
-            )
-
-            ingestion_results["team_stats"]["success"] = True
-            ingestion_results["team_stats"]["count"] = stats_count
-            total_records += stats_count
-        except Exception as e:
-            ingestion_results["team_stats"]["error"] = str(e)
-            errors.append(f"Team stats ingestion failed: {str(e)}")
-
-        end_time = datetime.now()
-        duration = (end_time - start_time).total_seconds()
-
-        # Create overall summary
-        ingestion_summary = DataIngestionResultDTO(
-            operation="full_data_ingestion",
-            records_processed=total_records,
-            records_created=total_records,  # Simplified assumption
-            records_updated=0,
-            errors=errors,
-            duration_seconds=duration,
-            timestamp=end_time,
+        ingestion_results, total_records, errors = await _collect_ingestion_results(
+            use_cases=use_cases,
+            season=season,
+            days_back=days_back,
         )
-
-        # Determine overall success
-        overall_success = all(result["success"] for result in ingestion_results.values())
-
-        if not overall_success and errors:
-            # If there are critical errors, raise an exception
-            raise DomainExceptions.ExternalServiceError("Data Ingestion", "; ".join(errors))
-
-        return ResponseHandler.created(
-            data={
-                "overall_summary": ingestion_summary,
-                "teams_ingested": ingestion_results["teams"]["count"],
-                "games_ingested": ingestion_results["games"]["count"],
-                "stats_ingested": ingestion_results["team_stats"]["count"],
-                "breakdown": ingestion_results,
-            },
-            message=f"Full data ingestion completed successfully for season {season}",
-        )
-
+        return _build_ingestion_response(season, start_time, ingestion_results, total_records, errors)
     except Exception as e:
         if "MLB API" in str(e) or "api" in str(e).lower():
             raise DomainExceptions.ExternalServiceError("MLB API", str(e))

@@ -11,8 +11,8 @@ from sqlalchemy.orm import Session, joinedload
 
 from src.application.ports.game_repository import GameRepositoryPort
 from src.domain.entities.game import Game
-from src.domain.entities.team import Team
-from src.infrastructure.db.models import GameModel, TeamModel
+from src.infrastructure.db.models import GameModel
+from src.infrastructure.db.repositories.entity_mapping_helpers import game_model_to_entity
 
 
 class GameRepository(GameRepositoryPort):
@@ -255,45 +255,4 @@ class GameRepository(GameRepositoryPort):
 
     def _model_to_entity(self, model: GameModel) -> Game:
         """Convert a GameModel to a Game entity."""
-        game = Game(
-            id=model.id,
-            mlb_game_id=model.mlb_game_id,
-            home_team_id=model.home_team_id,
-            away_team_id=model.away_team_id,
-            game_date=model.game_date,
-            scheduled_innings=model.scheduled_innings,
-            status=model.status,
-            home_score=model.home_score,
-            away_score=model.away_score,
-            winning_team_id=model.winning_team_id,
-            created_at=model.created_at,
-            updated_at=model.updated_at,
-        )
-
-        # Set related entities if loaded
-        if hasattr(model, "home_team") and model.home_team:
-            game.home_team = self._team_model_to_entity(model.home_team)
-
-        if hasattr(model, "away_team") and model.away_team:
-            game.away_team = self._team_model_to_entity(model.away_team)
-
-        # Fix winning_team relationship loading
-        if hasattr(model, "winning_team") and model.winning_team:
-            game.winning_team = self._team_model_to_entity(model.winning_team)
-
-        return game
-
-    def _team_model_to_entity(self, model: TeamModel) -> Team:
-        """Convert a TeamModel to a Team entity."""
-        return Team(
-            id=model.id,
-            mlb_id=model.mlb_id,
-            name=model.name,
-            abbreviation=model.abbreviation,
-            city=model.city,
-            division=model.division,
-            league=model.league,
-            venue_name=model.venue_name,
-            created_at=model.created_at,
-            updated_at=model.updated_at,
-        )
+        return game_model_to_entity(model)

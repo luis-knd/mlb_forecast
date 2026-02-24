@@ -142,21 +142,17 @@ class SchedulerAdapter(SchedulerPort):
         Returns:
             List of job information dictionaries
         """
-        jobs_info = []
-
-        for job in self.scheduler.get_jobs():
-            jobs_info.append(
-                {
-                    "id": job.id,
-                    "name": job.name,
-                    "next_run": (job.next_run_time.isoformat() if job.next_run_time else None),
-                    "trigger": str(job.trigger),
-                    "max_instances": job.max_instances,
-                    "pending": job.pending,
-                }
-            )
-
-        return jobs_info
+        return [
+            {
+                "id": job.id,
+                "name": job.name,
+                "next_run": (job.next_run_time.isoformat() if job.next_run_time else None),
+                "trigger": str(job.trigger),
+                "max_instances": job.max_instances,
+                "pending": job.pending,
+            }
+            for job in self.scheduler.get_jobs()
+        ]
 
     async def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
         """

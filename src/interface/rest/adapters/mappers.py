@@ -53,6 +53,81 @@ def _build_dto(dto_cls: Type, **kwargs):
     return dto_cls(**payload)
 
 
+PITCHING_INT_DTO_FIELDS = {
+    "games_played": "games_played",
+    "wins": "wins",
+    "losses": "losses",
+    "saves": "saves",
+    "save_opportunities": "save_opportunities",
+    "holds": "holds",
+    "blown_saves": "blown_saves",
+    "batters_faced": "batters_faced",
+    "hits_allowed": "hits_allowed",
+    "runs_allowed": "runs_allowed",
+    "earned_runs": "earned_runs",
+    "home_runs_allowed": "home_runs_allowed",
+    "strikeouts": "strikeouts",
+    "base_on_balls": "base_on_balls",
+    "intentional_walks": "intentional_walks",
+    "hit_batsmen": "hit_batsmen",
+    "wild_pitches": "wild_pitches",
+    "balks": "balks",
+    "number_of_pitches": "number_of_pitches",
+    "complete_games": "complete_games",
+    "shutouts": "shutouts",
+    "games_started": "games_started",
+    "ground_outs": "ground_outs",
+    "air_outs": "air_outs",
+    "doubles": "doubles",
+    "triples": "triples",
+    "at_bats": "at_bats",
+    "outs": "outs",
+    "strikes": "strikes",
+    "pickoffs": "pickoffs",
+    "total_bases": "total_bases",
+    "games_finished": "games_finished",
+    "catchers_interference": "catchers_interference",
+    "sacrifice_bunts": "sacrifice_bunts",
+    "sacrifice_flies": "sacrifice_flies",
+    "ground_into_double_play": "ground_into_double_play",
+    "caught_stealing": "caught_stealing",
+    "inherited_runners": "inherited_runners",
+    "inherited_runners_scored": "inherited_runners_scored",
+    "quality_starts": "quality_starts",
+}
+
+PITCHING_FLOAT_DTO_FIELDS = {
+    "innings_pitched": "innings_pitched",
+    "earned_run_average": "earned_run_average",
+    "whip": "whip",
+    "strikeouts_per_nine": "strikeouts_per_nine",
+    "walks_per_nine": "walks_per_nine",
+    "hits_per_nine": "hits_per_nine",
+    "home_runs_per_nine": "home_runs_per_nine",
+    "strikeout_to_walk_ratio": "strikeout_to_walk_ratio",
+    "ground_outs_to_airouts": "ground_outs_to_airouts",
+    "pitches_per_inning": "pitches_per_inning",
+    "batting_average_against": "batting_average_against",
+    "on_base_percentage": "on_base_percentage",
+    "slugging_percentage": "slugging_percentage",
+    "ops": "ops",
+    "stolen_base_percentage": "stolen_base_percentage",
+    "strike_percentage": "strike_percentage",
+    "runs_scored_per_nine": "runs_scored_per_nine",
+}
+
+
+def _resolve_pitching_win_percentage(src: Any) -> Optional[float]:
+    win_pct = _f(_get(src, "win_percentage"))
+    if win_pct is not None:
+        return win_pct
+    wins = _f(_get(src, "wins"))
+    games_played = _f(_get(src, "games_played"))
+    if wins is None or games_played is None or games_played <= 0:
+        return None
+    return wins / games_played
+
+
 def to_team_dto(team: Team) -> TeamDTO:
     return TeamDTO(
         id=getattr(team, "id", None),
@@ -133,74 +208,13 @@ def to_hitting_stats_dto(src: Any) -> HittingStatsDTO:
 
 
 def to_pitching_stats_dto(src: Any) -> PitchingStatsDTO:
-    # derive win_percentage if missing
-    raw_win_pct = _get(src, "win_percentage")
-    win_pct = _f(raw_win_pct)
-    if win_pct is None:
-        wins = _f(_get(src, "wins"))
-        gp = _f(_get(src, "games_played"))
-        win_pct = (wins / gp) if wins is not None and gp and gp > 0 else None
-
-    return PitchingStatsDTO(
-        games_played=_i(_get(src, "games_played")),
-        wins=_i(_get(src, "wins")),
-        losses=_i(_get(src, "losses")),
-        saves=_i(_get(src, "saves")),
-        save_opportunities=_i(_get(src, "save_opportunities")),
-        holds=_i(_get(src, "holds")),
-        blown_saves=_i(_get(src, "blown_saves")),
-        innings_pitched=_f(_get(src, "innings_pitched")),
-        batters_faced=_i(_get(src, "batters_faced")),
-        hits_allowed=_i(_get(src, "hits_allowed")),
-        runs_allowed=_i(_get(src, "runs_allowed")),
-        earned_runs=_i(_get(src, "earned_runs")),
-        home_runs_allowed=_i(_get(src, "home_runs_allowed")),
-        strikeouts=_i(_get(src, "strikeouts")),
-        base_on_balls=_i(_get(src, "base_on_balls")),
-        intentional_walks=_i(_get(src, "intentional_walks")),
-        hit_batsmen=_i(_get(src, "hit_batsmen")),
-        wild_pitches=_i(_get(src, "wild_pitches")),
-        balks=_i(_get(src, "balks")),
-        number_of_pitches=_i(_get(src, "number_of_pitches")),
-        complete_games=_i(_get(src, "complete_games")),
-        shutouts=_i(_get(src, "shutouts")),
-        games_started=_i(_get(src, "games_started")),
-        ground_outs=_i(_get(src, "ground_outs")),
-        air_outs=_i(_get(src, "air_outs")),
-        doubles=_i(_get(src, "doubles")),
-        triples=_i(_get(src, "triples")),
-        at_bats=_i(_get(src, "at_bats")),
-        outs=_i(_get(src, "outs")),
-        strikes=_i(_get(src, "strikes")),
-        pickoffs=_i(_get(src, "pickoffs")),
-        total_bases=_i(_get(src, "total_bases")),
-        games_finished=_i(_get(src, "games_finished")),
-        catchers_interference=_i(_get(src, "catchers_interference")),
-        sacrifice_bunts=_i(_get(src, "sacrifice_bunts")),
-        sacrifice_flies=_i(_get(src, "sacrifice_flies")),
-        ground_into_double_play=_i(_get(src, "ground_into_double_play")),
-        caught_stealing=_i(_get(src, "caught_stealing")),
-        earned_run_average=_f(_get(src, "earned_run_average")),
-        whip=_f(_get(src, "whip")),
-        strikeouts_per_nine=_f(_get(src, "strikeouts_per_nine")),
-        walks_per_nine=_f(_get(src, "walks_per_nine")),
-        hits_per_nine=_f(_get(src, "hits_per_nine")),
-        home_runs_per_nine=_f(_get(src, "home_runs_per_nine")),
-        strikeout_to_walk_ratio=_f(_get(src, "strikeout_to_walk_ratio")),
-        ground_outs_to_airouts=_f(_get(src, "ground_outs_to_airouts")),
-        pitches_per_inning=_f(_get(src, "pitches_per_inning")),
-        batting_average_against=_f(_get(src, "batting_average_against")),
-        inherited_runners=_i(_get(src, "inherited_runners")),
-        inherited_runners_scored=_i(_get(src, "inherited_runners_scored")),
-        quality_starts=_i(_get(src, "quality_starts")),
-        on_base_percentage=_f(_get(src, "on_base_percentage")),
-        slugging_percentage=_f(_get(src, "slugging_percentage")),
-        ops=_f(_get(src, "ops")),
-        stolen_base_percentage=_f(_get(src, "stolen_base_percentage")),
-        strike_percentage=_f(_get(src, "strike_percentage")),
-        win_percentage=win_pct,
-        runs_scored_per_nine=_f(_get(src, "runs_scored_per_nine")),
-    )
+    data: dict[str, Any] = {}
+    for field_name, source_name in PITCHING_INT_DTO_FIELDS.items():
+        data[field_name] = _i(_get(src, source_name))
+    for field_name, source_name in PITCHING_FLOAT_DTO_FIELDS.items():
+        data[field_name] = _f(_get(src, source_name))
+    data["win_percentage"] = _resolve_pitching_win_percentage(src)
+    return _build_dto(PitchingStatsDTO, **data)
 
 
 def to_fielding_stats_dto(src: Any) -> FieldingStatsDTO:

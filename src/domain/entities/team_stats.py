@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
+from src.domain.entities.stats_factory import build_stats_payload
 from src.domain.entities.team import Team
 
 
@@ -59,61 +60,27 @@ class TeamStats:
         cls,
         team_id: int,
         season: int,
-        games_played: int = 0,
-        wins: int = 0,
-        losses: int = 0,
-        runs_scored: int = 0,
-        hits: int = 0,
-        home_runs: int = 0,
-        batting_average: float = 0.0,
-        on_base_percentage: float = 0.0,
-        slugging_percentage: float = 0.0,
-        ops: float = 0.0,
-        stolen_bases: int = 0,
-        earned_run_average: float = 0.0,
-        whip: float = 0.0,
-        strikeouts_per_nine: float = 0.0,
-        walks_per_nine: float = 0.0,
-        home_runs_allowed: int = 0,
-        runs_allowed: int = 0,
-        fielding_percentage: float = 0.0,
-        errors: int = 0,
-        double_plays: int = 0,
+        **stats: int | float,
     ) -> "TeamStats":
         """Factory method to create a new TeamStats entity."""
+        now, payload = build_stats_payload(
+            stats,
+            extra_blocked_keys=frozenset({"run_differential", "pythagorean_expectation"}),
+        )
+        runs_scored = int(payload.get("runs_scored", 0) or 0)
+        runs_allowed = int(payload.get("runs_allowed", 0) or 0)
         run_differential = runs_scored - runs_allowed
-
-        # Simple Pythagorean expectation formula
         pythagorean_expectation = cls._calculate_pythagorean_expectation(runs_scored, runs_allowed)
 
         return cls(
             id=None,
             team_id=team_id,
             season=season,
-            games_played=games_played,
-            wins=wins,
-            losses=losses,
-            runs_scored=runs_scored,
-            hits=hits,
-            home_runs=home_runs,
-            batting_average=batting_average,
-            on_base_percentage=on_base_percentage,
-            slugging_percentage=slugging_percentage,
-            ops=ops,
-            stolen_bases=stolen_bases,
-            earned_run_average=earned_run_average,
-            whip=whip,
-            strikeouts_per_nine=strikeouts_per_nine,
-            walks_per_nine=walks_per_nine,
-            home_runs_allowed=home_runs_allowed,
-            runs_allowed=runs_allowed,
-            fielding_percentage=fielding_percentage,
-            errors=errors,
-            double_plays=double_plays,
             run_differential=run_differential,
             pythagorean_expectation=pythagorean_expectation,
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
+            created_at=now,
+            updated_at=now,
+            **payload,
         )
 
     def win_percentage(self) -> float:

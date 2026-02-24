@@ -42,6 +42,32 @@ def get_team_stats_use_cases(
     }
 
 
+def _parse_season_year(season: str) -> int:
+    try:
+        return int(season)
+    except (TypeError, ValueError) as error:
+        raise HTTPException(status_code=422, detail="season must be an integer year") from error
+
+
+def _validate_season_range(season_year: int) -> None:
+    current_year = datetime.now().year
+    max_historical_season = current_year - 30
+    if max_historical_season <= season_year <= current_year:
+        return
+    raise DomainExceptions.InvalidDataError(f"Season must be between {max_historical_season} and {current_year}")
+
+
+def _resolve_stats_category(category: Optional[str]) -> TeamStatsCategory:
+    normalized_category = category.strip().lower() if category else None
+    if not normalized_category:
+        return TeamStatsCategory.ALL
+    try:
+        return TeamStatsCategory(normalized_category)
+    except ValueError as error:
+        allowed_values = ", ".join(TeamStatsCategory.allowed_values())
+        raise HTTPException(status_code=422, detail=f"category must be one of: {allowed_values}") from error
+
+
 @router.get(
     "/teams/{team_id}/stats/{season}",
     response_model=TeamSeasonStatsDetailResponse,
@@ -88,31 +114,9 @@ async def get_team_stats(
     if team_id <= 0:
         raise DomainExceptions.InvalidDataError("Team ID must be a positive integer")
 
-    try:
-        season_year = int(season)
-    except (TypeError, ValueError) as error:
-        raise HTTPException(
-            status_code=422,
-            detail="season must be an integer year",
-        ) from error
-
-    current_year = datetime.now().year
-    max_historical_season = current_year - 30
-    if season_year < max_historical_season or season_year > current_year:
-        raise DomainExceptions.InvalidDataError(f"Season must be between {max_historical_season} and {current_year}")
-
-    normalized_category = category.strip().lower() if category else None
-    resolved_category = TeamStatsCategory.ALL
-    if normalized_category:
-        try:
-            resolved_category = TeamStatsCategory(normalized_category)
-        except ValueError as error:
-            allowed_values = ", ".join(TeamStatsCategory.allowed_values())
-            raise HTTPException(
-                status_code=422,
-                detail=f"category must be one of: {allowed_values}",
-            ) from error
-
+    season_year = _parse_season_year(season)
+    _validate_season_range(season_year)
+    resolved_category = _resolve_stats_category(category)
     try:
         get_team_stats_use_case = use_cases["get_team_stats"]
         team_stats = await get_team_stats_use_case.execute(

@@ -43,7 +43,13 @@ def completed_game() -> Game:
 
 @pytest.fixture
 def sample_team_stats() -> TeamStats:
-    return TeamStats.create(team_id=1, season=datetime.now(timezone.utc).year, games_played=50, wins=30, losses=20)
+    return TeamStats.create(
+        team_id=1,
+        season=datetime.now(timezone.utc).year,
+        games_played=50,
+        wins=30,
+        losses=20,
+    )
 
 
 @pytest.fixture
@@ -87,7 +93,11 @@ class TestGeneratePredictionUseCase:
         prediction_repository.save.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_returns_none_when_game_already_completed(self, completed_game, sample_team_stats):
+    async def test_returns_none_when_game_already_completed(
+        self,
+        completed_game,
+        sample_team_stats,
+    ):
         # Given
         prediction_repository = AsyncMock()
         game_repository = AsyncMock()
@@ -153,7 +163,11 @@ class TestGeneratePredictionUseCase:
         team_stats_repository = AsyncMock()
         team_stats_repository.get_by_team_and_season = AsyncMock(side_effect=[sample_team_stats, sample_team_stats])
         ml_model = AsyncMock()
-        base_prediction = Prediction.create(game_id=0, prediction_type="winner", model_version="v1")
+        base_prediction = Prediction.create(
+            game_id=0,
+            prediction_type="winner",
+            model_version="v1",
+        )
         ml_model.predict_game_outcome = AsyncMock(return_value=base_prediction)
         cache = AsyncMock()
         use_case = GeneratePredictionUseCase(
@@ -204,8 +218,15 @@ class TestGetPredictionsForGameUseCase:
         result = await use_case.execute(game_id=10, prediction_type="winner")
 
         # Then
-        prediction_repository.list_by_game_and_type.assert_awaited_once_with(10, "winner")
-        cache.set.assert_awaited_once_with("predictions:game:10:winner", [sample_prediction], ttl=1800)
+        prediction_repository.list_by_game_and_type.assert_awaited_once_with(
+            10,
+            "winner",
+        )
+        cache.set.assert_awaited_once_with(
+            "predictions:game:10:winner",
+            [sample_prediction],
+            ttl=1800,
+        )
         assert result == [sample_prediction]
 
     @pytest.mark.asyncio
@@ -222,7 +243,11 @@ class TestGetPredictionsForGameUseCase:
 
         # Then
         prediction_repository.list_by_game.assert_awaited_once_with(10)
-        cache.set.assert_awaited_once_with("predictions:game:10:all", [sample_prediction], ttl=1800)
+        cache.set.assert_awaited_once_with(
+            "predictions:game:10:all",
+            [sample_prediction],
+            ttl=1800,
+        )
         assert result == [sample_prediction]
 
 
@@ -235,7 +260,11 @@ class TestListUpcomingPredictionsUseCase:
         cache.get = AsyncMock(return_value=cached_payload)
         prediction_repository = AsyncMock()
         game_repository = AsyncMock()
-        use_case = ListUpcomingPredictionsUseCase(prediction_repository, game_repository, cache)
+        use_case = ListUpcomingPredictionsUseCase(
+            prediction_repository,
+            game_repository,
+            cache,
+        )
 
         # When
         result = await use_case.execute(days_ahead=2, limit=5)
@@ -275,7 +304,11 @@ class TestListUpcomingPredictionsUseCase:
         )
         prediction_repository = AsyncMock()
         prediction_repository.list_by_game = AsyncMock(return_value=[prediction_with_timestamp])
-        use_case = ListUpcomingPredictionsUseCase(prediction_repository, game_repository, cache)
+        use_case = ListUpcomingPredictionsUseCase(
+            prediction_repository,
+            game_repository,
+            cache,
+        )
 
         # When
         result = await use_case.execute(days_ahead=1, limit=1)
@@ -296,7 +329,11 @@ class TestUpdatePredictionWithResultUseCase:
         prediction_repository.get_by_id = AsyncMock(return_value=None)
         game_repository = AsyncMock()
         cache = AsyncMock()
-        use_case = UpdatePredictionWithResultUseCase(prediction_repository, game_repository, cache)
+        use_case = UpdatePredictionWithResultUseCase(
+            prediction_repository,
+            game_repository,
+            cache,
+        )
 
         # When
         result = await use_case.execute(prediction_id=5)
@@ -313,7 +350,11 @@ class TestUpdatePredictionWithResultUseCase:
         game_repository = AsyncMock()
         game_repository.get_by_id = AsyncMock(return_value=None)
         cache = AsyncMock()
-        use_case = UpdatePredictionWithResultUseCase(prediction_repository, game_repository, cache)
+        use_case = UpdatePredictionWithResultUseCase(
+            prediction_repository,
+            game_repository,
+            cache,
+        )
 
         # When
         result = await use_case.execute(prediction_id=21)
@@ -323,14 +364,22 @@ class TestUpdatePredictionWithResultUseCase:
         prediction_repository.update_with_actual_result.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_returns_none_when_game_not_completed(self, sample_prediction, sample_game):
+    async def test_returns_none_when_game_not_completed(
+        self,
+        sample_prediction,
+        sample_game,
+    ):
         # Given
         prediction_repository = AsyncMock()
         prediction_repository.get_by_id = AsyncMock(return_value=sample_prediction)
         game_repository = AsyncMock()
         game_repository.get_by_id = AsyncMock(return_value=sample_game)
         cache = AsyncMock()
-        use_case = UpdatePredictionWithResultUseCase(prediction_repository, game_repository, cache)
+        use_case = UpdatePredictionWithResultUseCase(
+            prediction_repository,
+            game_repository,
+            cache,
+        )
 
         # When
         result = await use_case.execute(prediction_id=21)
@@ -340,7 +389,11 @@ class TestUpdatePredictionWithResultUseCase:
         prediction_repository.update_with_actual_result.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_updates_prediction_with_winner_accuracy(self, sample_prediction, completed_game):
+    async def test_updates_prediction_with_winner_accuracy(
+        self,
+        sample_prediction,
+        completed_game,
+    ):
         # Given
         prediction_repository = AsyncMock()
         prediction_repository.get_by_id = AsyncMock(return_value=sample_prediction)
@@ -360,7 +413,11 @@ class TestUpdatePredictionWithResultUseCase:
         game_repository = AsyncMock()
         game_repository.get_by_id = AsyncMock(return_value=completed_game)
         cache = AsyncMock()
-        use_case = UpdatePredictionWithResultUseCase(prediction_repository, game_repository, cache)
+        use_case = UpdatePredictionWithResultUseCase(
+            prediction_repository,
+            game_repository,
+            cache,
+        )
 
         # When
         result = await use_case.execute(prediction_id=21)

@@ -24,41 +24,24 @@ repos:
       - id: isort
         name: isort (python)
 
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.4
+    hooks:
+      - id: ruff
+        args:
+          - "--select=E,F,ERA"
+          - "--line-length=120"
+          - "--exclude=src/interface/rest/generated"
+
   - repo: https://github.com/pycqa/flake8
     rev: 7.1.0
     hooks:
       - id: flake8
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.10.0
-    hooks:
-      - id: mypy
-        args: [ --config-file=pyproject.toml, --explicit-package-bases ]
-        additional_dependencies:
-          - types-redis
-          - types-requests
-          - sqlalchemy[mypy]
-          - fastapi
-          - pydantic-settings
-          - httpx
-          - apscheduler
-          - structlog
-        files: ^src/
-
   - repo: https://github.com/python-openapi/openapi-spec-validator
     rev: 0.8.0b1
     hooks:
       - id: openapi-spec-validator
-
-  - repo: local
-    hooks:
-      - id: pytest
-        name: Unit test
-        entry: bash -lc 'docker exec -i "${APP_CTN:-mlb_forecast_backend-app-1}" pytest -q tests/unit'
-        language: system
-        pass_filenames: false
-        files: ^src/
-        exclude: ^src/interface/rest/generated/
 
   # Secrets scanning
   - repo: https://github.com/Yelp/detect-secrets

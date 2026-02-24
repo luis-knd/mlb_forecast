@@ -726,6 +726,7 @@ curl http://localhost:8000/info
 
 - **API Docs**: http://localhost:8000/docs (Swagger)
 - **Arquitectura**: Ver diagramas en [docs/diagrams/](docs/diagrams/)
+- **Quality Gates**: Estrategia de verificación en [docs/quality-gates.md](docs/quality-gates.md)
 - **ML Models**: Documentación detallada en `/docs/ml/`
 
 ## 🆘 Troubleshooting

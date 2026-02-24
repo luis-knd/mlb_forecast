@@ -30,10 +30,22 @@ class TestTeamRepository:
                 "Oakland Coliseum",
             ),
             Team.create(
-                136, "Seattle Mariners", "SEA", "Seattle", "American League West", "American League", "T-Mobile Park"
+                136,
+                "Seattle Mariners",
+                "SEA",
+                "Seattle",
+                "American League West",
+                "American League",
+                "T-Mobile Park",
             ),
             Team.create(
-                147, "New York Yankees", "NYY", "New York", "American League East", "American League", "Yankee Stadium"
+                147,
+                "New York Yankees",
+                "NYY",
+                "New York",
+                "American League East",
+                "American League",
+                "Yankee Stadium",
             ),
         ]
 

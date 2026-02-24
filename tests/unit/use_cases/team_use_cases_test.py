@@ -38,12 +38,22 @@ class TestListTeamsUseCase:
                 "Oakland Coliseum",
             ),
             Team.create(
-                136, "Seattle Mariners", "SEA", "Seattle", "American League West", "American League", "T-Mobile Park"
+                136,
+                "Seattle Mariners",
+                "SEA",
+                "Seattle",
+                "American League West",
+                "American League",
+                "T-Mobile Park",
             ),
         ]
 
     @pytest.mark.asyncio
-    async def test_execute_with_combined_filters(self, mock_repository, american_west_teams):
+    async def test_execute_with_combined_filters(
+        self,
+        mock_repository,
+        american_west_teams,
+    ):
         use_case = ListTeamsUseCase(mock_repository)
 
         # Given
@@ -53,7 +63,10 @@ class TestListTeamsUseCase:
         result = await use_case.execute(league="American", division="West")
 
         # Then
-        mock_repository.list_by_league_and_division.assert_called_once_with("American", "West")
+        mock_repository.list_by_league_and_division.assert_called_once_with(
+            "American",
+            "West",
+        )
         assert len(result) == 2
         assert all("American League" in team.league and "West" in team.division for team in result)
 
@@ -135,7 +148,7 @@ class TestListTeamsUseCase:
     async def test_invalid_league_raises_error(self, mock_repository):
         # Given
         use_case = ListTeamsUseCase(mock_repository)
-        expected_error = f"Invalid league: `Invalid League`. Expected one of these values: {VALID_LEAGUES}"
+        expected_error = "Invalid league: `Invalid League`. " f"Expected one of these values: {VALID_LEAGUES}"
 
         # When, Then
         with pytest.raises(DomainExceptions.InvalidDataError, match=expected_error):
@@ -145,7 +158,7 @@ class TestListTeamsUseCase:
     async def test_invalid_division_raises_error(self, mock_repository):
         # Given
         use_case = ListTeamsUseCase(mock_repository)
-        expected_error = f"Invalid division: `Invalid Division`. Expected one of these values: {VALID_DIVISIONS}"
+        expected_error = "Invalid division: `Invalid Division`. " f"Expected one of these values: {VALID_DIVISIONS}"
 
         # When, Then
         with pytest.raises(DomainExceptions.InvalidDataError, match=expected_error):
@@ -223,7 +236,15 @@ class TestIngestTeamsUseCase:
         ]
         mock_mlb_api.get_teams.return_value = mlb_teams_dto
 
-        saved_team = Team.create(1, "Team 1", "T1", "City 1", "Div 1", "Lg 1", "Venue 1")
+        saved_team = Team.create(
+            1,
+            "Team 1",
+            "T1",
+            "City 1",
+            "Div 1",
+            "Lg 1",
+            "Venue 1",
+        )
         mock_repository.save.return_value = saved_team
 
         # When
