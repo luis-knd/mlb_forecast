@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from typing import Any
+from typing import Any, TypeVar
+
+from pydantic import BaseModel
 
 from src.domain.entities.player import Player
 from src.domain.entities.team import Team
@@ -46,7 +48,10 @@ def _f(v: Any) -> float | None:
     return _to_number(v, float)
 
 
-def _build_dto(dto_cls: type, **kwargs):
+DTOModel = TypeVar("DTOModel", bound=BaseModel)
+
+
+def _build_dto(dto_cls: type[DTOModel], **kwargs: Any) -> DTOModel:
     # Solo pasa al DTO las keys que existen en el modelo y con valor no None
     allowed = set(dto_cls.model_fields.keys())
     payload = {k: v for k, v in kwargs.items() if k in allowed and v is not None}
