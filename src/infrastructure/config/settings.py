@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     MLB_API_TIMEOUT: int = int(os.getenv("MLB_API_TIMEOUT", "10"))
     MLB_API_MAX_RETRIES: int = int(os.getenv("MLB_API_MAX_RETRIES", "2"))
     MLB_API_BACKOFF_FACTOR: float = float(os.getenv("MLB_API_BACKOFF_FACTOR", "0.5"))
+    MLB_PLAYER_STATS_ALL_GROUPS_CONCURRENCY: int = int(os.getenv("MLB_PLAYER_STATS_ALL_GROUPS_CONCURRENCY", "2"))
 
     # ML model settings
     MODEL_DIR: str = "models"  # TODO this does not exist yet
