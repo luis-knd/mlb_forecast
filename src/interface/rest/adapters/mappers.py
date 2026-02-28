@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any, Iterable, List, Optional, Type
+from collections.abc import Iterable, Mapping
+from typing import Any, TypeVar
+
+from pydantic import BaseModel
 
 from src.domain.entities.player import Player
 from src.domain.entities.team import Team
@@ -38,17 +40,20 @@ def _to_number(value: Any, caster):
         return None
 
 
-def _i(v: Any) -> Optional[int]:
+def _i(v: Any) -> int | None:
     return _to_number(v, int)
 
 
-def _f(v: Any) -> Optional[float]:
+def _f(v: Any) -> float | None:
     return _to_number(v, float)
 
 
-def _build_dto(dto_cls: Type, **kwargs):
+DTOModel = TypeVar("DTOModel", bound=BaseModel)
+
+
+def _build_dto(dto_cls: type[DTOModel], **kwargs: Any) -> DTOModel:
     # Solo pasa al DTO las keys que existen en el modelo y con valor no None
-    allowed = set(getattr(dto_cls, "model_fields").keys())
+    allowed = set(dto_cls.model_fields.keys())
     payload = {k: v for k, v in kwargs.items() if k in allowed and v is not None}
     return dto_cls(**payload)
 
@@ -117,7 +122,7 @@ PITCHING_FLOAT_DTO_FIELDS = {
 }
 
 
-def _resolve_pitching_win_percentage(src: Any) -> Optional[float]:
+def _resolve_pitching_win_percentage(src: Any) -> float | None:
     win_pct = _f(_get(src, "win_percentage"))
     if win_pct is not None:
         return win_pct
@@ -143,7 +148,7 @@ def to_team_dto(team: Team) -> TeamDTO:
     )
 
 
-def to_team_dto_list(teams: Iterable[Team]) -> List[TeamDTO]:
+def to_team_dto_list(teams: Iterable[Team]) -> list[TeamDTO]:
     return [to_team_dto(t) for t in teams]
 
 
@@ -165,45 +170,45 @@ def to_player_payload(player: Player) -> dict[str, Any]:
     }
 
 
-def to_player_payload_list(players: Iterable[Player]) -> List[dict[str, Any]]:
+def to_player_payload_list(players: Iterable[Player]) -> list[dict[str, Any]]:
     return [to_player_payload(player) for player in players]
 
 
 def to_hitting_stats_dto(src: Any) -> HittingStatsDTO:
-    data = dict(
-        games_played=_i(_get(src, "games_played")),
-        plate_appearances=_i(_get(src, "plate_appearances")),
-        at_bats=_i(_get(src, "at_bats")),
-        hits=_i(_get(src, "hits")),
-        doubles=_i(_get(src, "doubles")),
-        triples=_i(_get(src, "triples")),
-        home_runs=_i(_get(src, "home_runs")),
+    data = {
+        "games_played": _i(_get(src, "games_played")),
+        "plate_appearances": _i(_get(src, "plate_appearances")),
+        "at_bats": _i(_get(src, "at_bats")),
+        "hits": _i(_get(src, "hits")),
+        "doubles": _i(_get(src, "doubles")),
+        "triples": _i(_get(src, "triples")),
+        "home_runs": _i(_get(src, "home_runs")),
         # Nombres alineados a DB + alias de compatibilidad
-        runs_scored=_i(_get(src, "runs_scored", _get(src, "runs"))),
-        runs_batted_in=_i(_get(src, "runs_batted_in", _get(src, "rbi"))),
-        stolen_bases=_i(_get(src, "stolen_bases")),
-        caught_stealing=_i(_get(src, "caught_stealing")),
-        base_on_balls=_i(_get(src, "base_on_balls", _get(src, "walks"))),
-        strikeouts=_i(_get(src, "strikeouts")),
-        hit_by_pitch=_i(_get(src, "hit_by_pitch")),
-        sacrifice_hits=_i(_get(src, "sacrifice_hits", _get(src, "sacrifice_bunts"))),
-        sacrifice_flies=_i(_get(src, "sacrifice_flies")),
-        ground_into_double_play=_i(_get(src, "ground_into_double_play")),
-        left_on_base=_i(_get(src, "left_on_base")),
-        total_bases=_i(_get(src, "total_bases")),
-        batting_average=_f(_get(src, "batting_average")),
-        on_base_percentage=_f(_get(src, "on_base_percentage")),
-        slugging_percentage=_f(_get(src, "slugging_percentage")),
-        ops=_f(_get(src, "ops")),
-        babip=_f(_get(src, "babip")),
-        at_bats_per_home_run=_f(_get(src, "at_bats_per_home_run")),
-        stolen_base_percentage=_f(_get(src, "stolen_base_percentage")),
-        ground_outs=_i(_get(src, "ground_outs")),
-        air_outs=_i(_get(src, "air_outs")),
-        ground_outs_to_air_outs=_f(_get(src, "ground_outs_to_air_outs", _get(src, "ground_outs_to_airouts"))),
-        number_of_pitches=_i(_get(src, "number_of_pitches")),
-        intentional_walks=_i(_get(src, "intentional_walks")),
-    )
+        "runs_scored": _i(_get(src, "runs_scored", _get(src, "runs"))),
+        "runs_batted_in": _i(_get(src, "runs_batted_in", _get(src, "rbi"))),
+        "stolen_bases": _i(_get(src, "stolen_bases")),
+        "caught_stealing": _i(_get(src, "caught_stealing")),
+        "base_on_balls": _i(_get(src, "base_on_balls", _get(src, "walks"))),
+        "strikeouts": _i(_get(src, "strikeouts")),
+        "hit_by_pitch": _i(_get(src, "hit_by_pitch")),
+        "sacrifice_hits": _i(_get(src, "sacrifice_hits", _get(src, "sacrifice_bunts"))),
+        "sacrifice_flies": _i(_get(src, "sacrifice_flies")),
+        "ground_into_double_play": _i(_get(src, "ground_into_double_play")),
+        "left_on_base": _i(_get(src, "left_on_base")),
+        "total_bases": _i(_get(src, "total_bases")),
+        "batting_average": _f(_get(src, "batting_average")),
+        "on_base_percentage": _f(_get(src, "on_base_percentage")),
+        "slugging_percentage": _f(_get(src, "slugging_percentage")),
+        "ops": _f(_get(src, "ops")),
+        "babip": _f(_get(src, "babip")),
+        "at_bats_per_home_run": _f(_get(src, "at_bats_per_home_run")),
+        "stolen_base_percentage": _f(_get(src, "stolen_base_percentage")),
+        "ground_outs": _i(_get(src, "ground_outs")),
+        "air_outs": _i(_get(src, "air_outs")),
+        "ground_outs_to_air_outs": _f(_get(src, "ground_outs_to_air_outs", _get(src, "ground_outs_to_airouts"))),
+        "number_of_pitches": _i(_get(src, "number_of_pitches")),
+        "intentional_walks": _i(_get(src, "intentional_walks")),
+    }
     return _build_dto(HittingStatsDTO, **data)
 
 
@@ -312,5 +317,5 @@ def to_game_dto(game: Any) -> GameDTO:
     )
 
 
-def to_game_dto_list(games: Iterable[Any]) -> List[GameDTO]:
+def to_game_dto_list(games: Iterable[Any]) -> list[GameDTO]:
     return [to_game_dto(g) for g in games]

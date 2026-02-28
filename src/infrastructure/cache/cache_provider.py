@@ -6,11 +6,10 @@ to avoid reconnecting on every request and spamming logs.
 """
 
 import logging
-from typing import Optional
 
 from src.infrastructure.cache.redis_adapter import RedisAdapter
 
-_cache_adapter: Optional[RedisAdapter] = None
+_cache_adapter: RedisAdapter | None = None
 logger = logging.getLogger(__name__)
 
 

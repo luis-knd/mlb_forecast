@@ -4,7 +4,6 @@ This defines how the application interacts with team statistics data storage.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Optional
 
 from src.domain.entities.team_stats import TeamStats
 
@@ -13,29 +12,29 @@ class TeamStatsRepositoryPort(ABC):
     """Interface for team statistics repository operations."""
 
     @abstractmethod
-    async def get_by_id(self, stats_id: int) -> Optional[TeamStats]:
+    async def get_by_id(self, stats_id: int) -> TeamStats | None:
         """Get team statistics by its ID."""
         pass
 
     @abstractmethod
-    async def get_by_team_and_season(self, team_id: int, season: int) -> Optional[dict]:
+    async def get_by_team_and_season(self, team_id: int, season: int) -> dict | None:
         """Get team statistics by team ID and season."""
         pass
 
     @abstractmethod
-    async def list_by_team(self, team_id: int) -> List[TeamStats]:
+    async def list_by_team(self, team_id: int) -> list[TeamStats]:
         """List all statistics for a specific team across seasons."""
         pass
 
     @abstractmethod
-    async def list_by_season(self, season: int) -> List[TeamStats]:
+    async def list_by_season(self, season: int) -> list[TeamStats]:
         """List statistics for all teams in a specific season."""
         pass
 
     @abstractmethod
     async def list_top_teams_by_stat(
         self, season: int, stat_name: str, limit: int = 10, descending: bool = True
-    ) -> List[TeamStats]:
+    ) -> list[TeamStats]:
         """List top teams by a specific statistic."""
         pass
 
@@ -45,7 +44,7 @@ class TeamStatsRepositoryPort(ABC):
         pass
 
     @abstractmethod
-    async def update_stats(self, stats_id: int, updated_stats: dict) -> Optional[TeamStats]:
+    async def update_stats(self, stats_id: int, updated_stats: dict) -> TeamStats | None:
         """Update specific statistics for a team."""
         pass
 

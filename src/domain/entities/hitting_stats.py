@@ -5,7 +5,6 @@ This is a pure domain entity without any framework dependencies.
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 
 from src.domain.entities.stats_factory import build_stats_payload
 from src.domain.entities.team import Team
@@ -15,7 +14,7 @@ from src.domain.entities.team import Team
 class HittingStats:
     """HittingStats entity representing hitting statistics for a baseball team in the MLB."""
 
-    id: Optional[int]
+    id: int | None
     team_id: int
     season: int
 
@@ -56,11 +55,11 @@ class HittingStats:
     number_of_pitches: int = 0
     intentional_walks: int = 0
 
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     # This is not stored but can be set for convenience
-    team: Optional[Team] = None
+    team: Team | None = None
 
     @classmethod
     def create(

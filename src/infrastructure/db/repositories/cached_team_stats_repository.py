@@ -3,7 +3,7 @@ Cached TeamStats repository implementation.
 This module implements the CachedTeamStatsRepository decorator for Caching Strategy.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from src.application.ports.cache import CachePort
 from src.application.ports.team_stats_repository import TeamStatsRepositoryPort
@@ -22,7 +22,7 @@ class CachedTeamStatsRepository(TeamStatsRepositoryPort):
         self.repository = repository
         self.cache = cache
 
-    async def get_by_id(self, stats_id: int) -> Optional[TeamStats]:
+    async def get_by_id(self, stats_id: int) -> TeamStats | None:
         """Get team statistics by its ID with caching."""
         cache_key = f"{self.CACHE_PREFIX}:id:{stats_id}"
         cached_value = await self.cache.get(cache_key)
@@ -36,7 +36,7 @@ class CachedTeamStatsRepository(TeamStatsRepositoryPort):
 
         return result
 
-    async def get_by_team_and_season(self, team_id: int, season: int) -> Optional[dict]:
+    async def get_by_team_and_season(self, team_id: int, season: int) -> dict | None:
         """Get team statistics by team ID and season with caching."""
         cache_key = f"{self.CACHE_PREFIX}:{team_id}:{season}"
         cached_value = await self.cache.get(cache_key)
@@ -50,7 +50,7 @@ class CachedTeamStatsRepository(TeamStatsRepositoryPort):
 
         return result
 
-    async def list_by_team(self, team_id: int) -> List[TeamStats]:
+    async def list_by_team(self, team_id: int) -> list[TeamStats]:
         """List all statistics for a specific team across seasons with caching."""
         cache_key = f"{self.CACHE_PREFIX}:team:{team_id}"
         cached_value = await self.cache.get(cache_key)
@@ -64,7 +64,7 @@ class CachedTeamStatsRepository(TeamStatsRepositoryPort):
 
         return result
 
-    async def list_by_season(self, season: int) -> List[TeamStats]:
+    async def list_by_season(self, season: int) -> list[TeamStats]:
         """List statistics for all teams in a specific season with caching."""
         cache_key = f"{self.CACHE_PREFIX}:season:{season}"
         cached_value = await self.cache.get(cache_key)
@@ -80,7 +80,7 @@ class CachedTeamStatsRepository(TeamStatsRepositoryPort):
 
     async def list_top_teams_by_stat(
         self, season: int, stat_name: str, limit: int = 10, descending: bool = True
-    ) -> List[TeamStats]:
+    ) -> list[TeamStats]:
         """List top teams by a specific statistic with caching."""
         # Include all parameters in cache key
         cache_key = f"{self.CACHE_PREFIX}:top:{season}:{stat_name}:{limit}:{descending}"
@@ -104,7 +104,7 @@ class CachedTeamStatsRepository(TeamStatsRepositoryPort):
 
         return result
 
-    async def update_stats(self, stats_id: int, updated_stats: Dict[str, Any]) -> Optional[TeamStats]:
+    async def update_stats(self, stats_id: int, updated_stats: dict[str, Any]) -> TeamStats | None:
         """Update specific statistics and invalidate relevant caches."""
         result = await self.repository.update_stats(stats_id, updated_stats)
 

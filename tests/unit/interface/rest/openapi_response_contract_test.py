@@ -31,4 +31,4 @@ def test_all_json_responses_have_structured_schema():
                     invalid_responses.append((path, method, status_code, "string_schema"))
 
     # Then
-    assert not invalid_responses, "Invalid OpenAPI JSON schemas detected: " f"{invalid_responses}"
+    assert not invalid_responses, f"Invalid OpenAPI JSON schemas detected: {invalid_responses}"

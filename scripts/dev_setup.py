@@ -77,7 +77,7 @@ def create_env_file():
     print("📝 Creando archivo .env desde ejemplo...")
 
     try:
-        with open(env_example, "r") as src, open(env_file, "w") as dst:
+        with open(env_example) as src, open(env_file, "w") as dst:
             dst.write(src.read())
         print("✅ Archivo .env creado")
         return True
@@ -233,7 +233,7 @@ def main():
     ]
 
     for step_name, step_func in steps:
-        print(f"\n{'='*20} {step_name} {'='*20}")
+        print(f"\n{'=' * 20} {step_name} {'=' * 20}")
 
         if not step_func():
             print(f"\n❌ Error en paso: {step_name}")

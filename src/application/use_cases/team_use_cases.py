@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from src.application.ports.mlb_api import MLBApiPort
 from src.application.ports.team_repository import TeamRepositoryPort
 from src.domain.entities.team import Team
@@ -14,13 +12,13 @@ class ListTeamsUseCase:
     def __init__(self, team_repository: TeamRepositoryPort):
         self.team_repository = team_repository
 
-    async def execute(self, league: Optional[str] = None, division: Optional[str] = None) -> List[Team]:
+    async def execute(self, league: str | None = None, division: str | None = None) -> list[Team]:
         normalized_league = self._normalize_league(league) if league else None
         normalized_division = self._normalize_division(division) if division else None
 
         return await self._fetch_teams(normalized_league, normalized_division)
 
-    async def _fetch_teams(self, league: Optional[str], division: Optional[str]) -> List[Team]:
+    async def _fetch_teams(self, league: str | None, division: str | None) -> list[Team]:
         if league and division:
             return await self.team_repository.list_by_league_and_division(league, division)
         elif league:
@@ -52,11 +50,10 @@ class ListTeamsUseCase:
 
 
 class GetTeamUseCase:
-
     def __init__(self, team_repository: TeamRepositoryPort):
         self.team_repository = team_repository
 
-    async def execute(self, team_id: int) -> Optional[Team]:
+    async def execute(self, team_id: int) -> Team | None:
         if team_id is None or team_id <= 0:
             raise InvalidDataError("Invalid team ID. Must be a positive integer")
 
@@ -69,12 +66,11 @@ class GetTeamUseCase:
 
 
 class IngestTeamsUseCase:
-
     def __init__(self, team_repository: TeamRepositoryPort, mlb_api: MLBApiPort):
         self.team_repository = team_repository
         self.mlb_api = mlb_api
 
-    async def execute(self) -> List[Team]:
+    async def execute(self) -> list[Team]:
         teams_dto = await self.mlb_api.get_teams()
 
         ingested_teams = []

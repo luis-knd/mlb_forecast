@@ -4,7 +4,7 @@ These define the application's business logic for prediction operations.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from src.application.ports.cache import CachePort
 from src.application.ports.game_repository import GameRepositoryPort
@@ -31,7 +31,7 @@ class GeneratePredictionUseCase:
         self.ml_model = ml_model
         self.cache = cache
 
-    async def execute(self, game_id: int, prediction_type: str = "winner") -> Optional[Prediction]:
+    async def execute(self, game_id: int, prediction_type: str = "winner") -> Prediction | None:
         """
         Generate a prediction for a game.
 
@@ -92,7 +92,7 @@ class GetPredictionsForGameUseCase:
         self.prediction_repository = prediction_repository
         self.cache = cache
 
-    async def execute(self, game_id: int, prediction_type: Optional[str] = None) -> List[Prediction]:
+    async def execute(self, game_id: int, prediction_type: str | None = None) -> list[Prediction]:
         """
         Get predictions for a game, optionally filtered by prediction type.
 
@@ -135,7 +135,7 @@ class ListUpcomingPredictionsUseCase:
         self.game_repository = game_repository
         self.cache = cache
 
-    async def execute(self, days_ahead: int = 3, limit: int = 20) -> List[Dict[str, Any]]:
+    async def execute(self, days_ahead: int = 3, limit: int = 20) -> list[dict[str, Any]]:
         """
         List predictions for upcoming games.
 
@@ -170,7 +170,7 @@ class ListUpcomingPredictionsUseCase:
                 continue
 
             # Get the most recent prediction of each type - add proper type annotation
-            prediction_by_type: Dict[str, Any] = {}
+            prediction_by_type: dict[str, Any] = {}
             for prediction in predictions:
                 # Ensure created_at is not None before comparison
                 if prediction.created_at is None:
@@ -205,7 +205,7 @@ class UpdatePredictionWithResultUseCase:
         self.game_repository = game_repository
         self.cache = cache
 
-    async def execute(self, prediction_id: int) -> Optional[Prediction]:
+    async def execute(self, prediction_id: int) -> Prediction | None:
         """
         Update a prediction with the actual result of the game.
 
@@ -231,14 +231,14 @@ class UpdatePredictionWithResultUseCase:
         await self.cache.clear(pattern=f"predictions:game:{prediction.game_id}*")
         return updated_prediction
 
-    async def _get_completed_game(self, game_id: int) -> Optional[Any]:
+    async def _get_completed_game(self, game_id: int) -> Any | None:
         game = await self.game_repository.get_by_id(game_id)
         if game is None or not game.is_completed():
             return None
         return game
 
     @staticmethod
-    def _build_actual_result(game: Any) -> Dict[str, Any]:
+    def _build_actual_result(game: Any) -> dict[str, Any]:
         return {
             "home_score": game.home_score,
             "away_score": game.away_score,

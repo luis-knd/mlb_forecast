@@ -3,7 +3,7 @@ TeamStats repository implementation.
 This module implements the TeamStatsRepositoryPort interface using SQLAlchemy.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import Session, joinedload
@@ -21,7 +21,7 @@ class TeamStatsRepository(TeamStatsRepositoryPort):
         self.session = session
         self.mapper = TeamStatsMapper()
 
-    async def get_by_id(self, stats_id: int) -> Optional[TeamStats]:
+    async def get_by_id(self, stats_id: int) -> TeamStats | None:
         """Get team statistics by its ID."""
         # Since we no longer have a TeamStatsModel, we need to query the individual stats models
         # and aggregate them into a TeamStats entity
@@ -106,13 +106,14 @@ class TeamStatsRepository(TeamStatsRepositoryPort):
             "updated_at": updated_at,
         }
 
-    def _model_to_dict(self, model):
+    @staticmethod
+    def _model_to_dict(model):
         """Convert SQLAlchemy model to dictionary."""
         if not model:
             return None
         return {c.name: getattr(model, c.name) for c in model.__table__.columns}
 
-    async def list_by_team(self, team_id: int) -> List[TeamStats]:
+    async def list_by_team(self, team_id: int) -> list[TeamStats]:
         """List all statistics for a specific team across seasons."""
         # Get all seasons for which the team has hitting stats
         seasons = (
@@ -132,7 +133,7 @@ class TeamStatsRepository(TeamStatsRepositoryPort):
 
         return team_stats_list
 
-    async def list_by_season(self, season: int) -> List[TeamStats]:
+    async def list_by_season(self, season: int) -> list[TeamStats]:
         """List statistics for all teams in a specific season."""
         # Get all teams that have hitting stats for the given season
         team_ids = self.session.query(HittingStatsModel.team_id).filter(HittingStatsModel.season == season).all()
@@ -149,7 +150,7 @@ class TeamStatsRepository(TeamStatsRepositoryPort):
 
     async def list_top_teams_by_stat(
         self, season: int, stat_name: str, limit: int = 10, descending: bool = True
-    ) -> List[TeamStats]:
+    ) -> list[TeamStats]:
         """List top teams by a specific statistic."""
 
         # Check if the stat is in HittingStatsModel
@@ -220,7 +221,7 @@ class TeamStatsRepository(TeamStatsRepositoryPort):
         model_updater(team_stats, model)
         return model
 
-    async def update_stats(self, stats_id: int, updated_stats: Dict[str, Any]) -> Optional[TeamStats]:
+    async def update_stats(self, stats_id: int, updated_stats: dict[str, Any]) -> TeamStats | None:
         """
         Update specific statistics for a team.
 

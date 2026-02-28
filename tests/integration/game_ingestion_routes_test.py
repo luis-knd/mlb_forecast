@@ -4,7 +4,6 @@ from starlette.status import HTTP_201_CREATED
 
 
 class TestGameIngestionRoute:
-
     @patch("src.application.use_cases.game_use_cases.IngestGamesUseCase.execute")
     def test_ingest_games_created_envelope(self, mock_execute, integration_client):
         mock_execute.return_value = []

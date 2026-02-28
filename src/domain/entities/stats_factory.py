@@ -1,7 +1,8 @@
 """Helpers for building typed payloads used by stats entities factories."""
 
+from collections.abc import Mapping
 from datetime import datetime
-from typing import Any, Mapping
+from typing import Any
 
 COMMON_BLOCKED_KEYS = frozenset({"id", "team_id", "season", "created_at", "updated_at"})
 

@@ -3,7 +3,8 @@ Use cases for team statistics ingestion operations.
 These define the application's business logic for ingesting team statistics from the MLB API.
 """
 
-from typing import Any, Dict, Iterable, List
+from collections.abc import Iterable
+from typing import Any
 
 from src.application.ports.catching_stats_repository import CatchingStatsRepositoryPort
 from src.application.ports.fielding_stats_repository import FieldingStatsRepositoryPort
@@ -17,14 +18,14 @@ from src.domain.entities.hitting_stats import HittingStats
 from src.domain.entities.pitching_stats import PitchingStats
 
 
-def _build_team_mapping(teams: Iterable[Any]) -> Dict[int, int]:
+def _build_team_mapping(teams: Iterable[Any]) -> dict[int, int]:
     return {team.mlb_id: team.id for team in teams if team.id is not None}
 
 
 def _iter_team_stat_splits(
-    stats_data: Dict[str, Any],
-    team_mapping: Dict[int, int],
-) -> Iterable[tuple[int, Dict[str, Any]]]:
+    stats_data: dict[str, Any],
+    team_mapping: dict[int, int],
+) -> Iterable[tuple[int, dict[str, Any]]]:
     for group in stats_data.get("stats", []):
         for split in group.get("splits", []):
             mlb_team_id = split.get("team", {}).get("id")
@@ -112,7 +113,7 @@ class IngestTeamHittingStatsUseCase:
         self.team_repository = team_repository
         self.mlb_api = mlb_api
 
-    async def execute(self, season: int) -> List[HittingStats]:
+    async def execute(self, season: int) -> list[HittingStats]:
         """
         Ingest team hitting statistics from the MLB API for a specific season.
 
@@ -142,7 +143,7 @@ class IngestTeamHittingStatsUseCase:
         self,
         team_id: int,
         season: int,
-        stat_data: Dict[str, Any],
+        stat_data: dict[str, Any],
         games_played: int,
         at_bats: int,
     ) -> HittingStats:
@@ -216,7 +217,7 @@ class IngestTeamPitchingStatsUseCase:
         self.team_repository = team_repository
         self.mlb_api = mlb_api
 
-    async def execute(self, season: int) -> List[PitchingStats]:
+    async def execute(self, season: int) -> list[PitchingStats]:
         """
         Ingest team pitching statistics from the MLB API for a specific season.
 
@@ -240,8 +241,8 @@ class IngestTeamPitchingStatsUseCase:
             ingested_stats.append(saved_stats)
         return ingested_stats
 
-    def _build_pitching_stats(self, team_id: int, season: int, stat_data: Dict[str, Any]) -> PitchingStats:
-        numeric_values: Dict[str, int | float] = {}
+    def _build_pitching_stats(self, team_id: int, season: int, stat_data: dict[str, Any]) -> PitchingStats:
+        numeric_values: dict[str, int | float] = {}
         for field_name, source_key in PITCHING_INT_FIELDS.items():
             numeric_values[field_name] = self._safe_int_conversion(stat_data.get(source_key))
         for field_name, source_key in PITCHING_FLOAT_FIELDS.items():
@@ -280,7 +281,7 @@ class IngestTeamFieldingStatsUseCase:
         self.team_repository = team_repository
         self.mlb_api = mlb_api
 
-    async def execute(self, season: int) -> List[FieldingStats]:
+    async def execute(self, season: int) -> list[FieldingStats]:
         """
         Ingest team fielding statistics from the MLB API for a specific season.
 
@@ -304,7 +305,7 @@ class IngestTeamFieldingStatsUseCase:
             ingested_stats.append(saved_stats)
         return ingested_stats
 
-    def _build_fielding_stats(self, team_id: int, season: int, stat_data: Dict[str, Any]) -> FieldingStats:
+    def _build_fielding_stats(self, team_id: int, season: int, stat_data: dict[str, Any]) -> FieldingStats:
         return FieldingStats.create(
             team_id=team_id,
             season=season,
@@ -364,7 +365,7 @@ class IngestTeamCatchingStatsUseCase:
         self.team_repository = team_repository
         self.mlb_api = mlb_api
 
-    async def execute(self, season: int) -> List[CatchingStats]:
+    async def execute(self, season: int) -> list[CatchingStats]:
         """
         Ingest team catching statistics from the MLB API for a specific season.
 
@@ -388,7 +389,7 @@ class IngestTeamCatchingStatsUseCase:
             ingested_stats.append(saved_stats)
         return ingested_stats
 
-    def _build_catching_stats(self, team_id: int, season: int, stat_data: Dict[str, Any]) -> CatchingStats:
+    def _build_catching_stats(self, team_id: int, season: int, stat_data: dict[str, Any]) -> CatchingStats:
         return CatchingStats.create(
             team_id=team_id,
             season=season,
@@ -457,7 +458,7 @@ class IngestAllTeamStatsUseCase:
         self.fielding_stats_use_case = fielding_stats_use_case
         self.catching_stats_use_case = catching_stats_use_case
 
-    async def execute(self, season: int) -> Dict[str, List]:
+    async def execute(self, season: int) -> dict[str, list]:
         """
         Ingest all team statistics from the MLB API for a specific season.
 

@@ -3,7 +3,7 @@ Player repository implementation.
 This module implements the PlayerRepositoryPort interface using SQLAlchemy.
 """
 
-from typing import List, Optional
+from datetime import datetime
 
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
@@ -20,7 +20,7 @@ class PlayerRepository(PlayerRepositoryPort):
     def __init__(self, session: Session):
         self.session = session
 
-    async def get_by_id(self, player_id: int) -> Optional[Player]:
+    async def get_by_id(self, player_id: int) -> Player | None:
         """Get a player by its ID."""
         player_model = (
             self.session.query(PlayerModel)
@@ -32,7 +32,7 @@ class PlayerRepository(PlayerRepositoryPort):
             return None
         return self._model_to_entity(player_model)
 
-    async def get_by_mlb_id(self, mlb_id: int) -> Optional[Player]:
+    async def get_by_mlb_id(self, mlb_id: int) -> Player | None:
         """Get a player by its MLB ID."""
         player_model = (
             self.session.query(PlayerModel)
@@ -44,7 +44,7 @@ class PlayerRepository(PlayerRepositoryPort):
             return None
         return self._model_to_entity(player_model)
 
-    async def list_by_team(self, team_id: int) -> List[Player]:
+    async def list_by_team(self, team_id: int) -> list[Player]:
         """List players by team."""
         player_models = (
             self.session.query(PlayerModel)
@@ -54,7 +54,7 @@ class PlayerRepository(PlayerRepositoryPort):
         )
         return [self._model_to_entity(model) for model in player_models]
 
-    async def list_by_position(self, position: str) -> List[Player]:
+    async def list_by_position(self, position: str) -> list[Player]:
         """List players by position."""
         player_models = (
             self.session.query(PlayerModel)
@@ -64,7 +64,7 @@ class PlayerRepository(PlayerRepositoryPort):
         )
         return [self._model_to_entity(model) for model in player_models]
 
-    async def list_active_players(self) -> List[Player]:
+    async def list_active_players(self) -> list[Player]:
         """List all active players."""
         player_models = (
             self.session.query(PlayerModel)
@@ -76,13 +76,13 @@ class PlayerRepository(PlayerRepositoryPort):
 
     async def list_players(
         self,
-        team_id: Optional[int] = None,
-        position: Optional[str] = None,
-        name: Optional[str] = None,
-        active: Optional[bool] = None,
+        team_id: int | None = None,
+        position: str | None = None,
+        name: str | None = None,
+        active: bool | None = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> List[Player]:
+    ) -> list[Player]:
         """List players applying optional filters and deterministic pagination."""
         query = self.session.query(PlayerModel).options(joinedload(PlayerModel.current_team))
 
@@ -117,7 +117,7 @@ class PlayerRepository(PlayerRepositoryPort):
         player_models = query.order_by(PlayerModel.id.asc()).offset(offset).limit(limit).all()
         return [self._model_to_entity(model) for model in player_models]
 
-    async def search_by_name(self, name: str) -> List[Player]:
+    async def search_by_name(self, name: str) -> list[Player]:
         """Search players by name."""
         # Split the name to search in both first and last name
         search_terms = name.split()
@@ -188,7 +188,7 @@ class PlayerRepository(PlayerRepositoryPort):
         self.session.refresh(player_model)
         return await self.get_by_id(player_model.id)
 
-    async def update_team(self, player_id: int, team_id: Optional[int]) -> Optional[Player]:
+    async def update_team(self, player_id: int, team_id: int | None) -> Player | None:
         """Update a player's team."""
         player_model = self.session.query(PlayerModel).filter(PlayerModel.id == player_id).first()
         if not player_model:
@@ -212,12 +212,35 @@ class PlayerRepository(PlayerRepositoryPort):
         model.mlb_id = entity.mlb_id
         model.first_name = entity.first_name
         model.last_name = entity.last_name
-        model.position = entity.position
-        model.bats = entity.bats
-        model.throws = entity.throws
-        model.birth_date = entity.birth_date
+        model.position = self._merge_required_text_field(incoming=entity.position, current=model.position)
+        model.bats = self._merge_optional_text_field(incoming=entity.bats, current=model.bats)
+        model.throws = self._merge_optional_text_field(incoming=entity.throws, current=model.throws)
+        model.birth_date = self._merge_birth_date(incoming=entity.birth_date, current=model.birth_date)
         model.active = entity.active
         model.current_team_id = entity.current_team_id
+
+    @staticmethod
+    def _merge_required_text_field(incoming: str, current: str) -> str:
+        """Keep existing value when incoming text is blank."""
+        if incoming.strip() == "":
+            return current
+        return incoming
+
+    @staticmethod
+    def _merge_optional_text_field(incoming: str | None, current: str | None) -> str | None:
+        """Keep existing value when incoming text is missing or blank."""
+        if incoming is None:
+            return current
+        if incoming.strip() == "":
+            return current
+        return incoming
+
+    @staticmethod
+    def _merge_birth_date(incoming: datetime | None, current: datetime | None) -> datetime | None:
+        """Keep existing birth date when incoming value is missing."""
+        if incoming is None:
+            return current
+        return incoming
 
     def _model_to_entity(self, model: PlayerModel) -> Player:
         """Convert a PlayerModel to a Player entity."""
@@ -242,7 +265,8 @@ class PlayerRepository(PlayerRepositoryPort):
 
         return player
 
-    def _team_model_to_entity(self, model: TeamModel) -> Team:
+    @staticmethod
+    def _team_model_to_entity(model: TeamModel) -> Team:
         """Convert a TeamModel to a Team entity."""
         return Team(
             id=model.id,

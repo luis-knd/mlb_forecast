@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Dict, Optional
 
 from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import JSONResponse
@@ -70,13 +69,13 @@ def get_player_use_cases(
     },
 )
 async def list_players(
-    team_id: Optional[int] = Query(None, description="Filter by internal team ID"),
-    position: Optional[str] = Query(None, description="Filter by position abbreviation"),
-    name: Optional[str] = Query(None, description="Filter by player name"),
-    active: Optional[bool] = Query(None, description="Filter by active status"),
+    team_id: int | None = Query(None, description="Filter by internal team ID"),
+    position: str | None = Query(None, description="Filter by position abbreviation"),
+    name: str | None = Query(None, description="Filter by player name"),
+    active: bool | None = Query(None, description="Filter by active status"),
     limit: int = Query(50, ge=1, le=200, description="Maximum number of players to return"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-    use_cases: Dict = Depends(get_player_use_cases),
+    use_cases: dict = Depends(get_player_use_cases),
 ) -> JSONResponse:
     if team_id is not None and team_id <= 0:
         raise DomainExceptions.InvalidDataError("team_id must be a positive integer")
@@ -111,7 +110,7 @@ async def list_players(
 )
 async def get_player(
     player_id: int = Path(..., description="MLB personId"),
-    use_cases: Dict = Depends(get_player_use_cases),
+    use_cases: dict = Depends(get_player_use_cases),
 ) -> JSONResponse:
     if player_id <= 0:
         raise DomainExceptions.InvalidDataError("player_id must be a positive integer")
@@ -142,10 +141,10 @@ async def get_player_stats(
     player_id: int = Path(..., description="MLB personId"),
     stats: str = Query(..., description="Stats type (season, career, yearByYear, gameLog, statSplits, seasonAdvanced)"),
     group: str = Query(..., description="Stats group (hitting, pitching, fielding, catching, running)"),
-    season: Optional[int] = Query(None, description="Season year"),
-    game_type: Optional[str] = Query(None, alias="gameType", description="Game type (R, S, P, W, A)"),
-    days_back: Optional[int] = Query(None, alias="daysBack", description="Rolling days back"),
-    use_cases: Dict = Depends(get_player_use_cases),
+    season: int | None = Query(None, description="Season year"),
+    game_type: str | None = Query(None, alias="gameType", description="Game type (R, S, P, W, A)"),
+    days_back: int | None = Query(None, alias="daysBack", description="Rolling days back"),
+    use_cases: dict = Depends(get_player_use_cases),
 ) -> JSONResponse:
     if player_id <= 0:
         raise DomainExceptions.InvalidDataError("player_id must be a positive integer")
@@ -171,7 +170,7 @@ async def get_player_stats(
 
     return ResponseHandler.success(
         data=player_stats,
-        message=(f"Player stats retrieved successfully for player {player_id} " f"(stats={stats}, group={group})"),
+        message=(f"Player stats retrieved successfully for player {player_id} (stats={stats}, group={group})"),
     )
 
 
@@ -191,16 +190,16 @@ async def get_player_stats(
 )
 async def ingest_players(
     source: str = Query("sport_players", description="Source mode: team_roster, sport_players, search"),
-    season: Optional[int] = Query(None, description="Season year"),
-    team_id: Optional[int] = Query(
+    season: int | None = Query(None, description="Season year"),
+    team_id: int | None = Query(
         None,
         alias="teamId",
         description="MLB team ID required when source=team_roster and optional filter when source=sport_players",
     ),
     roster_type: str = Query("active", alias="rosterType", description="Roster type for team roster ingestion"),
     sport_id: int = Query(1, alias="sportId", description="Sport ID for sport_players mode"),
-    query: Optional[str] = Query(None, alias="q", description="Search text when source=search"),
-    use_cases: Dict = Depends(get_player_use_cases),
+    query: str | None = Query(None, alias="q", description="Search text when source=search"),
+    use_cases: dict = Depends(get_player_use_cases),
 ) -> JSONResponse:
     start_time = datetime.now()
     current_year = datetime.now().year

@@ -2,8 +2,9 @@
 REST API routes for data ingestion and machine learning operations.
 """
 
+from collections.abc import Awaitable, Callable
 from datetime import datetime
-from typing import Any, Awaitable, Callable, Dict, Union
+from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
@@ -103,7 +104,7 @@ def _validate_ingestion_params(season: int, days_back: int) -> None:
         raise DomainExceptions.InvalidDataError(f"Days back must be between 1 and {MAX_DAYS_BACK}")
 
 
-def _new_ingestion_results() -> Dict[str, Dict[str, Union[bool, int, str, None]]]:
+def _new_ingestion_results() -> dict[str, dict[str, bool | int | str | None]]:
     return {
         "teams": {"success": False, "count": 0, "error": None},
         "games": {"success": False, "count": 0, "error": None},
@@ -123,7 +124,7 @@ def _count_team_stats_payload(team_stats: Any) -> int:
 async def _run_ingestion_step(
     step_key: str,
     executor: StepExecutor,
-    ingestion_results: Dict[str, Dict[str, Union[bool, int, str, None]]],
+    ingestion_results: dict[str, dict[str, bool | int | str | None]],
     errors: list[str],
     count_extractor: Callable[[Any], int] = len,
 ) -> int:
@@ -140,10 +141,10 @@ async def _run_ingestion_step(
 
 
 async def _collect_ingestion_results(
-    use_cases: Dict[str, Any],
+    use_cases: dict[str, Any],
     season: int,
     days_back: int,
-) -> tuple[Dict[str, Dict[str, Union[bool, int, str, None]]], int, list[str]]:
+) -> tuple[dict[str, dict[str, bool | int | str | None]], int, list[str]]:
     ingestion_results = _new_ingestion_results()
     errors: list[str] = []
     total_records = 0
@@ -167,7 +168,7 @@ async def _collect_ingestion_results(
 def _build_ingestion_response(
     season: int,
     start_time: datetime,
-    ingestion_results: Dict[str, Dict[str, Union[bool, int, str, None]]],
+    ingestion_results: dict[str, dict[str, bool | int | str | None]],
     total_records: int,
     errors: list[str],
 ) -> JSONResponse:
@@ -212,7 +213,7 @@ def _build_ingestion_response(
 async def ingest_full_data(
     season: int = Query(datetime.now().year, description="Season to ingest data for"),
     days_back: int = Query(7, le=30, description="Number of days back to ingest games for"),
-    use_cases: Dict = Depends(get_data_ingestion_use_cases),
+    use_cases: dict = Depends(get_data_ingestion_use_cases),
 ) -> JSONResponse:
     """
     Handle the full data ingestion process for a given season.

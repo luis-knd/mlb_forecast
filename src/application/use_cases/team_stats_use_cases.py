@@ -3,7 +3,7 @@ Use cases for team statistics operations.
 These define the application's business logic for team statistics operations.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from src.application.ports.cache import CachePort
 from src.application.ports.mlb_api import MLBApiPort
@@ -33,7 +33,7 @@ class GetTeamStatsUseCase:
         team_id: int,
         season: int,
         category: TeamStatsCategory = TeamStatsCategory.ALL,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Get statistics for a specific team and season.
 
@@ -61,7 +61,7 @@ class GetTeamStatsUseCase:
 
         return filtered_stats
 
-    def _filter_by_category(self, stats: Dict[str, Any], category: TeamStatsCategory) -> Dict[str, Any]:
+    def _filter_by_category(self, stats: dict[str, Any], category: TeamStatsCategory) -> dict[str, Any]:
         if category is TeamStatsCategory.ALL:
             return stats
 
@@ -87,7 +87,7 @@ class ListTeamStatsBySeason:
     def __init__(self, team_stats_repository: TeamStatsRepositoryPort):
         self.team_stats_repository = team_stats_repository
 
-    async def execute(self, season: int) -> List[TeamStats]:
+    async def execute(self, season: int) -> list[TeamStats]:
         """
         List statistics for all teams in a specific season.
 
@@ -106,7 +106,7 @@ class ListTopTeamsByStatUseCase:
     def __init__(self, team_stats_repository: TeamStatsRepositoryPort):
         self.team_stats_repository = team_stats_repository
 
-    async def execute(self, season: int, stat_name: str, limit: int = 10, descending: bool = True) -> List[TeamStats]:
+    async def execute(self, season: int, stat_name: str, limit: int = 10, descending: bool = True) -> list[TeamStats]:
         """
         List top teams by a specific statistic.
 
@@ -135,7 +135,7 @@ class IngestTeamStatsUseCase:
         self.team_repository = team_repository
         self.mlb_api = mlb_api
 
-    async def execute(self, season: int) -> List[TeamStats]:
+    async def execute(self, season: int) -> list[TeamStats]:
         """
         Ingest team statistics from the MLB API for a specific season.
 
@@ -199,7 +199,7 @@ class UpdateTeamStatsUseCase:
     def __init__(self, team_stats_repository: TeamStatsRepositoryPort):
         self.team_stats_repository = team_stats_repository
 
-    async def execute(self, stats_id: int, updated_stats: Dict[str, Any]) -> Optional[TeamStats]:
+    async def execute(self, stats_id: int, updated_stats: dict[str, Any]) -> TeamStats | None:
         """
         Update specific statistics for a team.
 

@@ -148,7 +148,7 @@ class TestListTeamsUseCase:
     async def test_invalid_league_raises_error(self, mock_repository):
         # Given
         use_case = ListTeamsUseCase(mock_repository)
-        expected_error = "Invalid league: `Invalid League`. " f"Expected one of these values: {VALID_LEAGUES}"
+        expected_error = f"Invalid league: `Invalid League`. Expected one of these values: {VALID_LEAGUES}"
 
         # When, Then
         with pytest.raises(DomainExceptions.InvalidDataError, match=expected_error):
@@ -158,7 +158,7 @@ class TestListTeamsUseCase:
     async def test_invalid_division_raises_error(self, mock_repository):
         # Given
         use_case = ListTeamsUseCase(mock_repository)
-        expected_error = "Invalid division: `Invalid Division`. " f"Expected one of these values: {VALID_DIVISIONS}"
+        expected_error = f"Invalid division: `Invalid Division`. Expected one of these values: {VALID_DIVISIONS}"
 
         # When, Then
         with pytest.raises(DomainExceptions.InvalidDataError, match=expected_error):

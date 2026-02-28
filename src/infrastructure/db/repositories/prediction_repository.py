@@ -3,7 +3,7 @@ Prediction repository implementation.
 This module implements the PredictionRepositoryPort interface using SQLAlchemy.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
@@ -21,7 +21,7 @@ class PredictionRepository(PredictionRepositoryPort):
     def __init__(self, session: Session):
         self.session = session
 
-    async def get_by_id(self, prediction_id: int) -> Optional[Prediction]:
+    async def get_by_id(self, prediction_id: int) -> Prediction | None:
         """Get a prediction by its ID."""
         prediction_model = (
             self.session.query(PredictionModel)
@@ -36,7 +36,7 @@ class PredictionRepository(PredictionRepositoryPort):
             return None
         return self._model_to_entity(prediction_model)
 
-    async def list_by_game(self, game_id: int) -> List[Prediction]:
+    async def list_by_game(self, game_id: int) -> list[Prediction]:
         """List predictions for a specific game."""
         prediction_models = (
             self.session.query(PredictionModel)
@@ -50,7 +50,7 @@ class PredictionRepository(PredictionRepositoryPort):
         )
         return [self._model_to_entity(model) for model in prediction_models]
 
-    async def list_by_game_and_type(self, game_id: int, prediction_type: str) -> List[Prediction]:
+    async def list_by_game_and_type(self, game_id: int, prediction_type: str) -> list[Prediction]:
         """List predictions for a specific game and type."""
         prediction_models = (
             self.session.query(PredictionModel)
@@ -67,7 +67,7 @@ class PredictionRepository(PredictionRepositoryPort):
         )
         return [self._model_to_entity(model) for model in prediction_models]
 
-    async def list_latest_predictions(self, limit: int = 50) -> List[Prediction]:
+    async def list_latest_predictions(self, limit: int = 50) -> list[Prediction]:
         """List the latest predictions."""
         prediction_models = (
             self.session.query(PredictionModel)
@@ -81,7 +81,7 @@ class PredictionRepository(PredictionRepositoryPort):
         )
         return [self._model_to_entity(model) for model in prediction_models]
 
-    async def list_by_model_version(self, model_version: str, limit: int = 50) -> List[Prediction]:
+    async def list_by_model_version(self, model_version: str, limit: int = 50) -> list[Prediction]:
         """List predictions by model version."""
         prediction_models = (
             self.session.query(PredictionModel)
@@ -128,8 +128,8 @@ class PredictionRepository(PredictionRepositoryPort):
         return await self.get_by_id(prediction_model.id)
 
     async def update_with_actual_result(
-        self, prediction_id: int, actual_result: Dict[str, Any], accuracy: float
-    ) -> Optional[Prediction]:
+        self, prediction_id: int, actual_result: dict[str, Any], accuracy: float
+    ) -> Prediction | None:
         """Update a prediction with the actual result and accuracy."""
         prediction_model = self.session.query(PredictionModel).filter(PredictionModel.id == prediction_id).first()
         if not prediction_model:
@@ -162,7 +162,8 @@ class PredictionRepository(PredictionRepositoryPort):
         )
         return float(result) if result is not None else 0.0
 
-    def _update_prediction_model(self, model: PredictionModel, entity: Prediction) -> None:
+    @staticmethod
+    def _update_prediction_model(model: PredictionModel, entity: Prediction) -> None:
         """Update a PredictionModel with values from a Prediction entity."""
         model.game_id = entity.game_id
         model.prediction_type = entity.prediction_type
@@ -177,7 +178,8 @@ class PredictionRepository(PredictionRepositoryPort):
         model.actual_result = entity.actual_result
         model.prediction_accuracy = entity.prediction_accuracy
 
-    def _model_to_entity(self, model: PredictionModel) -> Prediction:
+    @staticmethod
+    def _model_to_entity(model: PredictionModel) -> Prediction:
         """Convert a PredictionModel to a Prediction entity."""
         prediction = Prediction(
             id=model.id,
@@ -199,10 +201,11 @@ class PredictionRepository(PredictionRepositoryPort):
 
         # Set related game if loaded
         if hasattr(model, "game") and model.game:
-            prediction.game = self._game_model_to_entity(model.game)
+            prediction.game = PredictionRepository._game_model_to_entity(model.game)
 
         return prediction
 
-    def _game_model_to_entity(self, model: GameModel) -> Game:
+    @staticmethod
+    def _game_model_to_entity(model: GameModel) -> Game:
         """Convert a GameModel to a Game entity."""
         return game_model_to_entity(model)

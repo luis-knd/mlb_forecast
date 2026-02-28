@@ -5,7 +5,7 @@ This module implements the CachePort interface using Redis.
 
 import logging
 import pickle
-from typing import Any, Dict, List, Optional, Protocol
+from typing import Any, Protocol
 
 import redis.asyncio as redis
 
@@ -22,20 +22,20 @@ class CacheException(Exception):
 
 
 class _RedisIntrospectionContext(Protocol):
-    redis_client: Optional[redis.Redis]
+    redis_client: redis.Redis | None
 
     async def connect(self) -> None: ...
 
 
 class _RedisIntrospectionMixin:
-    async def get_stats(self: _RedisIntrospectionContext) -> Dict[str, Any]:
+    async def get_stats(self: _RedisIntrospectionContext) -> dict[str, Any]:
         """Get cache statistics."""
         if not self.redis_client:
             await self.connect()
 
         try:
             if self.redis_client:
-                info: Dict[str, Any] = dict(await self.redis_client.info())
+                info: dict[str, Any] = dict(await self.redis_client.info())
                 hits: int = info.get("keyspace_hits", 0)
                 misses: int = info.get("keyspace_misses", 0)
                 total: int = hits + misses
@@ -61,7 +61,7 @@ class _RedisIntrospectionMixin:
             logger.error(f"Error getting cache statistics: {e}")
             return {"error": str(e)}
 
-    async def count_keys(self: _RedisIntrospectionContext) -> Optional[int]:
+    async def count_keys(self: _RedisIntrospectionContext) -> int | None:
         """Return total amount of keys in the selected Redis database."""
         if not self.redis_client:
             await self.connect()
@@ -74,12 +74,12 @@ class _RedisIntrospectionMixin:
             logger.error(f"Error counting keys in cache: {e}")
             return None
 
-    async def list_keys(self: _RedisIntrospectionContext, pattern: str = "*", limit: int = 100) -> List[str]:
+    async def list_keys(self: _RedisIntrospectionContext, pattern: str = "*", limit: int = 100) -> list[str]:
         """Return up to `limit` keys matching `pattern` using SCAN to avoid blocking."""
         if not self.redis_client:
             await self.connect()
 
-        keys: List[str] = []
+        keys: list[str] = []
         try:
             if not self.redis_client:
                 return keys
@@ -102,8 +102,8 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
     """Implementation of the CachePort interface using Redis."""
 
     def __init__(self) -> None:
-        self.redis_client: Optional[redis.Redis] = None
-        self.connection_pool: Optional[redis.ConnectionPool] = None
+        self.redis_client: redis.Redis | None = None
+        self.connection_pool: redis.ConnectionPool | None = None
 
     async def connect(self) -> None:
         """Establish connection to Redis with connection pool."""
@@ -151,7 +151,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
 
         try:
             if self.redis_client:
-                value: Optional[bytes] = await self.redis_client.get(key)
+                value: bytes | None = await self.redis_client.get(key)
             else:
                 value = None
 
@@ -166,7 +166,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
             logger.error(f"Error retrieving from cache {key}: {e}")
             return default
 
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """Set a value in the cache with an optional time-to-live in seconds."""
         if not self.redis_client:
             await self.connect()
@@ -181,7 +181,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
 
             # Store in Redis
             if self.redis_client:
-                result: Optional[bool] = await self.redis_client.setex(key, ttl, serialized_value)
+                result: bool | None = await self.redis_client.setex(key, ttl, serialized_value)
             else:
                 result = False
 
@@ -217,7 +217,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
             if not self.redis_client:
                 return 0
 
-            keys: List[str] = [key async for key in self.redis_client.scan_iter(match=pattern)]
+            keys: list[str] = [key async for key in self.redis_client.scan_iter(match=pattern)]
 
             if not keys:
                 return 0
@@ -245,7 +245,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
             logger.error(f"Error checking existence in cache {key}: {e}")
             return False
 
-    async def clear(self, pattern: Optional[str] = None) -> int:
+    async def clear(self, pattern: str | None = None) -> int:
         """Clear the cache, optionally by pattern. Returns the number of keys deleted."""
         if not self.redis_client:
             await self.connect()
@@ -253,7 +253,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
         try:
             if self.redis_client:
                 if pattern:
-                    keys: List[str] = await self.redis_client.keys(pattern)
+                    keys: list[str] = await self.redis_client.keys(pattern)
                     if keys:
                         deleted: int = await self.redis_client.delete(*keys)
                         logger.info(f"Cleared {deleted} keys with pattern: {pattern}")
@@ -261,7 +261,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
                     return 0
                 else:
                     # Clear all keys (dangerous, use with caution)
-                    result: Optional[bool] = await self.redis_client.flushdb()
+                    result: bool | None = await self.redis_client.flushdb()
                     logger.warning("Cleared entire cache")
                     return 1 if result else 0
             return 0
@@ -270,19 +270,19 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
             logger.error(f"Error clearing cache with pattern {pattern}: {e}")
             return 0
 
-    async def get_many(self, keys: List[str]) -> Dict[str, Any]:
+    async def get_many(self, keys: list[str]) -> dict[str, Any]:
         """Get multiple values from the cache by keys."""
         if not self.redis_client:
             await self.connect()
 
         try:
             if self.redis_client:
-                values: List[Optional[bytes]] = await self.redis_client.mget(keys)
+                values: list[bytes | None] = await self.redis_client.mget(keys)
             else:
                 values = [None] * len(keys)
-            result: Dict[str, Any] = {}
+            result: dict[str, Any] = {}
 
-            for key, value in zip(keys, values):
+            for key, value in zip(keys, values, strict=False):
                 if value is not None:
                     try:
                         result[key] = pickle.loads(value)
@@ -298,7 +298,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
             logger.error(f"Error retrieving multiple elements: {e}")
             return {key: None for key in keys}
 
-    async def set_many(self, mapping: Dict[str, Any], ttl: Optional[int] = None) -> bool:
+    async def set_many(self, mapping: dict[str, Any], ttl: int | None = None) -> bool:
         """Set multiple values in the cache with an optional time-to-live in seconds."""
         if not self.redis_client:
             await self.connect()
@@ -317,7 +317,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
                 serialized_value: bytes = pickle.dumps(value)
                 await pipe.setex(key, ttl, serialized_value)
 
-            results: List[Any] = await pipe.execute()
+            results: list[Any] = await pipe.execute()
             success: bool = all(results)
 
             if success:
@@ -329,7 +329,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
             logger.error(f"Error storing multiple elements: {e}")
             return False
 
-    async def delete_many(self, keys: List[str]) -> int:
+    async def delete_many(self, keys: list[str]) -> int:
         """Delete multiple values from the cache by keys. Returns the number of keys deleted."""
         if not self.redis_client:
             await self.connect()

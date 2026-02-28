@@ -2,7 +2,7 @@
 Implementation of the PitchingStatsRepositoryPort interface using SQLAlchemy.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import Session, joinedload
@@ -88,7 +88,7 @@ class PitchingStatsRepository(PitchingStatsRepositoryPort):
     def __init__(self, session: Session):
         self.session = session
 
-    async def get_by_id(self, stats_id: int) -> Optional[PitchingStats]:
+    async def get_by_id(self, stats_id: int) -> PitchingStats | None:
         """Get pitching statistics by its ID."""
         stats_model = (
             self.session.query(PitchingStatsModel)
@@ -100,7 +100,7 @@ class PitchingStatsRepository(PitchingStatsRepositoryPort):
             return None
         return self._model_to_entity(stats_model)
 
-    async def get_by_team_and_season(self, team_id: int, season: int) -> Optional[PitchingStats]:
+    async def get_by_team_and_season(self, team_id: int, season: int) -> PitchingStats | None:
         """Get pitching statistics by team ID and season."""
         stats_model = (
             self.session.query(PitchingStatsModel)
@@ -115,7 +115,7 @@ class PitchingStatsRepository(PitchingStatsRepositoryPort):
             return None
         return self._model_to_entity(stats_model)
 
-    async def list_by_team(self, team_id: int) -> List[PitchingStats]:
+    async def list_by_team(self, team_id: int) -> list[PitchingStats]:
         """List all pitching statistics for a specific team across seasons."""
         stats_models = (
             self.session.query(PitchingStatsModel)
@@ -126,7 +126,7 @@ class PitchingStatsRepository(PitchingStatsRepositoryPort):
         )
         return [self._model_to_entity(model) for model in stats_models]
 
-    async def list_by_season(self, season: int) -> List[PitchingStats]:
+    async def list_by_season(self, season: int) -> list[PitchingStats]:
         """List pitching statistics for all teams in a specific season."""
         stats_models = (
             self.session.query(PitchingStatsModel)
@@ -138,7 +138,7 @@ class PitchingStatsRepository(PitchingStatsRepositoryPort):
 
     async def list_top_teams_by_stat(
         self, season: int, stat_name: str, limit: int = 10, descending: bool = True
-    ) -> List[PitchingStats]:
+    ) -> list[PitchingStats]:
         """List top teams by a specific pitching statistic."""
         # Validate that the stat_name is a valid column
         if not hasattr(PitchingStatsModel, stat_name):
@@ -175,7 +175,7 @@ class PitchingStatsRepository(PitchingStatsRepositoryPort):
         self.session.commit()
         return await self.get_by_id(stats_model.id)
 
-    def _get_existing_model(self, pitching_stats: PitchingStats) -> Optional[PitchingStatsModel]:
+    def _get_existing_model(self, pitching_stats: PitchingStats) -> PitchingStatsModel | None:
         if pitching_stats.id:
             stats_model = (
                 self.session.query(PitchingStatsModel).filter(PitchingStatsModel.id == pitching_stats.id).first()
@@ -191,7 +191,7 @@ class PitchingStatsRepository(PitchingStatsRepositoryPort):
             .first()
         )
 
-    async def update_stats(self, stats_id: int, updated_stats: Dict[str, Any]) -> Optional[PitchingStats]:
+    async def update_stats(self, stats_id: int, updated_stats: dict[str, Any]) -> PitchingStats | None:
         """Update specific pitching statistics for a team."""
         stats_model = self.session.query(PitchingStatsModel).filter(PitchingStatsModel.id == stats_id).first()
         if not stats_model:
@@ -209,7 +209,8 @@ class PitchingStatsRepository(PitchingStatsRepositoryPort):
         """Delete pitching statistics by its ID."""
         return delete_model_by_id(self.session, PitchingStatsModel, stats_id)
 
-    def _model_to_entity(self, model: PitchingStatsModel) -> PitchingStats:
+    @staticmethod
+    def _model_to_entity(model: PitchingStatsModel) -> PitchingStats:
         """Convert a PitchingStatsModel to a PitchingStats entity."""
         team = team_model_to_entity(model.team)
         return PitchingStats(
@@ -222,7 +223,8 @@ class PitchingStatsRepository(PitchingStatsRepositoryPort):
             **_pitching_payload_from_model(model),
         )
 
-    def _update_stats_model(self, model: PitchingStatsModel, entity: PitchingStats) -> None:
+    @staticmethod
+    def _update_stats_model(model: PitchingStatsModel, entity: PitchingStats) -> None:
         """Update a PitchingStatsModel with values from a PitchingStats entity."""
         model.team_id = entity.team_id
         model.season = entity.season

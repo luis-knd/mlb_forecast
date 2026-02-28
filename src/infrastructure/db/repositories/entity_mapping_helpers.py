@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -8,7 +8,7 @@ from src.domain.entities.game import Game
 from src.domain.entities.team import Team
 
 
-def team_model_to_entity(model: Any | None) -> Optional[Team]:
+def team_model_to_entity(model: Any | None) -> Team | None:
     if model is None:
         return None
 

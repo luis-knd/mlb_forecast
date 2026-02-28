@@ -5,7 +5,6 @@ This is a pure domain entity without any framework dependencies.
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 
 from src.domain.entities.team import Team
 
@@ -14,23 +13,23 @@ from src.domain.entities.team import Team
 class Game:
     """Game entity representing a baseball game in the MLB."""
 
-    id: Optional[int]
+    id: int | None
     mlb_game_id: int
     home_team_id: int
     away_team_id: int
     game_date: datetime
     status: str  # scheduled, in_progress, completed, cancelled
     scheduled_innings: int = 9
-    home_score: Optional[int] = None
-    away_score: Optional[int] = None
-    winning_team_id: Optional[int] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    home_score: int | None = None
+    away_score: int | None = None
+    winning_team_id: int | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     # These are not stored but can be set for convenience
-    home_team: Optional[Team] = None
-    away_team: Optional[Team] = None
-    winning_team: Optional[Team] = None
+    home_team: Team | None = None
+    away_team: Team | None = None
+    winning_team: Team | None = None
 
     @classmethod
     def create(
@@ -41,9 +40,9 @@ class Game:
         game_date: datetime,
         status: str,
         scheduled_innings: int = 9,
-        home_score: Optional[int] = None,
-        away_score: Optional[int] = None,
-        winning_team_id: Optional[int] = None,
+        home_score: int | None = None,
+        away_score: int | None = None,
+        winning_team_id: int | None = None,
     ) -> "Game":
         """Factory method to create a new Game entity."""
         return cls(
@@ -65,7 +64,7 @@ class Game:
         """Check if the game is completed."""
         return self.status == "completed"
 
-    def get_winner(self) -> Optional[int]:
+    def get_winner(self) -> int | None:
         """Get the ID of the winning team, if the game is completed."""
         if not self.is_completed() or self.home_score is None or self.away_score is None:
             return None

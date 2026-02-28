@@ -4,7 +4,6 @@ These define the application's business logic for game operations.
 """
 
 from datetime import date, datetime, timedelta
-from typing import List, Optional
 
 from src.application.dto.mlb_api_response import MLBGameDTO
 from src.application.ports.cache import CachePort
@@ -23,11 +22,11 @@ class ListGamesUseCase:
 
     async def execute(
         self,
-        game_date: Optional[date] = None,
-        team_id: Optional[int] = None,
-        status: Optional[str] = None,
+        game_date: date | None = None,
+        team_id: int | None = None,
+        status: str | None = None,
         limit: int = 50,
-    ) -> List[Game]:
+    ) -> list[Game]:
         """
         List games, optionally filtered by date, team, or status.
 
@@ -71,7 +70,7 @@ class GetGameUseCase:
         self.game_repository = game_repository
         self.cache = cache
 
-    async def execute(self, game_id: int) -> Optional[Game]:
+    async def execute(self, game_id: int) -> Game | None:
         """
         Get a game by its ID.
 
@@ -113,7 +112,7 @@ class IngestGamesUseCase:
         self.mlb_api = mlb_api
         self.cache = cache
 
-    async def execute(self, game_date: Optional[date] = None, days_back: int = 7) -> List[Game]:
+    async def execute(self, game_date: date | None = None, days_back: int = 7) -> list[Game]:
         """
         Ingest games from the MLB API and save them to the repository.
 
@@ -143,7 +142,7 @@ class IngestGamesUseCase:
 
         return ingested_games
 
-    async def _process_games_data(self, games_data: List["MLBGameDTO"]) -> List[Game]:
+    async def _process_games_data(self, games_data: list["MLBGameDTO"]) -> list[Game]:
         """Process games data from the MLB API and save to repository."""
         processed_games = []
 
@@ -199,7 +198,7 @@ class ListUpcomingGamesUseCase:
         self.game_repository = game_repository
         self.cache = cache
 
-    async def execute(self, days_ahead: int = 7, limit: int = 20) -> List[Game]:
+    async def execute(self, days_ahead: int = 7, limit: int = 20) -> list[Game]:
         """
         List upcoming games for the next N days.
 

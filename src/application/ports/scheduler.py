@@ -4,7 +4,7 @@ This module defines the interface for scheduling tasks.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class SchedulerPort(ABC):
@@ -58,7 +58,7 @@ class SchedulerPort(ABC):
         pass
 
     @abstractmethod
-    async def get_jobs(self) -> List[Dict[str, Any]]:
+    async def get_jobs(self) -> list[dict[str, Any]]:
         """
         Get all jobs in the jobs.
 
@@ -68,7 +68,7 @@ class SchedulerPort(ABC):
         pass
 
     @abstractmethod
-    async def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
+    async def get_job(self, job_id: str) -> dict[str, Any] | None:
         """
         Get information about a specific job.
 

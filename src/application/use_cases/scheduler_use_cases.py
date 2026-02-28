@@ -5,7 +5,7 @@ This module contains the business logic for scheduled tasks.
 
 import logging
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, List
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -28,9 +28,9 @@ async def _ingest_games_for_date_impl(
     game_repository: GameRepositoryPort,
     cache: CachePort,
     date_obj: date,
-) -> List[Game]:
+) -> list[Game]:
     games_data = await mlb_api.get_games_by_date(date_obj)
-    games: List[Game] = []
+    games: list[Game] = []
     for game_data in games_data:
         mlb_game_id = game_data.id
         home_team_id = game_data.home_team_id
@@ -71,17 +71,17 @@ async def _ingest_games_for_date_impl(
     return games
 
 
-def _safe_float(source: Dict[str, Any], key: str, default: float = 0.0) -> float:
+def _safe_float(source: dict[str, Any], key: str, default: float = 0.0) -> float:
     value = source.get(key, default)
     return float(value) if value is not None else default
 
 
-def _safe_number(source: Dict[str, Any], key: str, default: float = 0.0) -> float:
+def _safe_number(source: dict[str, Any], key: str, default: float = 0.0) -> float:
     value = source.get(key, default)
     return float(value) if value is not None else default
 
 
-def _build_team_feature_snapshot(hitting_stats: Dict[str, Any], pitching_stats: Dict[str, Any]) -> Dict[str, float]:
+def _build_team_feature_snapshot(hitting_stats: dict[str, Any], pitching_stats: dict[str, Any]) -> dict[str, float]:
     wins = _safe_number(pitching_stats, "wins")
     games_played = max(_safe_number(hitting_stats, "games_played"), 1.0)
     runs_scored = _safe_number(hitting_stats, "runs_scored")
@@ -103,10 +103,10 @@ def _build_team_feature_snapshot(hitting_stats: Dict[str, Any], pitching_stats: 
 
 
 def _create_game_features_impl(
-    home_team_stats: Dict[str, Any],
-    away_team_stats: Dict[str, Any],
+    home_team_stats: dict[str, Any],
+    away_team_stats: dict[str, Any],
     game: Game,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     home_hitting = home_team_stats.get("hitting_stats") or {}
     home_pitching = home_team_stats.get("pitching_stats") or {}
     away_hitting = away_team_stats.get("hitting_stats") or {}
@@ -156,7 +156,7 @@ async def _generate_upcoming_predictions_impl(
     team_stats_repository: TeamStatsRepositoryPort,
     ml_model: MLModelPort,
     cache: CachePort,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     try:
         upcoming_games = await game_repository.list_upcoming_games(days_ahead=3)
         predictions_generated = 0
@@ -225,7 +225,7 @@ class SchedulerUseCases:
         self.team_stats_repository = team_stats_repository
         self.prediction_repository = prediction_repository
 
-    async def ingest_daily_games(self) -> Dict[str, Any]:
+    async def ingest_daily_games(self) -> dict[str, Any]:
         """
         Ingest games for today, yesterday, and tomorrow.
 
@@ -261,7 +261,7 @@ class SchedulerUseCases:
             logger.error(f"❌ Error in daily games ingestion: {e}")
             return {"success": False, "error": str(e)}
 
-    async def ingest_team_statistics(self) -> Dict[str, Any]:
+    async def ingest_team_statistics(self) -> dict[str, Any]:
         """
         Ingest team statistics for the current season.
 
@@ -315,7 +315,7 @@ class SchedulerUseCases:
             logger.error(f"❌ Error in team statistics ingestion: {e}")
             return {"success": False, "error": str(e)}
 
-    async def retrain_ml_model(self) -> Dict[str, Any]:
+    async def retrain_ml_model(self) -> dict[str, Any]:
         """
         Retrain the ML model with the latest data.
 
@@ -367,7 +367,7 @@ class SchedulerUseCases:
             logger.error(f"❌ Error in ML model retraining: {e}")
             return {"success": False, "error": str(e)}
 
-    async def cache_maintenance(self) -> Dict[str, Any]:
+    async def cache_maintenance(self) -> dict[str, Any]:
         """
         Perform cache maintenance tasks.
 
@@ -402,7 +402,7 @@ class SchedulerUseCases:
             logger.error(f"❌ Error in cache maintenance: {e}")
             return {"success": False, "error": str(e)}
 
-    async def generate_upcoming_predictions(self) -> Dict[str, Any]:
+    async def generate_upcoming_predictions(self) -> dict[str, Any]:
         """
         Generate predictions for upcoming games.
 
@@ -418,7 +418,7 @@ class SchedulerUseCases:
             cache=self.cache,
         )
 
-    async def ingest_teams_weekly(self) -> Dict[str, Any]:
+    async def ingest_teams_weekly(self) -> dict[str, Any]:
         """
         Ingest team data weekly.
 
@@ -459,7 +459,7 @@ class SchedulerUseCases:
             logger.error(f"❌ Error in weekly team ingestion: {e}")
             return {"success": False, "error": str(e)}
 
-    async def _ingest_games_for_date(self, date_obj: date) -> List[Game]:
+    async def _ingest_games_for_date(self, date_obj: date) -> list[Game]:
         """
         Ingest games for a specific date.
 
@@ -477,8 +477,8 @@ class SchedulerUseCases:
         )
 
     def _create_game_features(
-        self, home_team_stats: Dict[str, Any], away_team_stats: Dict[str, Any], game: Game
-    ) -> Dict[str, Any]:
+        self, home_team_stats: dict[str, Any], away_team_stats: dict[str, Any], game: Game
+    ) -> dict[str, Any]:
         """
         Create features for game prediction.
 

@@ -6,7 +6,7 @@ This module implements the business logic for system-related operations.
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Protocol, cast
+from typing import Any, Protocol, cast
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -19,11 +19,11 @@ logger = logging.getLogger(__name__)
 class CacheIntrospectionPort(Protocol):
     """Protocol for cache adapters that support diagnostics operations."""
 
-    async def get_stats(self) -> Dict[str, Any]: ...
+    async def get_stats(self) -> dict[str, Any]: ...
 
-    async def list_keys(self, pattern: str = "*", limit: int = 100) -> List[str]: ...
+    async def list_keys(self, pattern: str = "*", limit: int = 100) -> list[str]: ...
 
-    async def count_keys(self) -> Optional[int]: ...
+    async def count_keys(self) -> int | None: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,9 +53,9 @@ class GetCacheStatsUseCase:
     async def execute(
         self,
         include_keys: bool = False,
-        pattern: Optional[str] = None,
+        pattern: str | None = None,
         limit: int = 100,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get cache statistics."""
         try:
             introspection = self._get_introspection_port()
@@ -80,7 +80,7 @@ class GetCacheStatsUseCase:
         raise SystemException("Cache adapter does not support cache diagnostics")
 
     @staticmethod
-    def _normalize_stats(stats: Dict[str, Any]) -> Dict[str, Any]:
+    def _normalize_stats(stats: dict[str, Any]) -> dict[str, Any]:
         normalized = {
             "connected_clients": stats.get("connected_clients", 0),
             "used_memory": stats.get("used_memory", 0),
@@ -109,7 +109,7 @@ class GetCacheStatsUseCase:
         return normalized
 
     @staticmethod
-    async def _safe_total_keys(cache_introspection: CacheIntrospectionPort) -> Optional[int]:
+    async def _safe_total_keys(cache_introspection: CacheIntrospectionPort) -> int | None:
         try:
             return await cache_introspection.count_keys()
         except Exception:
@@ -118,8 +118,8 @@ class GetCacheStatsUseCase:
     async def _append_keys_stats(
         self,
         cache_introspection: CacheIntrospectionPort,
-        stats: Dict[str, Any],
-        pattern: Optional[str],
+        stats: dict[str, Any],
+        pattern: str | None,
         limit: int,
     ) -> None:
         bounded_limit = min(max(limit, 1), 10000)
@@ -136,7 +136,7 @@ class ClearCacheUseCase:
     def __init__(self, cache_adapter: CachePort):
         self.cache_adapter = cache_adapter
 
-    async def execute(self, pattern: Optional[str] = None) -> Dict[str, Any]:
+    async def execute(self, pattern: str | None = None) -> dict[str, Any]:
         """Clear cache entries by pattern or all entries."""
         try:
             total_deleted = 0
@@ -169,7 +169,7 @@ class HealthCheckUseCase:
         self.cache_adapter = cache_adapter
         self.runtime_config = runtime_config
 
-    async def execute(self, db: Session) -> Dict[str, Any]:
+    async def execute(self, db: Session) -> dict[str, Any]:
         """Perform a comprehensive health check."""
         health_status = {
             "status": "healthy",
@@ -191,7 +191,7 @@ class HealthCheckUseCase:
             return health_status
 
     @staticmethod
-    def _check_database_health(db: Session, health_status: Dict[str, Any]) -> None:
+    def _check_database_health(db: Session, health_status: dict[str, Any]) -> None:
         try:
             db.execute(text("SELECT 1"))
             health_status["database"] = "connected"
@@ -201,7 +201,7 @@ class HealthCheckUseCase:
             health_status["status"] = "unhealthy"
             logger.error(f"Database health check failed: {error}")
 
-    async def _check_cache_health(self, health_status: Dict[str, Any]) -> None:
+    async def _check_cache_health(self, health_status: dict[str, Any]) -> None:
         try:
             test_key = "health_check_test"
             await self.cache_adapter.set(test_key, "test_value", 10)
@@ -221,7 +221,7 @@ class GetAppInfoUseCase:
         self.cache_adapter = cache_adapter
         self.runtime_config = runtime_config
 
-    async def execute(self, db: Session) -> Dict[str, Any]:
+    async def execute(self, db: Session) -> dict[str, Any]:
         """Get detailed application information."""
         try:
             database_connected = self._is_database_connected(db)

@@ -4,9 +4,9 @@ from __future__ import annotations
 import argparse
 import ast
 import sys
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Sequence
 
 DEFAULT_EXCLUDED_PARTS = frozenset(
     {
@@ -32,8 +32,7 @@ class Violation:
 
     def render(self) -> str:
         return (
-            f"{self.path}:{self.line}: "
-            f"{self.kind} '{self.symbol}' has {self.line_count} lines (max {self.max_lines})"
+            f"{self.path}:{self.line}: {self.kind} '{self.symbol}' has {self.line_count} lines (max {self.max_lines})"
         )
 
     def fingerprint(self) -> str:

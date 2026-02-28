@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -13,7 +12,7 @@ class MLBTeamDTO:
     city: str
     division: str
     league: str
-    venue_name: Optional[str] = None
+    venue_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -23,12 +22,12 @@ class MLBGameDTO:
     id: int
     home_team_id: int
     away_team_id: int
-    game_date: Optional[datetime]
+    game_date: datetime | None
     status: str
     scheduled_innings: int
-    home_score: Optional[int]
-    away_score: Optional[int]
-    winning_team_id: Optional[int]
+    home_score: int | None
+    away_score: int | None
+    winning_team_id: int | None
 
 
 @dataclass(frozen=True)
@@ -41,6 +40,6 @@ class MLBPlayerDTO:
     position: str
     bats: str
     throws: str
-    birth_date: Optional[datetime]
+    birth_date: datetime | None
     active: bool
-    current_team_id: Optional[int]
+    current_team_id: int | None

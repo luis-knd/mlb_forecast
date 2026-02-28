@@ -2,7 +2,7 @@
 Implementation of the CatchingStatsRepositoryPort interface using SQLAlchemy.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import Session, joinedload
@@ -55,7 +55,7 @@ class CatchingStatsRepository(CatchingStatsRepositoryPort):
     def __init__(self, session: Session):
         self.session = session
 
-    async def get_by_id(self, stats_id: int) -> Optional[CatchingStats]:
+    async def get_by_id(self, stats_id: int) -> CatchingStats | None:
         """Get catching statistics by its ID."""
         stats_model = (
             self.session.query(CatchingStatsModel)
@@ -67,7 +67,7 @@ class CatchingStatsRepository(CatchingStatsRepositoryPort):
             return None
         return self._model_to_entity(stats_model)
 
-    async def get_by_team_and_season(self, team_id: int, season: int) -> Optional[CatchingStats]:
+    async def get_by_team_and_season(self, team_id: int, season: int) -> CatchingStats | None:
         """Get catching statistics by team ID and season."""
         stats_model = (
             self.session.query(CatchingStatsModel)
@@ -82,7 +82,7 @@ class CatchingStatsRepository(CatchingStatsRepositoryPort):
             return None
         return self._model_to_entity(stats_model)
 
-    async def list_by_team(self, team_id: int) -> List[CatchingStats]:
+    async def list_by_team(self, team_id: int) -> list[CatchingStats]:
         """List all catching statistics for a specific team across seasons."""
         stats_models = (
             self.session.query(CatchingStatsModel)
@@ -93,7 +93,7 @@ class CatchingStatsRepository(CatchingStatsRepositoryPort):
         )
         return [self._model_to_entity(model) for model in stats_models]
 
-    async def list_by_season(self, season: int) -> List[CatchingStats]:
+    async def list_by_season(self, season: int) -> list[CatchingStats]:
         """List catching statistics for all teams in a specific season."""
         stats_models = (
             self.session.query(CatchingStatsModel)
@@ -105,7 +105,7 @@ class CatchingStatsRepository(CatchingStatsRepositoryPort):
 
     async def list_top_teams_by_stat(
         self, season: int, stat_name: str, limit: int = 10, descending: bool = True
-    ) -> List[CatchingStats]:
+    ) -> list[CatchingStats]:
         """List top teams by a specific catching statistic."""
         # Validate that the stat_name is a valid column
         if not hasattr(CatchingStatsModel, stat_name):
@@ -142,7 +142,7 @@ class CatchingStatsRepository(CatchingStatsRepositoryPort):
         self.session.commit()
         return await self.get_by_id(stats_model.id)
 
-    def _get_existing_model(self, catching_stats: CatchingStats) -> Optional[CatchingStatsModel]:
+    def _get_existing_model(self, catching_stats: CatchingStats) -> CatchingStatsModel | None:
         if catching_stats.id:
             stats_model = (
                 self.session.query(CatchingStatsModel).filter(CatchingStatsModel.id == catching_stats.id).first()
@@ -158,7 +158,7 @@ class CatchingStatsRepository(CatchingStatsRepositoryPort):
             .first()
         )
 
-    async def update_stats(self, stats_id: int, updated_stats: Dict[str, Any]) -> Optional[CatchingStats]:
+    async def update_stats(self, stats_id: int, updated_stats: dict[str, Any]) -> CatchingStats | None:
         """Update specific catching statistics for a team."""
         stats_model = self.session.query(CatchingStatsModel).filter(CatchingStatsModel.id == stats_id).first()
         if not stats_model:
@@ -176,7 +176,8 @@ class CatchingStatsRepository(CatchingStatsRepositoryPort):
         """Delete catching statistics by its ID."""
         return delete_model_by_id(self.session, CatchingStatsModel, stats_id)
 
-    def _model_to_entity(self, model: CatchingStatsModel) -> CatchingStats:
+    @staticmethod
+    def _model_to_entity(model: CatchingStatsModel) -> CatchingStats:
         """Convert a CatchingStatsModel to a CatchingStats entity."""
         team = team_model_to_entity(model.team)
 
@@ -218,7 +219,8 @@ class CatchingStatsRepository(CatchingStatsRepositoryPort):
             team=team,
         )
 
-    def _update_stats_model(self, model: CatchingStatsModel, entity: CatchingStats) -> None:
+    @staticmethod
+    def _update_stats_model(model: CatchingStatsModel, entity: CatchingStats) -> None:
         """Update a CatchingStatsModel with values from a CatchingStats entity."""
         model.team_id = entity.team_id
         model.season = entity.season

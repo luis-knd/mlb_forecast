@@ -25,6 +25,8 @@ API_BASE_URL=${API_BASE_URL:-http://localhost:8000}
   - Ingest players from one MLB team roster.
   - Requires `teamId` (MLB team ID).
   - Optional: `season`, `rosterType`.
+  - Update semantics are non-destructive for profile fields: when incoming `position`, `bats`, `throws`, or `birth_date`
+    are missing, existing persisted values are preserved.
 - `sport_players`
   - Ingest players from a sport pool.
   - Default MLB uses `sportId=1`.

@@ -1,5 +1,3 @@
-from typing import Optional
-
 from src.domain.entities.team import Team
 from src.domain.entities.team_stats import TeamStats
 from src.infrastructure.db.models import FieldingStatsModel, HittingStatsModel, PitchingStatsModel, TeamModel
@@ -39,10 +37,10 @@ class TeamStatsMapper:
 
     @staticmethod
     def to_entity(
-        hitting_stats: Optional[HittingStatsModel],
-        pitching_stats: Optional[PitchingStatsModel],
-        fielding_stats: Optional[FieldingStatsModel],
-    ) -> Optional[TeamStats]:
+        hitting_stats: HittingStatsModel | None,
+        pitching_stats: PitchingStatsModel | None,
+        fielding_stats: FieldingStatsModel | None,
+    ) -> TeamStats | None:
         """
         Aggregate stats from different models into a TeamStats entity.
 
@@ -91,7 +89,7 @@ class TeamStatsMapper:
         )
 
     @staticmethod
-    def update_hitting_model(entity: TeamStats, model: Optional[HittingStatsModel] = None) -> HittingStatsModel:
+    def update_hitting_model(entity: TeamStats, model: HittingStatsModel | None = None) -> HittingStatsModel:
         """Update or create a HittingStatsModel from a TeamStats entity."""
         if not model:
             model = HittingStatsModel(team_id=entity.team_id, season=entity.season)
@@ -108,7 +106,7 @@ class TeamStatsMapper:
         return model
 
     @staticmethod
-    def update_pitching_model(entity: TeamStats, model: Optional[PitchingStatsModel] = None) -> PitchingStatsModel:
+    def update_pitching_model(entity: TeamStats, model: PitchingStatsModel | None = None) -> PitchingStatsModel:
         """Update or create a PitchingStatsModel from a TeamStats entity."""
         if not model:
             model = PitchingStatsModel(team_id=entity.team_id, season=entity.season)
@@ -124,7 +122,7 @@ class TeamStatsMapper:
         return model
 
     @staticmethod
-    def update_fielding_model(entity: TeamStats, model: Optional[FieldingStatsModel] = None) -> FieldingStatsModel:
+    def update_fielding_model(entity: TeamStats, model: FieldingStatsModel | None = None) -> FieldingStatsModel:
         """Update or create a FieldingStatsModel from a TeamStats entity."""
         if not model:
             model = FieldingStatsModel(team_id=entity.team_id, season=entity.season)

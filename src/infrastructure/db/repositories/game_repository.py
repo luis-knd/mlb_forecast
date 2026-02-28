@@ -4,7 +4,6 @@ This module implements the GameRepositoryPort interface using SQLAlchemy.
 """
 
 from datetime import date, datetime, timedelta
-from typing import List, Optional
 
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session, joinedload
@@ -21,7 +20,7 @@ class GameRepository(GameRepositoryPort):
     def __init__(self, session: Session):
         self.session = session
 
-    async def get_by_id(self, game_id: int) -> Optional[Game]:
+    async def get_by_id(self, game_id: int) -> Game | None:
         """Get a game by its ID."""
         game_model = (
             self.session.query(GameModel)
@@ -37,7 +36,7 @@ class GameRepository(GameRepositoryPort):
             return None
         return self._model_to_entity(game_model)
 
-    async def get_by_mlb_id(self, mlb_game_id: int) -> Optional[Game]:
+    async def get_by_mlb_id(self, mlb_game_id: int) -> Game | None:
         """Get a game by its MLB ID."""
         game_model = (
             self.session.query(GameModel)
@@ -53,7 +52,7 @@ class GameRepository(GameRepositoryPort):
             return None
         return self._model_to_entity(game_model)
 
-    async def list_by_date(self, game_date: date) -> List[Game]:
+    async def list_by_date(self, game_date: date) -> list[Game]:
         """List games by date."""
         # Convert date to datetime range for the entire day
         start_date = datetime.combine(game_date, datetime.min.time())
@@ -71,7 +70,7 @@ class GameRepository(GameRepositoryPort):
         )
         return [self._model_to_entity(game_model) for game_model in game_models]
 
-    async def list_by_team(self, team_id: int, limit: int = 50) -> List[Game]:
+    async def list_by_team(self, team_id: int, limit: int = 50) -> list[Game]:
         """List games by team."""
         game_models = (
             self.session.query(GameModel)
@@ -87,7 +86,7 @@ class GameRepository(GameRepositoryPort):
         )
         return [self._model_to_entity(game_model) for game_model in game_models]
 
-    async def list_by_status(self, status: str, limit: int = 50) -> List[Game]:
+    async def list_by_status(self, status: str, limit: int = 50) -> list[Game]:
         """List games by status."""
         game_models = (
             self.session.query(GameModel)
@@ -103,7 +102,7 @@ class GameRepository(GameRepositoryPort):
         )
         return [self._model_to_entity(game_model) for game_model in game_models]
 
-    async def list_upcoming_games(self, days_ahead: int = 7, limit: int = 50) -> List[Game]:
+    async def list_upcoming_games(self, days_ahead: int = 7, limit: int = 50) -> list[Game]:
         """List upcoming games."""
         today = datetime.now().date()
         end_date = today + timedelta(days=days_ahead)
@@ -128,7 +127,7 @@ class GameRepository(GameRepositoryPort):
         )
         return [self._model_to_entity(game_model) for game_model in game_models]
 
-    async def list_historical_matchups(self, home_team_id: int, away_team_id: int, limit: int = 10) -> List[Game]:
+    async def list_historical_matchups(self, home_team_id: int, away_team_id: int, limit: int = 10) -> list[Game]:
         """List historical matchups between two teams."""
         game_models = (
             self.session.query(GameModel)
@@ -204,7 +203,7 @@ class GameRepository(GameRepositoryPort):
 
     async def update_game_result(
         self, game_id: int, home_score: int, away_score: int, status: str = "completed"
-    ) -> Optional[Game]:
+    ) -> Game | None:
         """Update a game's result."""
         game_model = self.session.query(GameModel).filter(GameModel.id == game_id).first()
         if not game_model:
@@ -234,7 +233,8 @@ class GameRepository(GameRepositoryPort):
         self.session.commit()
         return True
 
-    def _update_game_model(self, model: GameModel, entity: Game) -> None:
+    @staticmethod
+    def _update_game_model(model: GameModel, entity: Game) -> None:
         """Update a GameModel with values from a Game entity."""
         model.mlb_game_id = entity.mlb_game_id
         model.home_team_id = entity.home_team_id
@@ -253,6 +253,7 @@ class GameRepository(GameRepositoryPort):
 
         model.updated_at = datetime.now()  # Explicitly update timestamp
 
-    def _model_to_entity(self, model: GameModel) -> Game:
+    @staticmethod
+    def _model_to_entity(model: GameModel) -> Game:
         """Convert a GameModel to a Game entity."""
         return game_model_to_entity(model)
