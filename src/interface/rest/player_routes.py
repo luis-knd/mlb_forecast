@@ -149,7 +149,11 @@ async def get_player_stats(
     stats: str = Query(..., description="Stats type (season, career, yearByYear, gameLog, statSplits, seasonAdvanced)"),
     group: str = Query(..., description="Stats group (hitting, pitching, fielding, catching, running, all)"),
     season: int | None = Query(None, description="Season year"),
-    game_type: str | None = Query(None, alias="gameType", description="Game type (R, S, P, W, A)"),
+    game_type: str | None = Query(
+        None,
+        alias="gameType",
+        description="Game type code: R=Regular Season, S=Spring Training, P=Postseason, W=World Series, A=All-Star",
+    ),
     days_back: int | None = Query(None, alias="daysBack", description="Rolling days back"),
     use_cases: dict = Depends(get_player_use_cases),
 ) -> JSONResponse:

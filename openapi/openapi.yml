@@ -1779,7 +1779,9 @@ paths:
               - type: string
               - type: 'null'
             title: Game Type
-          description: Game type (R, S, P, W, A)
+          description: >-
+            Game type code: R=Regular Season, S=Spring Training, P=Postseason,
+            W=World Series, A=All-Star
         - name: daysBack
           in: query
           required: false
