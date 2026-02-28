@@ -1,9 +1,11 @@
-name: Auto-create PRs for feature branches
+name: Auto-create PRs to develop
 
 on:
   push:
-    branches:
-      - "feature/**"
+    branches-ignore:
+      - "develop"
+      - "main"
+      - "master"
 
 permissions:
   contents: read
@@ -33,6 +35,11 @@ jobs:
 
           if [ -z "${MY_GITHUB_USERNAME:-}" ]; then
             echo "Missing vars.MY_GITHUB_USERNAME. Define it in repo variables."
+            exit 1
+          fi
+
+          if [ -z "${GITHUB_TOKEN:-}" ]; then
+            echo "Missing secrets.GH_PAT. Define it in repository secrets."
             exit 1
           fi
 
