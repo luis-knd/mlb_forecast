@@ -1,9 +1,10 @@
 from datetime import datetime
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from starlette.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_404_NOT_FOUND
 
+from src.application.dto.mlb_api_response import MLBPlayerDTO
 from src.domain.entities.player import Player
 from src.infrastructure.db.models import PlayerModel, TeamModel
 
@@ -138,3 +139,38 @@ class TestPlayerRoutesIntegration:
             sport_id=1,
             query=None,
         )
+
+    @patch("src.infrastructure.mlb_api.adapter.MLBApiAdapter.get_players_by_team", new_callable=AsyncMock)
+    def test_ingest_players_team_roster_preserves_existing_profile_fields_when_payload_is_partial(
+        self,
+        mock_get_players_by_team,
+        integration_client,
+        populated_players_db,
+        test_db_session,
+    ):
+        # Given
+        mock_get_players_by_team.return_value = [
+            MLBPlayerDTO(
+                id=660271,
+                first_name="Shohei",
+                last_name="Ohtani",
+                position="",
+                bats="",
+                throws="",
+                birth_date=None,
+                active=True,
+                current_team_id=119,
+            )
+        ]
+
+        # When
+        response = integration_client.post("/api/v1/data/ingest/players?source=team_roster&teamId=119&season=2025")
+
+        # Then
+        assert response.status_code == HTTP_201_CREATED
+        persisted_player = test_db_session.query(PlayerModel).filter(PlayerModel.mlb_id == 660271).first()
+        assert persisted_player is not None
+        assert persisted_player.position == "DH"
+        assert persisted_player.bats == "L"
+        assert persisted_player.throws == "R"
+        assert persisted_player.birth_date == datetime(1994, 7, 5)

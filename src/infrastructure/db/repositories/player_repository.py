@@ -3,6 +3,7 @@ Player repository implementation.
 This module implements the PlayerRepositoryPort interface using SQLAlchemy.
 """
 
+from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import or_
@@ -212,12 +213,35 @@ class PlayerRepository(PlayerRepositoryPort):
         model.mlb_id = entity.mlb_id
         model.first_name = entity.first_name
         model.last_name = entity.last_name
-        model.position = entity.position
-        model.bats = entity.bats
-        model.throws = entity.throws
-        model.birth_date = entity.birth_date
+        model.position = self._merge_required_text_field(incoming=entity.position, current=model.position)
+        model.bats = self._merge_optional_text_field(incoming=entity.bats, current=model.bats)
+        model.throws = self._merge_optional_text_field(incoming=entity.throws, current=model.throws)
+        model.birth_date = self._merge_birth_date(incoming=entity.birth_date, current=model.birth_date)
         model.active = entity.active
         model.current_team_id = entity.current_team_id
+
+    @staticmethod
+    def _merge_required_text_field(incoming: str, current: str) -> str:
+        """Keep existing value when incoming text is blank."""
+        if incoming.strip() == "":
+            return current
+        return incoming
+
+    @staticmethod
+    def _merge_optional_text_field(incoming: Optional[str], current: Optional[str]) -> Optional[str]:
+        """Keep existing value when incoming text is missing or blank."""
+        if incoming is None:
+            return current
+        if incoming.strip() == "":
+            return current
+        return incoming
+
+    @staticmethod
+    def _merge_birth_date(incoming: Optional[datetime], current: Optional[datetime]) -> Optional[datetime]:
+        """Keep existing birth date when incoming value is missing."""
+        if incoming is None:
+            return current
+        return incoming
 
     def _model_to_entity(self, model: PlayerModel) -> Player:
         """Convert a PlayerModel to a Player entity."""
