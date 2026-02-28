@@ -16,13 +16,13 @@ from src.infrastructure.db.database import get_db
 from src.infrastructure.db.repositories.game_repository import GameRepository
 from src.infrastructure.db.repositories.team_repository import TeamRepository
 from src.infrastructure.mlb_api.adapter import MLBApiAdapter
+from src.interface.rest.adapters.mappers import to_game_dto, to_game_dto_list
 from src.interface.rest.exception_handlers import DomainExceptions
 from src.interface.rest.generated.models.models import (
     BadRequest,
     DataIngestionResponse,
     DataIngestionResultDTO,
     GameDetailResponse,
-    GameDTO,
     GameListResponse,
     InternalServerError,
     NotFound,
@@ -109,9 +109,6 @@ async def list_games(
 
     games = await list_games_use_case.execute(game_date=game_date, team_id=team_id, status=status, limit=limit)
 
-    # Map domain entities to DTOs explicitly to avoid pydantic validation issues
-    from src.interface.rest.adapters.mappers import to_game_dto_list
-
     games_dto = to_game_dto_list(games)
 
     return ResponseHandler.success(data=games_dto, message=f"Retrieved {len(games_dto)} games successfully")
@@ -156,7 +153,7 @@ async def get_game(
     if not game:
         raise DomainExceptions.GameNotFoundError(game_id)
 
-    game_dto = GameDTO.model_validate(game)
+    game_dto = to_game_dto(game)
 
     return ResponseHandler.success(data=game_dto, message=f"Game {game_id} retrieved successfully")
 
@@ -214,8 +211,6 @@ async def ingest_games(
             operation_desc = f"last {days_back} days"
         end_time = datetime.now()
         duration = (end_time - start_time).total_seconds()
-        from src.interface.rest.adapters.mappers import to_game_dto_list
-
         games_dto = to_game_dto_list(ingested_games[:5])
         ingestion_result = DataIngestionResultDTO(
             operation="game_ingestion",
