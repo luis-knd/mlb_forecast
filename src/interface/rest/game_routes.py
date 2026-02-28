@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
+from src.application.ports.cache import CachePort
 from src.application.use_cases.game_use_cases import (
     GetGameUseCase,
     IngestGamesUseCase,
@@ -34,18 +35,20 @@ from src.interface.rest.response_handler import ResponseHandler
 router = APIRouter()
 
 
-def get_game_use_cases(db: Session = Depends(get_db)):
+def get_game_use_cases(
+    db: Session = Depends(get_db),
+    cache: CachePort = Depends(get_cache_adapter),
+):
     """Get game use cases with dependencies."""
     game_repository = GameRepository(db)
     team_repository = TeamRepository(db)
-    cache_adapter = get_cache_adapter()
     mlb_api_adapter = MLBApiAdapter()
 
     return {
-        "list_games": ListGamesUseCase(game_repository, cache_adapter),
-        "get_game": GetGameUseCase(game_repository, cache_adapter),
-        "ingest_games": IngestGamesUseCase(game_repository, team_repository, mlb_api_adapter, cache_adapter),
-        "list_upcoming_games": ListUpcomingGamesUseCase(game_repository, cache_adapter),
+        "list_games": ListGamesUseCase(game_repository, cache),
+        "get_game": GetGameUseCase(game_repository, cache),
+        "ingest_games": IngestGamesUseCase(game_repository, team_repository, mlb_api_adapter, cache),
+        "list_upcoming_games": ListUpcomingGamesUseCase(game_repository, cache),
     }
 
 

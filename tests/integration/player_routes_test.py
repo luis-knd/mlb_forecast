@@ -117,3 +117,24 @@ class TestPlayerRoutesIntegration:
         assert body["status"] == "success"
         assert body["data"]["ingestion_summary"]["operation"] == "player_ingestion"
         assert len(body["data"]["sample_players"]) == 1
+
+    @patch("src.application.use_cases.player_use_cases.IngestPlayersBySourceUseCase.execute")
+    def test_ingest_players_sport_source_forwards_team_filter(self, mock_execute, integration_client):
+        # Given
+        mock_execute.return_value = []
+
+        # When
+        response = integration_client.post(
+            "/api/v1/data/ingest/players?source=sport_players&teamId=133&season=2025&sportId=1"
+        )
+
+        # Then
+        assert response.status_code == HTTP_201_CREATED
+        mock_execute.assert_called_once_with(
+            source="sport_players",
+            season=2025,
+            team_mlb_id=133,
+            roster_type="active",
+            sport_id=1,
+            query=None,
+        )

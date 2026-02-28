@@ -192,7 +192,11 @@ async def get_player_stats(
 async def ingest_players(
     source: str = Query("sport_players", description="Source mode: team_roster, sport_players, search"),
     season: Optional[int] = Query(None, description="Season year"),
-    team_id: Optional[int] = Query(None, alias="teamId", description="MLB team ID when source=team_roster"),
+    team_id: Optional[int] = Query(
+        None,
+        alias="teamId",
+        description="MLB team ID required when source=team_roster and optional filter when source=sport_players",
+    ),
     roster_type: str = Query("active", alias="rosterType", description="Roster type for team roster ingestion"),
     sport_id: int = Query(1, alias="sportId", description="Sport ID for sport_players mode"),
     query: Optional[str] = Query(None, alias="q", description="Search text when source=search"),

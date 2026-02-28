@@ -51,8 +51,13 @@ class MLBApiPort(ABC):
         pass
 
     @abstractmethod
-    async def get_players_by_sport(self, sport_id: int = 1, season: Optional[int] = None) -> List[MLBPlayerDTO]:
-        """Get players by sport and optional season."""
+    async def get_players_by_sport(
+        self,
+        sport_id: int = 1,
+        season: Optional[int] = None,
+        team_mlb_id: Optional[int] = None,
+    ) -> List[MLBPlayerDTO]:
+        """Get players by sport with optional season and optional team filter."""
         pass
 
     @abstractmethod

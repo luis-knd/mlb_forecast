@@ -454,8 +454,12 @@ class IngestPlayersBySourceUseCase:
             players_dto = await self.mlb_api.get_players_by_sport(
                 sport_id=sport_id,
                 season=season,
+                team_mlb_id=team_mlb_id,
             )
-            return players_dto, None
+            if team_mlb_id is None:
+                return players_dto, None
+            filtered_players_dto = [player for player in players_dto if player.current_team_id == team_mlb_id]
+            return filtered_players_dto, team_mlb_id
 
         normalized_query = query.strip() if query else ""
         if not normalized_query:

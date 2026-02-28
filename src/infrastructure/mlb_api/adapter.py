@@ -354,10 +354,22 @@ class _PlayerTransformMixin:
         return resolved_first_name, resolved_last_name
 
     def _extract_player_position(self, player_data: Dict[str, Any]) -> str:
-        position = player_data.get("position", "")
-        if not isinstance(position, dict):
-            return str(position)
-        return str(position.get("abbreviation", "")) or str(position.get("code", "")) or str(position.get("name", ""))
+        position = self._extract_position_value(player_data.get("position"))
+        if position:
+            return position
+        return self._extract_position_value(player_data.get("primaryPosition"))
+
+    @staticmethod
+    def _extract_position_value(position_data: Any) -> str:
+        if isinstance(position_data, dict):
+            for field in ("abbreviation", "code", "name"):
+                value = str(position_data.get(field, "")).strip()
+                if value:
+                    return value
+            return ""
+        if position_data is None:
+            return ""
+        return str(position_data).strip()
 
     def _transform_player_stats_data(
         self,
@@ -552,16 +564,23 @@ class MLBApiAdapter(
             logger.warning("Roster for team with MLB ID %s not found", mlb_team_id)
             return []
 
-    async def get_players_by_sport(self, sport_id: int = 1, season: Optional[int] = None) -> List[MLBPlayerDTO]:
+    async def get_players_by_sport(
+        self,
+        sport_id: int = 1,
+        season: Optional[int] = None,
+        team_mlb_id: Optional[int] = None,
+    ) -> List[MLBPlayerDTO]:
         endpoint = f"/{self.api_version}/sports/{sport_id}/players"
         params: Dict[str, Any] = {}
         if season is not None:
             params["season"] = season
+        if team_mlb_id is not None:
+            params["teamId"] = team_mlb_id
         try:
             data = await self._make_request(endpoint, params)
             return [self._transform_player_data(player) for player in data.get("people", [])]
         except MLBApiException:
-            logger.warning("Players not found for sport=%s, season=%s", sport_id, season)
+            logger.warning("Players not found for sport=%s, season=%s, team=%s", sport_id, season, team_mlb_id)
             return []
 
     async def get_player_stats(
