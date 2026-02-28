@@ -16,7 +16,13 @@ jobs:
     steps:
       - name: Create PR, assign and request review (REST API)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use a PAT instead of GITHUB_TOKEN so the created PR triggers
+          # pull_request events (unit-tests, integration-tests, lint, etc.).
+          # GITHUB_TOKEN-created PRs are intentionally blocked by GitHub from
+          # firing those events to prevent recursive workflow loops.
+          # Create a classic PAT with scope: repo (full) and store it as
+          # secrets.GH_PAT in repo/org secrets.
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           REPO_FULL: ${{ github.repository }}
           OWNER: ${{ github.repository_owner }}
           BASE_BRANCH: develop
