@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from src.application.ports.cache import CachePort
 from src.application.ports.team_repository import TeamRepositoryPort
 from src.domain.entities.team import Team
@@ -31,7 +29,7 @@ class CachedTeamRepository(TeamRepositoryPort):
 
         return saved_team
 
-    async def get_by_id(self, team_id: int) -> Optional[Team]:
+    async def get_by_id(self, team_id: int) -> Team | None:
         """Get team by ID with caching."""
         cache_key = f"teams:id:{team_id}"
         cached_data = await self.cache.get(cache_key)
@@ -50,7 +48,7 @@ class CachedTeamRepository(TeamRepositoryPort):
 
         return team
 
-    async def get_by_mlb_id(self, mlb_id: int) -> Optional[Team]:
+    async def get_by_mlb_id(self, mlb_id: int) -> Team | None:
         """Get team by MLB ID with caching."""
         cache_key = f"teams:mlb_id:{mlb_id}"
         cached_data = await self.cache.get(cache_key)
@@ -64,7 +62,7 @@ class CachedTeamRepository(TeamRepositoryPort):
 
         return team
 
-    async def list_all(self) -> List[Team]:
+    async def list_all(self) -> list[Team]:
         """List all teams with caching."""
         cache_key = "teams:list:all:all"
         cached_data = await self.cache.get(cache_key)
@@ -78,7 +76,7 @@ class CachedTeamRepository(TeamRepositoryPort):
 
         return teams
 
-    async def list_by_league(self, league: str) -> List[Team]:
+    async def list_by_league(self, league: str) -> list[Team]:
         """List teams by league with caching."""
         cache_key = f"teams:list:{league}:all"
         cached_data = await self.cache.get(cache_key)
@@ -92,7 +90,7 @@ class CachedTeamRepository(TeamRepositoryPort):
 
         return teams
 
-    async def list_by_division(self, division: str) -> List[Team]:
+    async def list_by_division(self, division: str) -> list[Team]:
         """List teams by division with caching."""
         cache_key = f"teams:list:all:{division}"
         cached_data = await self.cache.get(cache_key)
@@ -106,7 +104,7 @@ class CachedTeamRepository(TeamRepositoryPort):
 
         return teams
 
-    async def list_by_league_and_division(self, league: str, division: str) -> List[Team]:
+    async def list_by_league_and_division(self, league: str, division: str) -> list[Team]:
         """List teams by league and division with caching."""
         cache_key = f"teams:list:{league}:{division}"
         cached_data = await self.cache.get(cache_key)

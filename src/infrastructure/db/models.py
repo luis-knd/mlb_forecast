@@ -3,7 +3,7 @@ Database models for the application.
 This module defines the SQLAlchemy models for the entities.
 """
 
-from typing import List, Optional
+from typing import Optional
 
 from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, relationship
@@ -30,17 +30,17 @@ class TeamModel(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships with proper type annotations
-    home_games: Mapped[List["GameModel"]] = relationship(
+    home_games: Mapped[list["GameModel"]] = relationship(
         "GameModel", foreign_keys="GameModel.home_team_id", back_populates="home_team"
     )
-    away_games: Mapped[List["GameModel"]] = relationship(
+    away_games: Mapped[list["GameModel"]] = relationship(
         "GameModel", foreign_keys="GameModel.away_team_id", back_populates="away_team"
     )
-    hitting_stats: Mapped[List["HittingStatsModel"]] = relationship("HittingStatsModel", back_populates="team")
-    pitching_stats: Mapped[List["PitchingStatsModel"]] = relationship("PitchingStatsModel", back_populates="team")
-    fielding_stats: Mapped[List["FieldingStatsModel"]] = relationship("FieldingStatsModel", back_populates="team")
-    catching_stats: Mapped[List["CatchingStatsModel"]] = relationship("CatchingStatsModel", back_populates="team")
-    players: Mapped[List["PlayerModel"]] = relationship("PlayerModel", back_populates="current_team")
+    hitting_stats: Mapped[list["HittingStatsModel"]] = relationship("HittingStatsModel", back_populates="team")
+    pitching_stats: Mapped[list["PitchingStatsModel"]] = relationship("PitchingStatsModel", back_populates="team")
+    fielding_stats: Mapped[list["FieldingStatsModel"]] = relationship("FieldingStatsModel", back_populates="team")
+    catching_stats: Mapped[list["CatchingStatsModel"]] = relationship("CatchingStatsModel", back_populates="team")
+    players: Mapped[list["PlayerModel"]] = relationship("PlayerModel", back_populates="current_team")
 
 
 class PlayerModel(Base):
@@ -102,7 +102,7 @@ class GameModel(Base):
     home_team: Mapped["TeamModel"] = relationship("TeamModel", foreign_keys=[home_team_id], back_populates="home_games")
     away_team: Mapped["TeamModel"] = relationship("TeamModel", foreign_keys=[away_team_id], back_populates="away_games")
     winning_team: Mapped[Optional["TeamModel"]] = relationship("TeamModel", foreign_keys=[winning_team_id])
-    predictions: Mapped[List["PredictionModel"]] = relationship("PredictionModel", back_populates="game")
+    predictions: Mapped[list["PredictionModel"]] = relationship("PredictionModel", back_populates="game")
 
     # Indices
     __table_args__ = (

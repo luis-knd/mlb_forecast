@@ -3,7 +3,6 @@ REST API routes for system operations and administration.
 """
 
 from datetime import datetime
-from typing import Dict, Optional
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
@@ -73,9 +72,9 @@ def get_system_use_cases(db: Session = Depends(get_db)):
 )
 async def get_cache_stats(
     include_keys: bool = Query(False, description="Include a sample of keys in stats output"),
-    pattern: Optional[str] = Query(None, description="Pattern to match keys when include_keys=true (e.g., 'mlb:*')"),
+    pattern: str | None = Query(None, description="Pattern to match keys when include_keys=true (e.g., 'mlb:*')"),
     limit: int = Query(100, ge=1, le=10000, description="Max number of keys to list when include_keys=true"),
-    use_cases: Dict = Depends(get_system_use_cases),
+    use_cases: dict = Depends(get_system_use_cases),
 ) -> JSONResponse:
     """
     Get cache statistics for monitoring and debugging purposes.
@@ -111,8 +110,8 @@ async def get_cache_stats(
     },
 )
 async def clear_cache(
-    pattern: Optional[str] = Query(None, description="Pattern to clear specific cache keys (e.g., 'mlb:teams:*')"),
-    use_cases: Dict = Depends(get_system_use_cases),
+    pattern: str | None = Query(None, description="Pattern to clear specific cache keys (e.g., 'mlb:teams:*')"),
+    use_cases: dict = Depends(get_system_use_cases),
 ) -> JSONResponse:
     """
     Clear cache keys based on a provided pattern.
@@ -163,7 +162,7 @@ async def clear_cache(
 )
 async def health_check(
     db: Session = Depends(get_db),
-    use_cases: Dict = Depends(get_system_use_cases),
+    use_cases: dict = Depends(get_system_use_cases),
 ) -> JSONResponse:
     """
     Comprehensive system health check endpoint.
@@ -227,7 +226,7 @@ async def health_check(
 )
 async def app_info(
     db: Session = Depends(get_db),
-    use_cases: Dict = Depends(get_system_use_cases),
+    use_cases: dict = Depends(get_system_use_cases),
 ) -> JSONResponse:
     """
     Get comprehensive application information and metadata.

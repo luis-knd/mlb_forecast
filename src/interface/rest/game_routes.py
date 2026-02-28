@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Dict, Optional
 
 from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import JSONResponse
@@ -65,11 +64,11 @@ def get_game_use_cases(
     },
 )
 async def list_games(
-    date: Optional[str] = Query(None, description="Filter by date in YYYY-MM-DD format"),
-    team_id: Optional[int] = Query(None, description="Filter by team ID"),
-    status: Optional[str] = Query(None, description="Filter by game status (scheduled, in_progress, completed)"),
+    date: str | None = Query(None, description="Filter by date in YYYY-MM-DD format"),
+    team_id: int | None = Query(None, description="Filter by team ID"),
+    status: str | None = Query(None, description="Filter by game status (scheduled, in_progress, completed)"),
     limit: int = Query(50, le=200, description="Maximum number of games to return"),
-    use_cases: Dict = Depends(get_game_use_cases),
+    use_cases: dict = Depends(get_game_use_cases),
 ) -> JSONResponse:
     """
     Retrieve games with optional filtering and pagination.
@@ -131,7 +130,7 @@ async def list_games(
 )
 async def get_game(
     game_id: int = Path(..., description="The ID of the game to get"),
-    use_cases: Dict = Depends(get_game_use_cases),
+    use_cases: dict = Depends(get_game_use_cases),
 ) -> JSONResponse:
     """
     Get a game by its ID.
@@ -176,9 +175,9 @@ async def get_game(
     },
 )
 async def ingest_games(
-    date: Optional[str] = Query(None, description="Specific date to ingest games for (YYYY-MM-DD)"),
+    date: str | None = Query(None, description="Specific date to ingest games for (YYYY-MM-DD)"),
     days_back: int = Query(7, le=30, description="Number of days back to ingest games for"),
-    use_cases: Dict = Depends(get_game_use_cases),
+    use_cases: dict = Depends(get_game_use_cases),
 ) -> JSONResponse:
     """
     Ingest game data from external MLB API.

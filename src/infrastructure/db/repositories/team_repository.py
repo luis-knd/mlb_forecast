@@ -3,8 +3,6 @@ Team repository implementation.
 This module implements the TeamRepositoryPort interface using SQLAlchemy.
 """
 
-from typing import List, Optional
-
 from sqlalchemy.orm import Session
 
 from src.application.ports.team_repository import TeamRepositoryPort
@@ -18,36 +16,36 @@ class TeamRepository(TeamRepositoryPort):
     def __init__(self, session: Session):
         self.session = session
 
-    async def get_by_id(self, team_id: int) -> Optional[Team]:
+    async def get_by_id(self, team_id: int) -> Team | None:
         """Get a team by its ID."""
         team_model = self.session.query(TeamModel).filter(TeamModel.id == team_id).first()
         if not team_model:
             return None
         return self._model_to_entity(team_model)
 
-    async def get_by_mlb_id(self, mlb_id: int) -> Optional[Team]:
+    async def get_by_mlb_id(self, mlb_id: int) -> Team | None:
         """Get a team by its MLB ID."""
         team_model = self.session.query(TeamModel).filter(TeamModel.mlb_id == mlb_id).first()
         if not team_model:
             return None
         return self._model_to_entity(team_model)
 
-    async def list_all(self) -> List[Team]:
+    async def list_all(self) -> list[Team]:
         """List all teams."""
         team_models = self.session.query(TeamModel).all()
         return [self._model_to_entity(team_model) for team_model in team_models]
 
-    async def list_by_league(self, league: str) -> List[Team]:
+    async def list_by_league(self, league: str) -> list[Team]:
         """List teams by league."""
         team_models = self.session.query(TeamModel).filter(TeamModel.league.ilike(f"%{league}%")).all()
         return [self._model_to_entity(team_model) for team_model in team_models]
 
-    async def list_by_division(self, division: str) -> List[Team]:
+    async def list_by_division(self, division: str) -> list[Team]:
         """List teams by division."""
         team_models = self.session.query(TeamModel).filter(TeamModel.division.ilike(f"%{division}%")).all()
         return [self._model_to_entity(team_model) for team_model in team_models]
 
-    async def list_by_league_and_division(self, league: str, division: str) -> List[Team]:
+    async def list_by_league_and_division(self, league: str, division: str) -> list[Team]:
         """List teams by league and division."""
         team_models = (
             self.session.query(TeamModel)
@@ -110,7 +108,8 @@ class TeamRepository(TeamRepositoryPort):
         self.session.commit()
         return True
 
-    def _model_to_entity(self, model: TeamModel) -> Team:
+    @staticmethod
+    def _model_to_entity(model: TeamModel) -> Team:
         """Convert a TeamModel to a Team entity."""
         return Team(
             id=model.id,

@@ -172,7 +172,7 @@ def create_env_file():
     print("📝 Creando archivo .env desde ejemplo...")
 
     try:
-        with open(env_example, "r") as src, open(env_file, "w") as dst:
+        with open(env_example) as src, open(env_file, "w") as dst:
             dst.write(src.read())
         print("✅ Archivo .env creado")
         return True

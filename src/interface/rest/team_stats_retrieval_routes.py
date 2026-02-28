@@ -3,7 +3,6 @@ REST API routes for team statistics retrieval operations.
 """
 
 from datetime import datetime
-from typing import Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from fastapi.responses import JSONResponse
@@ -57,7 +56,7 @@ def _validate_season_range(season_year: int) -> None:
     raise DomainExceptions.InvalidDataError(f"Season must be between {max_historical_season} and {current_year}")
 
 
-def _resolve_stats_category(category: Optional[str]) -> TeamStatsCategory:
+def _resolve_stats_category(category: str | None) -> TeamStatsCategory:
     normalized_category = category.strip().lower() if category else None
     if not normalized_category:
         return TeamStatsCategory.ALL
@@ -83,12 +82,12 @@ def _resolve_stats_category(category: Optional[str]) -> TeamStatsCategory:
 async def get_team_stats(
     team_id: int = Path(..., description="The ID of the team to get stats for"),
     season: str = Path(..., description="The season to get stats for"),
-    category: Optional[str] = Query(
+    category: str | None = Query(
         "all",
         description="Optional stats category filter. Defaults to `all`.",
         json_schema_extra={"enum": list(TeamStatsCategory.allowed_values())},
     ),
-    use_cases: Dict = Depends(get_team_stats_use_cases),
+    use_cases: dict = Depends(get_team_stats_use_cases),
 ) -> JSONResponse:
     """
     Retrieve statistical data for a specific team for a given season.

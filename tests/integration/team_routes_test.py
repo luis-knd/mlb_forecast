@@ -13,7 +13,6 @@ from src.domain.entities.team import Team
 
 
 class TestTeamRoutesIntegration:
-
     def test_list_all_teams(self, integration_client, populated_test_db):
         # When
         response = integration_client.get("/api/v1/teams")

@@ -4,7 +4,7 @@ This module implements the SchedulerPort interface using APScheduler.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -135,7 +135,7 @@ class SchedulerAdapter(SchedulerPort):
             logger.error(f"Error removing job {job_id}: {e}")
             return False
 
-    async def get_jobs(self) -> List[Dict[str, Any]]:
+    async def get_jobs(self) -> list[dict[str, Any]]:
         """
         Get all jobs in the jobs.
 
@@ -154,7 +154,7 @@ class SchedulerAdapter(SchedulerPort):
             for job in self.scheduler.get_jobs()
         ]
 
-    async def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
+    async def get_job(self, job_id: str) -> dict[str, Any] | None:
         """
         Get information about a specific job.
 
@@ -178,7 +178,7 @@ class SchedulerAdapter(SchedulerPort):
             "pending": job.pending,
         }
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """
         Get the status of the jobs.
 

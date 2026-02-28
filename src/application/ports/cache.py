@@ -4,7 +4,7 @@ This defines how the application interacts with the cache system.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class CachePort(ABC):
@@ -16,7 +16,7 @@ class CachePort(ABC):
         pass
 
     @abstractmethod
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """Set a value in the cache with an optional time-to-live in seconds."""
         pass
 
@@ -36,22 +36,22 @@ class CachePort(ABC):
         pass
 
     @abstractmethod
-    async def clear(self, pattern: Optional[str] = None) -> int:
+    async def clear(self, pattern: str | None = None) -> int:
         """Clear the cache, optionally by pattern. Returns the number of keys deleted."""
         pass
 
     @abstractmethod
-    async def get_many(self, keys: List[str]) -> Dict[str, Any]:
+    async def get_many(self, keys: list[str]) -> dict[str, Any]:
         """Get multiple values from the cache by keys."""
         pass
 
     @abstractmethod
-    async def set_many(self, mapping: Dict[str, Any], ttl: Optional[int] = None) -> bool:
+    async def set_many(self, mapping: dict[str, Any], ttl: int | None = None) -> bool:
         """Set multiple values in the cache with an optional time-to-live in seconds."""
         pass
 
     @abstractmethod
-    async def delete_many(self, keys: List[str]) -> int:
+    async def delete_many(self, keys: list[str]) -> int:
         """Delete multiple values from the cache by keys. Returns the number of keys deleted."""
         pass
 
@@ -66,6 +66,6 @@ class CachePort(ABC):
         pass
 
     @abstractmethod
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         pass

@@ -14,7 +14,9 @@ Local hooks are focused on quick checks:
 - formatting and hygiene: `trailing-whitespace`, `end-of-file-fixer`, `check-yaml`, `pretty-format-json`
 - security and safety: `detect-private-key`, `detect-aws-credentials`, `detect-secrets`
 - Python formatting/imports: `black`, `isort`
-- static quick lint: `ruff` (`E`, `F`, `ERA`) and `flake8`
+- static quick lint: `ruff` (`E,W,F,ERA,UP,BLE,B,C4,SIM`, with `--fix`)
+  - transitional ignores: `E203,B008,B904,BLE001,SIM102,SIM103,SIM105,UP038`
+- static design smell check: local `pylint` hook with `R6301` (`method-may-be-static`) for DB repositories
 - OpenAPI consistency: `openapi-spec-validator`
 
 Generated OpenAPI code is out of scope for quality gates:
@@ -82,7 +84,7 @@ docker exec -i "$APP_CTN" ruff check src --select PERF
 
 ## Operational Notes
 
-- Keep `requirements-dev.txt` versions pinned.
+- Keep `requirements-dev.txt` aligned with hook minimum versions.
 - Keep generated code excluded where required (`src/interface/rest/generated`).
 - `vulture` and duplication checks run in advisory mode at this stage (`continue-on-error`) while debt is triaged.
 - If static-quality false positives appear, tune thresholds with explicit evidence before relaxing defaults.

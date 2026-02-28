@@ -4,7 +4,6 @@ This module defines the application settings using Pydantic's BaseSettings class
 """
 
 import os
-from typing import Optional
 
 from pydantic_settings import BaseSettings
 
@@ -33,7 +32,7 @@ class Settings(BaseSettings):
 
     # Redis settings
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    REDIS_PASSWORD: Optional[str] = os.getenv("REDIS_PASSWORD")
+    REDIS_PASSWORD: str | None = os.getenv("REDIS_PASSWORD")
     REDIS_TIMEOUT: int = int(os.getenv("REDIS_TIMEOUT", "5"))
 
     # MLB API settings

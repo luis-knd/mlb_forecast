@@ -4,8 +4,9 @@ This module defines the SQLAlchemy engine, session, and base class for the model
 """
 
 import logging
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any, Dict, Generator
+from typing import Any
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
@@ -14,8 +15,8 @@ from src.infrastructure.config.settings import settings
 
 # Create SQLAlchemy engine
 
-connect_args: Dict[str, Any] = {}
-engine_args: Dict[str, Any] = {
+connect_args: dict[str, Any] = {}
+engine_args: dict[str, Any] = {
     "pool_pre_ping": True,
     "echo": settings.SQL_ECHO,
 }

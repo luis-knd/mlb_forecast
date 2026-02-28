@@ -5,7 +5,6 @@ This is a pure domain entity without any framework dependencies.
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 
 from src.domain.entities.team import Team
 
@@ -14,21 +13,21 @@ from src.domain.entities.team import Team
 class Player:
     """Player entity representing a baseball player in the MLB."""
 
-    id: Optional[int]
+    id: int | None
     mlb_id: int
     first_name: str
     last_name: str
     position: str
-    bats: Optional[str] = None  # L, R, S (switch)
-    throws: Optional[str] = None  # L, R
-    birth_date: Optional[datetime] = None
+    bats: str | None = None  # L, R, S (switch)
+    throws: str | None = None  # L, R
+    birth_date: datetime | None = None
     active: bool = True
-    current_team_id: Optional[int] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    current_team_id: int | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     # This is not stored but can be set for convenience
-    current_team: Optional[Team] = None
+    current_team: Team | None = None
 
     @classmethod
     def create(
@@ -37,11 +36,11 @@ class Player:
         first_name: str,
         last_name: str,
         position: str,
-        bats: Optional[str] = None,
-        throws: Optional[str] = None,
-        birth_date: Optional[datetime] = None,
+        bats: str | None = None,
+        throws: str | None = None,
+        birth_date: datetime | None = None,
         active: bool = True,
-        current_team_id: Optional[int] = None,
+        current_team_id: int | None = None,
     ) -> "Player":
         """Factory method to create a new Player entity."""
         return cls(

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 from uuid import UUID
 
 from fastapi import status
@@ -47,11 +47,11 @@ class APIResponse:
 
     status: ResponseStatus
     code: int
-    data: Optional[Union[Dict[str, Any], List[Any], Any]] = None
-    errors: Optional[List[str]] = None
-    message: Optional[str] = None
+    data: dict[str, Any] | list[Any] | Any | None = None
+    errors: list[str] | None = None
+    message: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert response to dictionary format with proper serialization."""
         # Use FastAPI's jsonable_encoder for initial conversion
         serialized_data = jsonable_encoder(self.data) if self.data is not None else None
@@ -74,8 +74,8 @@ class ResponseHandler:
 
     @staticmethod
     def success(
-        data: Optional[Union[Dict[str, Any], List[Any], Any]] = None,
-        message: Optional[str] = None,
+        data: dict[str, Any] | list[Any] | Any | None = None,
+        message: str | None = None,
         status_code: int = status.HTTP_200_OK,
     ) -> JSONResponse:
         """
@@ -98,10 +98,10 @@ class ResponseHandler:
 
     @staticmethod
     def error(
-        errors: Union[str, List[str]],
+        errors: str | list[str],
         status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR,
-        message: Optional[str] = None,
-        data: Optional[Any] = None,
+        message: str | None = None,
+        data: Any | None = None,
     ) -> JSONResponse:
         """
         Create an error response.
@@ -126,7 +126,7 @@ class ResponseHandler:
         return JSONResponse(status_code=status_code, content=content)
 
     @staticmethod
-    def not_found(resource: str = "Resource", identifier: Optional[Union[str, int]] = None) -> JSONResponse:
+    def not_found(resource: str = "Resource", identifier: str | int | None = None) -> JSONResponse:
         """
         Create a 404 not found response.
 
@@ -137,17 +137,14 @@ class ResponseHandler:
         Returns:
             JSONResponse: Standardized 404 response
         """
-        if identifier:
-            message = f"{resource} with ID {identifier} not found"
-        else:
-            message = f"{resource} not found"
+        message = f"{resource} with ID {identifier} not found" if identifier else f"{resource} not found"
 
         return ResponseHandler.error(
             errors=[message], status_code=status.HTTP_404_NOT_FOUND, message="Resource not found"
         )
 
     @staticmethod
-    def bad_request(errors: Union[str, List[str]], message: str = "Invalid request") -> JSONResponse:
+    def bad_request(errors: str | list[str], message: str = "Invalid request") -> JSONResponse:
         """
         Create a 400 bad request response.
 
@@ -161,7 +158,7 @@ class ResponseHandler:
         return ResponseHandler.error(errors=errors, status_code=status.HTTP_400_BAD_REQUEST, message=message)
 
     @staticmethod
-    def created(data: Optional[Any] = None, message: str = "Resource created successfully") -> JSONResponse:
+    def created(data: Any | None = None, message: str = "Resource created successfully") -> JSONResponse:
         """
         Create a 201 created response.
 

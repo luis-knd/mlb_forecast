@@ -6,7 +6,6 @@ from starlette.status import HTTP_201_CREATED
 
 
 class TestTeamStatsIngestionRoutes:
-
     @pytest.fixture
     def sample_stats(self):
         return [

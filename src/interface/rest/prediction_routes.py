@@ -3,7 +3,6 @@ REST API routes for prediction operations.
 """
 
 from datetime import datetime
-from typing import Dict, Optional
 
 from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import JSONResponse
@@ -62,8 +61,8 @@ def get_prediction_use_cases(db: Session = Depends(get_db)):
 )
 async def get_game_predictions(
     game_id: int = Path(..., description="The ID of the game to get predictions for"),
-    prediction_type: Optional[str] = Query(None, description="Filter by prediction type"),
-    use_cases: Dict = Depends(get_prediction_use_cases),
+    prediction_type: str | None = Query(None, description="Filter by prediction type"),
+    use_cases: dict = Depends(get_prediction_use_cases),
 ) -> JSONResponse:
     """
     Get predictions for a specific game.
@@ -115,7 +114,7 @@ async def get_game_predictions(
 async def generate_prediction(
     game_id: int = Query(..., description="The ID of the game to create prediction for"),
     prediction_type: str = Query("winner", description="Type of prediction to generate"),
-    use_cases: Dict = Depends(get_prediction_use_cases),
+    use_cases: dict = Depends(get_prediction_use_cases),
 ) -> JSONResponse:
     """
     Generate a new prediction for a game.

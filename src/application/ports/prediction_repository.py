@@ -4,7 +4,7 @@ This defines how the application interacts with prediction data storage.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from src.domain.entities.prediction import Prediction
 
@@ -13,27 +13,27 @@ class PredictionRepositoryPort(ABC):
     """Interface for prediction repository operations."""
 
     @abstractmethod
-    async def get_by_id(self, prediction_id: int) -> Optional[Prediction]:
+    async def get_by_id(self, prediction_id: int) -> Prediction | None:
         """Get a prediction by its ID."""
         pass
 
     @abstractmethod
-    async def list_by_game(self, game_id: int) -> List[Prediction]:
+    async def list_by_game(self, game_id: int) -> list[Prediction]:
         """List predictions for a specific game."""
         pass
 
     @abstractmethod
-    async def list_by_game_and_type(self, game_id: int, prediction_type: str) -> List[Prediction]:
+    async def list_by_game_and_type(self, game_id: int, prediction_type: str) -> list[Prediction]:
         """List predictions for a specific game and type."""
         pass
 
     @abstractmethod
-    async def list_latest_predictions(self, limit: int = 50) -> List[Prediction]:
+    async def list_latest_predictions(self, limit: int = 50) -> list[Prediction]:
         """List the latest predictions."""
         pass
 
     @abstractmethod
-    async def list_by_model_version(self, model_version: str, limit: int = 50) -> List[Prediction]:
+    async def list_by_model_version(self, model_version: str, limit: int = 50) -> list[Prediction]:
         """List predictions by model version."""
         pass
 
@@ -44,8 +44,8 @@ class PredictionRepositoryPort(ABC):
 
     @abstractmethod
     async def update_with_actual_result(
-        self, prediction_id: int, actual_result: Dict[str, Any], accuracy: float
-    ) -> Optional[Prediction]:
+        self, prediction_id: int, actual_result: dict[str, Any], accuracy: float
+    ) -> Prediction | None:
         """Update a prediction with the actual result and accuracy."""
         pass
 

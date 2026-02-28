@@ -2,7 +2,7 @@
 Implementation of the FieldingStatsRepositoryPort interface using SQLAlchemy.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import Session, joinedload
@@ -48,7 +48,7 @@ class FieldingStatsRepository(FieldingStatsRepositoryPort):
     def __init__(self, session: Session):
         self.session = session
 
-    async def get_by_id(self, stats_id: int) -> Optional[FieldingStats]:
+    async def get_by_id(self, stats_id: int) -> FieldingStats | None:
         """Get fielding statistics by its ID."""
         stats_model = (
             self.session.query(FieldingStatsModel)
@@ -60,7 +60,7 @@ class FieldingStatsRepository(FieldingStatsRepositoryPort):
             return None
         return self._model_to_entity(stats_model)
 
-    async def get_by_team_and_season(self, team_id: int, season: int) -> Optional[FieldingStats]:
+    async def get_by_team_and_season(self, team_id: int, season: int) -> FieldingStats | None:
         """Get fielding statistics by team ID and season."""
         stats_model = (
             self.session.query(FieldingStatsModel)
@@ -75,7 +75,7 @@ class FieldingStatsRepository(FieldingStatsRepositoryPort):
             return None
         return self._model_to_entity(stats_model)
 
-    async def list_by_team(self, team_id: int) -> List[FieldingStats]:
+    async def list_by_team(self, team_id: int) -> list[FieldingStats]:
         """List all fielding statistics for a specific team across seasons."""
         stats_models = (
             self.session.query(FieldingStatsModel)
@@ -86,7 +86,7 @@ class FieldingStatsRepository(FieldingStatsRepositoryPort):
         )
         return [self._model_to_entity(model) for model in stats_models]
 
-    async def list_by_season(self, season: int) -> List[FieldingStats]:
+    async def list_by_season(self, season: int) -> list[FieldingStats]:
         """List fielding statistics for all teams in a specific season."""
         stats_models = (
             self.session.query(FieldingStatsModel)
@@ -98,7 +98,7 @@ class FieldingStatsRepository(FieldingStatsRepositoryPort):
 
     async def list_top_teams_by_stat(
         self, season: int, stat_name: str, limit: int = 10, descending: bool = True
-    ) -> List[FieldingStats]:
+    ) -> list[FieldingStats]:
         """List top teams by a specific fielding statistic."""
         # Validate that the stat_name is a valid column
         if not hasattr(FieldingStatsModel, stat_name):
@@ -135,7 +135,7 @@ class FieldingStatsRepository(FieldingStatsRepositoryPort):
         self.session.commit()
         return await self.get_by_id(stats_model.id)
 
-    def _get_existing_model(self, fielding_stats: FieldingStats) -> Optional[FieldingStatsModel]:
+    def _get_existing_model(self, fielding_stats: FieldingStats) -> FieldingStatsModel | None:
         if fielding_stats.id:
             stats_model = (
                 self.session.query(FieldingStatsModel).filter(FieldingStatsModel.id == fielding_stats.id).first()
@@ -151,7 +151,7 @@ class FieldingStatsRepository(FieldingStatsRepositoryPort):
             .first()
         )
 
-    async def update_stats(self, stats_id: int, updated_stats: Dict[str, Any]) -> Optional[FieldingStats]:
+    async def update_stats(self, stats_id: int, updated_stats: dict[str, Any]) -> FieldingStats | None:
         """Update specific fielding statistics for a team."""
         stats_model = self.session.query(FieldingStatsModel).filter(FieldingStatsModel.id == stats_id).first()
         if not stats_model:
@@ -169,7 +169,8 @@ class FieldingStatsRepository(FieldingStatsRepositoryPort):
         """Delete fielding statistics by its ID."""
         return delete_model_by_id(self.session, FieldingStatsModel, stats_id)
 
-    def _model_to_entity(self, model: FieldingStatsModel) -> FieldingStats:
+    @staticmethod
+    def _model_to_entity(model: FieldingStatsModel) -> FieldingStats:
         """Convert a FieldingStatsModel to a FieldingStats entity."""
         team = team_model_to_entity(model.team)
 
@@ -204,7 +205,8 @@ class FieldingStatsRepository(FieldingStatsRepositoryPort):
             team=team,
         )
 
-    def _update_stats_model(self, model: FieldingStatsModel, entity: FieldingStats) -> None:
+    @staticmethod
+    def _update_stats_model(model: FieldingStatsModel, entity: FieldingStats) -> None:
         """Update a FieldingStatsModel with values from a FieldingStats entity."""
         model.team_id = entity.team_id
         model.season = entity.season

@@ -3,6 +3,7 @@
 Quick start script for MLB Forecast Backend.
 Detects the system and runs the appropriate setup.
 """
+
 import os
 import platform
 import re
@@ -12,7 +13,6 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import Optional
 
 
 class ProgressSpinner:
@@ -40,7 +40,7 @@ class ProgressSpinner:
         self.thread = threading.Thread(target=self._spin, daemon=True)
         self.thread.start()
 
-    def stop(self, final_message: Optional[str] = None):
+    def stop(self, final_message: str | None = None):
         """Detener el spinner y mostrar mensaje final."""
         self.spinning = False
         if self.thread:
@@ -253,7 +253,6 @@ def run_docker_build_with_progress(command: str, description: str = "") -> bool:
                     "=> cached",
                 ]
             ):
-
                 # Nueva línea si estábamos mostrando progreso inline
                 if last_progress_line and not line_clean.startswith("\n"):
                     print()  # Nueva línea
@@ -499,7 +498,7 @@ def validate_openapi() -> bool:
     print(f"\n🧪 Validando {spec} ...")
 
     # Attempt A: 'app' image without entrypoint (clean shell)
-    cmd_a = f'{compose} run --rm --no-deps --entrypoint "" app ' f'sh -lc "set -e; openapi-spec-validator {spec}"'
+    cmd_a = f'{compose} run --rm --no-deps --entrypoint "" app sh -lc "set -e; openapi-spec-validator {spec}"'
     ok = run_command(cmd_a, "Validando OpenAPI (imagen app)")
     if ok:
         return True
@@ -621,7 +620,7 @@ def generate_from_openapi() -> bool:
     os.makedirs(models_dir, exist_ok=True)
 
     base_dirs = f"mkdir -p {models_dir} {routers_dir}"
-    detect_flag = 'FLAG="--use-pydantic-v2"; ' 'datamodel-codegen --help | grep -q -- "--use-pydantic-v2" || FLAG=""; '
+    detect_flag = 'FLAG="--use-pydantic-v2"; datamodel-codegen --help | grep -q -- "--use-pydantic-v2" || FLAG=""; '
     # Build a resilient FastAPI codegen invocation into a temporary directory.
     routers_tmp = f"{routers_dir}_tmp"
 
@@ -637,7 +636,7 @@ def generate_from_openapi() -> bool:
     )
 
     # Try using the app image for models only
-    cmd_models_a = f'{compose} run --rm --no-deps --entrypoint "" app ' f'sh -lc "set -e; {models_codegen_cmd}"'
+    cmd_models_a = f'{compose} run --rm --no-deps --entrypoint "" app sh -lc "set -e; {models_codegen_cmd}"'
     cmd_models_b = (
         'docker run --rm -u "$(id -u):$(id -g)" '
         "-e HOME=/tmp -e PIP_CACHE_DIR=/tmp/pipcache "

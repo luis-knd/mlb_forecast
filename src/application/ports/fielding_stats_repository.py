@@ -4,7 +4,6 @@ This defines how the application interacts with fielding statistics data storage
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Optional
 
 from src.domain.entities.fielding_stats import FieldingStats
 
@@ -13,29 +12,29 @@ class FieldingStatsRepositoryPort(ABC):
     """Interface for fielding statistics repository operations."""
 
     @abstractmethod
-    async def get_by_id(self, stats_id: int) -> Optional[FieldingStats]:
+    async def get_by_id(self, stats_id: int) -> FieldingStats | None:
         """Get fielding statistics by its ID."""
         pass
 
     @abstractmethod
-    async def get_by_team_and_season(self, team_id: int, season: int) -> Optional[FieldingStats]:
+    async def get_by_team_and_season(self, team_id: int, season: int) -> FieldingStats | None:
         """Get fielding statistics by team ID and season."""
         pass
 
     @abstractmethod
-    async def list_by_team(self, team_id: int) -> List[FieldingStats]:
+    async def list_by_team(self, team_id: int) -> list[FieldingStats]:
         """List all fielding statistics for a specific team across seasons."""
         pass
 
     @abstractmethod
-    async def list_by_season(self, season: int) -> List[FieldingStats]:
+    async def list_by_season(self, season: int) -> list[FieldingStats]:
         """List fielding statistics for all teams in a specific season."""
         pass
 
     @abstractmethod
     async def list_top_teams_by_stat(
         self, season: int, stat_name: str, limit: int = 10, descending: bool = True
-    ) -> List[FieldingStats]:
+    ) -> list[FieldingStats]:
         """List top teams by a specific fielding statistic."""
         pass
 
@@ -45,7 +44,7 @@ class FieldingStatsRepositoryPort(ABC):
         pass
 
     @abstractmethod
-    async def update_stats(self, stats_id: int, updated_stats: dict) -> Optional[FieldingStats]:
+    async def update_stats(self, stats_id: int, updated_stats: dict) -> FieldingStats | None:
         """Update specific fielding statistics for a team."""
         pass
 

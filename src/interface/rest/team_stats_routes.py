@@ -152,7 +152,7 @@ async def ingest_team_hitting_stats(
                 "hitting_stats_count": len(ingested_stats),
                 "season": season,
             },
-            message=("Team hitting statistics ingested successfully " f"for season {season}"),
+            message=(f"Team hitting statistics ingested successfully for season {season}"),
         )
     except Exception as error:
         raise HTTPException(
@@ -192,7 +192,7 @@ async def ingest_team_pitching_stats(
                 "pitching_stats_count": len(ingested_stats),
                 "season": season,
             },
-            message=("Team pitching statistics ingested successfully " f"for season {season}"),
+            message=(f"Team pitching statistics ingested successfully for season {season}"),
         )
     except Exception as error:
         raise HTTPException(
@@ -232,7 +232,7 @@ async def ingest_team_fielding_stats(
                 "fielding_stats_count": len(ingested_stats),
                 "season": season,
             },
-            message=("Team fielding statistics ingested successfully " f"for season {season}"),
+            message=(f"Team fielding statistics ingested successfully for season {season}"),
         )
     except Exception as error:
         raise HTTPException(
@@ -272,7 +272,7 @@ async def ingest_team_catching_stats(
                 "catching_stats_count": len(ingested_stats),
                 "season": season,
             },
-            message=("Team catching statistics ingested successfully " f"for season {season}"),
+            message=(f"Team catching statistics ingested successfully for season {season}"),
         )
     except Exception as error:
         raise HTTPException(

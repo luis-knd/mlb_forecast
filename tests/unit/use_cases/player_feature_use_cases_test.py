@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
@@ -24,11 +24,11 @@ def sample_player() -> Player:
         position="DH",
         bats="L",
         throws="R",
-        birth_date=datetime(1994, 7, 5, tzinfo=timezone.utc),
+        birth_date=datetime(1994, 7, 5, tzinfo=UTC),
         active=True,
         current_team_id=1,
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
 
 

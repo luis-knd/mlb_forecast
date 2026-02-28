@@ -7,7 +7,7 @@ import logging
 import os
 import pickle
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Protocol, Tuple
+from typing import Any, Protocol
 
 import numpy as np
 import pandas as pd
@@ -64,17 +64,17 @@ WINNER_FEATURE_NAMES = [
 ]
 
 
-def _to_float(source: Dict[str, Any], key: str, default: float = 0.0) -> float:
+def _to_float(source: dict[str, Any], key: str, default: float = 0.0) -> float:
     value = source.get(key, default)
     return float(value) if value is not None else default
 
 
-def _to_number(source: Dict[str, Any], key: str, default: int = 0) -> float:
+def _to_number(source: dict[str, Any], key: str, default: int = 0) -> float:
     value = source.get(key, default)
     return float(value) if value is not None else float(default)
 
 
-def _team_stats_to_dict(stats: Dict[str, Any]) -> Dict[str, float]:
+def _team_stats_to_dict(stats: dict[str, Any]) -> dict[str, float]:
     hitting = stats.get("hitting_stats") or {}
     pitching = stats.get("pitching_stats") or {}
 
@@ -107,10 +107,10 @@ def _team_stats_to_dict(stats: Dict[str, Any]) -> Dict[str, float]:
 
 
 def _create_matchup_features(
-    home_stats: Dict[str, float],
-    away_stats: Dict[str, float],
-    historical_matchups: Optional[List[Game]] = None,
-) -> Dict[str, float]:
+    home_stats: dict[str, float],
+    away_stats: dict[str, float],
+    historical_matchups: list[Game] | None = None,
+) -> dict[str, float]:
     features = {
         "win_pct_diff": home_stats.get("win_percentage", 0) - away_stats.get("win_percentage", 0),
         "runs_diff_advantage": home_stats.get("run_differential", 0) - away_stats.get("run_differential", 0),
@@ -139,7 +139,7 @@ def _create_matchup_features(
     return features
 
 
-def _create_temporal_features(game_date: datetime) -> Dict[str, float]:
+def _create_temporal_features(game_date: datetime) -> dict[str, float]:
     season_start = datetime(game_date.year, 3, 1)
     days_since_season_start = (game_date - season_start).days
     return {
@@ -151,11 +151,11 @@ def _create_temporal_features(game_date: datetime) -> Dict[str, float]:
 
 
 def _create_game_features(
-    home_team_stats: Dict[str, Any],
-    away_team_stats: Dict[str, Any],
+    home_team_stats: dict[str, Any],
+    away_team_stats: dict[str, Any],
     game_date: datetime,
-    historical_matchups: Optional[List[Game]] = None,
-) -> Dict[str, float]:
+    historical_matchups: list[Game] | None = None,
+) -> dict[str, float]:
     home_stats_dict = _team_stats_to_dict(home_team_stats)
     away_stats_dict = _team_stats_to_dict(away_team_stats)
     matchup_features = _create_matchup_features(home_stats_dict, away_stats_dict, historical_matchups)
@@ -232,7 +232,7 @@ class MLModelAdapter(_ModelPersistenceMixin, MLModelPort):
         os.makedirs(self.model_dir, exist_ok=True)
         self._try_load_model()
 
-    async def train(self, historical_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def train(self, historical_data: list[dict[str, Any]]) -> dict[str, Any]:
         """Train the model with historical data and return performance metrics."""
         logger.info("Starting model training")
         try:
@@ -260,10 +260,10 @@ class MLModelAdapter(_ModelPersistenceMixin, MLModelPort):
 
     async def predict_game_outcome(
         self,
-        home_team_stats: Dict[str, Any],
-        away_team_stats: Dict[str, Any],
+        home_team_stats: dict[str, Any],
+        away_team_stats: dict[str, Any],
         game_date: datetime,
-        historical_matchups: Optional[List[Game]] = None,
+        historical_matchups: list[Game] | None = None,
     ) -> Prediction:
         """Predict the outcome of a game based on team statistics and historical matchups."""
         if not self.is_trained:
@@ -292,7 +292,7 @@ class MLModelAdapter(_ModelPersistenceMixin, MLModelPort):
             logger.error(f"Error during prediction: {e}")
             raise MLModelException(f"Prediction error: {e}")
 
-    async def evaluate_model(self, test_data: List[Dict[str, Any]]) -> Dict[str, float]:
+    async def evaluate_model(self, test_data: list[dict[str, Any]]) -> dict[str, float]:
         """Evaluate the model on test data and return performance metrics."""
         if not self.is_trained:
             raise MLModelException("Model has not been trained")
@@ -314,7 +314,7 @@ class MLModelAdapter(_ModelPersistenceMixin, MLModelPort):
             logger.error(f"Error during model evaluation: {e}")
             raise MLModelException(f"Evaluation error: {e}")
 
-    async def get_feature_importance(self) -> Dict[str, float]:
+    async def get_feature_importance(self) -> dict[str, float]:
         """Get the importance of each feature in the model."""
         if not self.is_trained:
             raise MLModelException("Model has not been trained")
@@ -358,7 +358,7 @@ class MLModelAdapter(_ModelPersistenceMixin, MLModelPort):
         """Get the current model version."""
         return self.model_version
 
-    async def get_model_performance(self) -> Dict[str, Any]:
+    async def get_model_performance(self) -> dict[str, Any]:
         """Get the current model performance metrics."""
         if not self.is_trained:
             return {"error": "Model not trained"}
@@ -368,14 +368,14 @@ class MLModelAdapter(_ModelPersistenceMixin, MLModelPort):
         }
 
     @staticmethod
-    def _to_training_frame(historical_data: List[Dict[str, Any]]) -> pd.DataFrame:
+    def _to_training_frame(historical_data: list[dict[str, Any]]) -> pd.DataFrame:
         df = pd.DataFrame(historical_data)
         if df.empty or len(df) < 50:
             raise MLModelException("Insufficient historical data for training")
         return df
 
     @staticmethod
-    def _extract_training_columns(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series, pd.Series]:
+    def _extract_training_columns(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series, pd.Series]:
         features_df = df.drop(columns=["winner", "total_runs"])
         return features_df, df["winner"], df["total_runs"]
 
@@ -384,7 +384,7 @@ class MLModelAdapter(_ModelPersistenceMixin, MLModelPort):
         features_scaled: np.ndarray,
         winner_df: pd.Series,
         runs_df: pd.Series,
-    ) -> Tuple[np.ndarray, np.ndarray, pd.Series, pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[np.ndarray, np.ndarray, pd.Series, pd.Series, pd.Series, pd.Series]:
         X_train, X_test, y_winner_train, y_winner_test = train_test_split(
             features_scaled, winner_df, test_size=0.2, random_state=42
         )
@@ -398,7 +398,7 @@ class MLModelAdapter(_ModelPersistenceMixin, MLModelPort):
         runs_true: pd.Series,
         runs_pred: np.ndarray,
         samples: int,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         return {
             "winner_accuracy": float(accuracy_score(winner_true, winner_pred)),
             "winner_precision": float(precision_score(winner_true, winner_pred, average="weighted")),
@@ -413,7 +413,7 @@ class MLModelAdapter(_ModelPersistenceMixin, MLModelPort):
     def _next_model_version() -> str:
         return f"v1.0_{datetime.now().strftime('%Y%m%d')}"
 
-    def _get_feature_importance(self) -> Dict[str, float]:
+    def _get_feature_importance(self) -> dict[str, float]:
         """Get feature importance from the winner model."""
         if not self.is_trained:
             return {}
@@ -426,7 +426,7 @@ class MLModelAdapter(_ModelPersistenceMixin, MLModelPort):
             return {}
 
     @staticmethod
-    def _map_feature_importance(importance_values: List[float]) -> Dict[str, float]:
+    def _map_feature_importance(importance_values: list[float]) -> dict[str, float]:
         if len(WINNER_FEATURE_NAMES) != len(importance_values):
             return {f"feature_{index}": float(value) for index, value in enumerate(importance_values)}
-        return {name: float(value) for name, value in zip(WINNER_FEATURE_NAMES, importance_values)}
+        return {name: float(value) for name, value in zip(WINNER_FEATURE_NAMES, importance_values, strict=False)}

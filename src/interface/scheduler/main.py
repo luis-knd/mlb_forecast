@@ -7,7 +7,7 @@ import asyncio
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict, Tuple
+from typing import Any
 
 import structlog
 
@@ -32,7 +32,7 @@ logging.basicConfig(
 logger = structlog.get_logger(__name__)
 
 
-def _build_adapters() -> Tuple[RedisAdapter, MLModelAdapter, MLBApiAdapter, SchedulerAdapter]:
+def _build_adapters() -> tuple[RedisAdapter, MLModelAdapter, MLBApiAdapter, SchedulerAdapter]:
     cache_adapter = RedisAdapter()
     ml_model_adapter = MLModelAdapter()
     mlb_api_adapter = MLBApiAdapter()
@@ -57,7 +57,7 @@ async def _load_current_model(ml_model_adapter: MLModelAdapter) -> None:
         logger.warning(f"Could not load ML model: {e}")
 
 
-def _ingest_daily_games_job(scheduler_use_cases: SchedulerUseCases) -> Dict[str, Any]:
+def _ingest_daily_games_job(scheduler_use_cases: SchedulerUseCases) -> dict[str, Any]:
     return {
         "job_id": "ingest_daily_games",
         "func": scheduler_use_cases.ingest_daily_games,
@@ -70,7 +70,7 @@ def _ingest_daily_games_job(scheduler_use_cases: SchedulerUseCases) -> Dict[str,
     }
 
 
-def _ingest_team_statistics_job(scheduler_use_cases: SchedulerUseCases) -> Dict[str, Any]:
+def _ingest_team_statistics_job(scheduler_use_cases: SchedulerUseCases) -> dict[str, Any]:
     return {
         "job_id": "ingest_team_statistics",
         "func": scheduler_use_cases.ingest_team_statistics,
@@ -83,7 +83,7 @@ def _ingest_team_statistics_job(scheduler_use_cases: SchedulerUseCases) -> Dict[
     }
 
 
-def _retrain_ml_model_job(scheduler_use_cases: SchedulerUseCases) -> Dict[str, Any]:
+def _retrain_ml_model_job(scheduler_use_cases: SchedulerUseCases) -> dict[str, Any]:
     return {
         "job_id": "retrain_ml_model",
         "func": scheduler_use_cases.retrain_ml_model,
@@ -96,7 +96,7 @@ def _retrain_ml_model_job(scheduler_use_cases: SchedulerUseCases) -> Dict[str, A
     }
 
 
-def _cache_maintenance_job(scheduler_use_cases: SchedulerUseCases) -> Dict[str, Any]:
+def _cache_maintenance_job(scheduler_use_cases: SchedulerUseCases) -> dict[str, Any]:
     return {
         "job_id": "cache_maintenance",
         "func": scheduler_use_cases.cache_maintenance,
@@ -108,7 +108,7 @@ def _cache_maintenance_job(scheduler_use_cases: SchedulerUseCases) -> Dict[str, 
     }
 
 
-def _generate_upcoming_predictions_job(scheduler_use_cases: SchedulerUseCases) -> Dict[str, Any]:
+def _generate_upcoming_predictions_job(scheduler_use_cases: SchedulerUseCases) -> dict[str, Any]:
     return {
         "job_id": "generate_upcoming_predictions",
         "func": scheduler_use_cases.generate_upcoming_predictions,
@@ -120,7 +120,7 @@ def _generate_upcoming_predictions_job(scheduler_use_cases: SchedulerUseCases) -
     }
 
 
-def _ingest_teams_weekly_job(scheduler_use_cases: SchedulerUseCases) -> Dict[str, Any]:
+def _ingest_teams_weekly_job(scheduler_use_cases: SchedulerUseCases) -> dict[str, Any]:
     return {
         "job_id": "ingest_teams_weekly",
         "func": scheduler_use_cases.ingest_teams_weekly,
@@ -134,7 +134,7 @@ def _ingest_teams_weekly_job(scheduler_use_cases: SchedulerUseCases) -> Dict[str
     }
 
 
-def _job_definitions(scheduler_use_cases: SchedulerUseCases) -> Tuple[Dict[str, Any], ...]:
+def _job_definitions(scheduler_use_cases: SchedulerUseCases) -> tuple[dict[str, Any], ...]:
     return (
         _ingest_daily_games_job(scheduler_use_cases),
         _ingest_team_statistics_job(scheduler_use_cases),

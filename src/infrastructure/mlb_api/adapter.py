@@ -5,8 +5,9 @@ This module implements the MLBApiPort interface using httpx for HTTP requests.
 
 import asyncio
 import logging
+from collections.abc import Iterator
 from datetime import date, datetime
-from typing import Any, Dict, Iterator, List, Optional, Protocol
+from typing import Any, Protocol
 
 import httpx
 
@@ -24,7 +25,7 @@ CANCELLED_STATES = {"cancelled", "postponed", "suspended"}
 IN_PROGRESS_STATES = {"in progress", "live", "in-progress"}
 SCHEDULED_STATES = {"scheduled", "pre-game", "warmup", "pregame"}
 
-TEAM_STATS_DEFAULTS: Dict[str, Any] = {
+TEAM_STATS_DEFAULTS: dict[str, Any] = {
     "games_played": 0,
     "wins": 0,
     "losses": 0,
@@ -52,7 +53,7 @@ TEAM_STATS_DEFAULTS: Dict[str, Any] = {
     "pythagorean_expectation": 0.0,
 }
 
-FIELDING_STATS_DEFAULTS: Dict[str, Any] = {
+FIELDING_STATS_DEFAULTS: dict[str, Any] = {
     "games_played": 0,
     "games_started": 0,
     "innings_played": 0.0,
@@ -100,8 +101,8 @@ class _RequestContext(Protocol):
 
 class _RequestMixin:
     async def _make_request(
-        self: _RequestContext, endpoint: str, params: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        self: _RequestContext, endpoint: str, params: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         url = f"{self.base_url}{endpoint}"
         attempts = self.max_retries + 1
         for attempt in range(1, attempts + 1):
@@ -131,7 +132,7 @@ class _RequestMixin:
 
 class _TeamSplitMixin:
     @staticmethod
-    def _iter_matching_team_stats(stats_data: Dict[str, Any], mlb_team_id: int) -> Iterator[tuple[str, Dict[str, Any]]]:
+    def _iter_matching_team_stats(stats_data: dict[str, Any], mlb_team_id: int) -> Iterator[tuple[str, dict[str, Any]]]:
         for group in stats_data.get("stats", []):
             group_name = str(group.get("group", {}).get("displayName", "")).lower()
             for split in group.get("splits", []):
@@ -141,7 +142,7 @@ class _TeamSplitMixin:
 
 
 class _TeamTransformMixin:
-    def _transform_team_data(self, team_data: Dict[str, Any]) -> MLBTeamDTO:
+    def _transform_team_data(self, team_data: dict[str, Any]) -> MLBTeamDTO:
         division_info = team_data.get("division", {})
         league_info = team_data.get("league", {})
         venue_info = team_data.get("venue", {})
@@ -157,7 +158,7 @@ class _TeamTransformMixin:
 
 
 class _GameTransformMixin:
-    def _transform_game_data(self, game_data: Dict[str, Any]) -> MLBGameDTO:
+    def _transform_game_data(self, game_data: dict[str, Any]) -> MLBGameDTO:
         teams = game_data.get("teams", {})
         home_team_data = teams.get("home", {}).get("team", {})
         away_team_data = teams.get("away", {}).get("team", {})
@@ -177,7 +178,7 @@ class _GameTransformMixin:
             winning_team_id=winning_team_id,
         )
 
-    def _parse_game_date(self, game_date_raw: Any) -> Optional[datetime]:
+    def _parse_game_date(self, game_date_raw: Any) -> datetime | None:
         if not game_date_raw:
             return None
         try:
@@ -186,7 +187,7 @@ class _GameTransformMixin:
             logger.warning("Invalid date format: %s", game_date_raw)
             return None
 
-    def _build_status_context(self, game_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _build_status_context(self, game_data: dict[str, Any]) -> dict[str, Any]:
         status_data = game_data.get("status", {})
         detailed_state = str(status_data.get("detailedState", "")).lower()
         abstract_state = str(status_data.get("abstractGameState", "")).lower()
@@ -201,11 +202,11 @@ class _GameTransformMixin:
 
     def _resolve_winning_team_id(
         self,
-        home_team_data: Dict[str, Any],
-        away_team_data: Dict[str, Any],
-        home_score: Optional[int],
-        away_score: Optional[int],
-    ) -> Optional[int]:
+        home_team_data: dict[str, Any],
+        away_team_data: dict[str, Any],
+        home_score: int | None,
+        away_score: int | None,
+    ) -> int | None:
         if home_score is None or away_score is None:
             return None
         if home_score == away_score:
@@ -249,21 +250,21 @@ class _GameTransformMixin:
 
 
 class _TeamStatsTransformMixin(_TeamSplitMixin):
-    def _transform_team_stats_data(self, stats_data: Dict[str, Any], mlb_team_id: int, season: int) -> Dict[str, Any]:
+    def _transform_team_stats_data(self, stats_data: dict[str, Any], mlb_team_id: int, season: int) -> dict[str, Any]:
         result = {"team_id": mlb_team_id, "season": season, **TEAM_STATS_DEFAULTS}
         for group_name, stat_data in self._iter_matching_team_stats(stats_data, mlb_team_id):
             self._apply_team_group_stats(group_name, stat_data, result)
         self._apply_team_derived_metrics(result)
         return result
 
-    def _apply_team_group_stats(self, group_name: str, stat_data: Dict[str, Any], result: Dict[str, Any]) -> None:
+    def _apply_team_group_stats(self, group_name: str, stat_data: dict[str, Any], result: dict[str, Any]) -> None:
         if group_name == "hitting":
             self._process_hitting_stats(stat_data, result)
             return
         if group_name == "pitching":
             self._process_pitching_stats(stat_data, result)
 
-    def _process_hitting_stats(self, stat_data: Dict[str, Any], result: Dict[str, Any]) -> None:
+    def _process_hitting_stats(self, stat_data: dict[str, Any], result: dict[str, Any]) -> None:
         mapping = {
             "gamesPlayed": "games_played",
             "runs": "runs_scored",
@@ -280,7 +281,7 @@ class _TeamStatsTransformMixin(_TeamSplitMixin):
         result["slugging_percentage"] = _safe_float(stat_data.get("slg")) or result["slugging_percentage"]
         result["ops"] = _safe_float(stat_data.get("ops")) or result["ops"]
 
-    def _process_pitching_stats(self, stat_data: Dict[str, Any], result: Dict[str, Any]) -> None:
+    def _process_pitching_stats(self, stat_data: dict[str, Any], result: dict[str, Any]) -> None:
         mapping = {
             "wins": "wins",
             "losses": "losses",
@@ -302,7 +303,7 @@ class _TeamStatsTransformMixin(_TeamSplitMixin):
         result["strikeouts_per_nine"] = strikeouts_per_nine or result["strikeouts_per_nine"]
         result["walks_per_nine"] = walks_per_nine or result["walks_per_nine"]
 
-    def _apply_team_derived_metrics(self, result: Dict[str, Any]) -> None:
+    def _apply_team_derived_metrics(self, result: dict[str, Any]) -> None:
         runs_scored = result["runs_scored"]
         runs_allowed = result["runs_allowed"]
         result["run_differential"] = runs_scored - runs_allowed
@@ -313,7 +314,7 @@ class _TeamStatsTransformMixin(_TeamSplitMixin):
 
 
 class _PlayerTransformMixin:
-    def _transform_player_data(self, player_data: Dict[str, Any]) -> MLBPlayerDTO:
+    def _transform_player_data(self, player_data: dict[str, Any]) -> MLBPlayerDTO:
         first_name, last_name = self._extract_player_names(player_data)
         position = self._extract_player_position(player_data)
         return MLBPlayerDTO(
@@ -328,7 +329,7 @@ class _PlayerTransformMixin:
             current_team_id=player_data.get("currentTeam", {}).get("id"),
         )
 
-    def _parse_player_birth_date(self, player_data: Dict[str, Any]) -> Optional[datetime]:
+    def _parse_player_birth_date(self, player_data: dict[str, Any]) -> datetime | None:
         birth_date = player_data.get("birthDate")
         if not birth_date:
             return None
@@ -338,7 +339,7 @@ class _PlayerTransformMixin:
             logger.warning("Invalid birth date format: %s", birth_date)
             return None
 
-    def _extract_player_names(self, player_data: Dict[str, Any]) -> tuple[str, str]:
+    def _extract_player_names(self, player_data: dict[str, Any]) -> tuple[str, str]:
         first_name = str(player_data.get("firstName", "")).strip()
         last_name = str(player_data.get("lastName", "")).strip()
         if first_name and last_name:
@@ -353,7 +354,7 @@ class _PlayerTransformMixin:
         resolved_last_name = last_name or " ".join(split_name[1:])
         return resolved_first_name, resolved_last_name
 
-    def _extract_player_position(self, player_data: Dict[str, Any]) -> str:
+    def _extract_player_position(self, player_data: dict[str, Any]) -> str:
         position = self._extract_position_value(player_data.get("position"))
         if position:
             return position
@@ -373,14 +374,14 @@ class _PlayerTransformMixin:
 
     def _transform_player_stats_data(
         self,
-        stats_data: Dict[str, Any],
+        stats_data: dict[str, Any],
         mlb_player_id: int,
         stats: str,
         group: str,
-        season: Optional[int] = None,
-        game_type: Optional[str] = None,
-        days_back: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        season: int | None = None,
+        game_type: str | None = None,
+        days_back: int | None = None,
+    ) -> dict[str, Any]:
         return {
             "player_id": mlb_player_id,
             "stats": stats,
@@ -395,22 +396,22 @@ class _PlayerTransformMixin:
 class _FieldingStatsTransformMixin(_TeamSplitMixin):
     def _transform_fielding_stats_data(
         self,
-        stats_data: Dict[str, Any],
+        stats_data: dict[str, Any],
         mlb_team_id: int,
         season: int,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         result = {"team_id": mlb_team_id, "season": season, **FIELDING_STATS_DEFAULTS}
         for group_name, stat_data in self._iter_matching_team_stats(stats_data, mlb_team_id):
             if group_name == "fielding":
                 self._process_fielding_stats(stat_data, result)
         return result
 
-    def _process_fielding_stats(self, stat_data: Dict[str, Any], result: Dict[str, Any]) -> None:
+    def _process_fielding_stats(self, stat_data: dict[str, Any], result: dict[str, Any]) -> None:
         self._apply_fielding_raw_stats(stat_data, result)
         self._apply_fielding_percentage_stats(stat_data, result)
         self._apply_fielding_derived_stats(result)
 
-    def _apply_fielding_raw_stats(self, stat_data: Dict[str, Any], result: Dict[str, Any]) -> None:
+    def _apply_fielding_raw_stats(self, stat_data: dict[str, Any], result: dict[str, Any]) -> None:
         mapping = {
             "gamesPlayed": "games_played",
             "gamesStarted": "games_started",
@@ -436,7 +437,7 @@ class _FieldingStatsTransformMixin(_TeamSplitMixin):
         if innings_played:
             result["innings_played"] = innings_played
 
-    def _apply_fielding_percentage_stats(self, stat_data: Dict[str, Any], result: Dict[str, Any]) -> None:
+    def _apply_fielding_percentage_stats(self, stat_data: dict[str, Any], result: dict[str, Any]) -> None:
         fielding_percentage = _safe_float(stat_data.get("fielding"))
         stolen_base_percentage = _safe_float(stat_data.get("stolenBasePercentage"))
         if fielding_percentage:
@@ -444,7 +445,7 @@ class _FieldingStatsTransformMixin(_TeamSplitMixin):
         if stolen_base_percentage:
             result["stolen_base_percentage"] = stolen_base_percentage
 
-    def _apply_fielding_derived_stats(self, result: Dict[str, Any]) -> None:
+    def _apply_fielding_derived_stats(self, result: dict[str, Any]) -> None:
         successful_plays = result["putouts"] + result["assists"]
         if result["total_chances"] > 0 and result["fielding_percentage"] == 0.0:
             result["fielding_percentage"] = successful_plays / result["total_chances"]
@@ -472,13 +473,13 @@ class MLBApiAdapter(
         self.max_retries = settings.MLB_API_MAX_RETRIES
         self.backoff_factor = settings.MLB_API_BACKOFF_FACTOR
 
-    async def get_teams(self) -> List[MLBTeamDTO]:
+    async def get_teams(self) -> list[MLBTeamDTO]:
         endpoint = f"/{self.api_version}/teams"
         params = {"sportId": 1}
         data = await self._make_request(endpoint, params)
         return [self._transform_team_data(team) for team in data.get("teams", [])]
 
-    async def get_team_by_id(self, mlb_team_id: int) -> Optional[MLBTeamDTO]:
+    async def get_team_by_id(self, mlb_team_id: int) -> MLBTeamDTO | None:
         endpoint = f"/{self.api_version}/teams/{mlb_team_id}"
         try:
             data = await self._make_request(endpoint)
@@ -490,7 +491,7 @@ class MLBApiAdapter(
             logger.warning("Team with MLB ID %s not found", mlb_team_id)
             return None
 
-    async def get_games_by_date(self, game_date: date) -> List[MLBGameDTO]:
+    async def get_games_by_date(self, game_date: date) -> list[MLBGameDTO]:
         endpoint = f"/{self.api_version}/schedule"
         params = {"sportId": 1, "date": game_date.strftime("%Y-%m-%d")}
         data = await self._make_request(endpoint, params)
@@ -500,7 +501,7 @@ class MLBApiAdapter(
             for game_data in date_info.get("games", [])
         ]
 
-    async def get_game_by_id(self, mlb_game_id: int) -> Optional[MLBGameDTO]:
+    async def get_game_by_id(self, mlb_game_id: int) -> MLBGameDTO | None:
         endpoint = f"/{self.api_version}/game/{mlb_game_id}/feed/live"
         try:
             data = await self._make_request(endpoint)
@@ -513,10 +514,10 @@ class MLBApiAdapter(
         self,
         season: int,
         group: str,
-        mlb_team_id: Optional[int] = None,
-    ) -> Optional[Dict[str, Any]]:
+        mlb_team_id: int | None = None,
+    ) -> dict[str, Any] | None:
         endpoint = f"/{self.api_version}/teams/stats"
-        params: Dict[str, Any] = {
+        params: dict[str, Any] = {
             "season": season,
             "sportId": 1,
             "group": group,
@@ -530,7 +531,7 @@ class MLBApiAdapter(
             logger.warning("Stats not found: group=%s, team=%s, season=%s", group, mlb_team_id or "all", season)
             return None
 
-    async def get_player_by_id(self, mlb_player_id: int) -> Optional[MLBPlayerDTO]:
+    async def get_player_by_id(self, mlb_player_id: int) -> MLBPlayerDTO | None:
         endpoint = f"/{self.api_version}/people/{mlb_player_id}"
         try:
             data = await self._make_request(endpoint)
@@ -545,16 +546,16 @@ class MLBApiAdapter(
     async def get_players_by_team(
         self,
         mlb_team_id: int,
-        season: Optional[int] = None,
+        season: int | None = None,
         roster_type: str = "active",
-    ) -> List[MLBPlayerDTO]:
+    ) -> list[MLBPlayerDTO]:
         endpoint = f"/{self.api_version}/teams/{mlb_team_id}/roster"
-        params: Dict[str, Any] = {"rosterType": roster_type}
+        params: dict[str, Any] = {"rosterType": roster_type}
         if season is not None:
             params["season"] = season
         try:
             data = await self._make_request(endpoint, params)
-            players: List[MLBPlayerDTO] = []
+            players: list[MLBPlayerDTO] = []
             for roster_entry in data.get("roster", []):
                 player_data = dict(roster_entry.get("person", {}))
                 player_data["position"] = roster_entry.get("position", {}).get("abbreviation", "")
@@ -567,11 +568,11 @@ class MLBApiAdapter(
     async def get_players_by_sport(
         self,
         sport_id: int = 1,
-        season: Optional[int] = None,
-        team_mlb_id: Optional[int] = None,
-    ) -> List[MLBPlayerDTO]:
+        season: int | None = None,
+        team_mlb_id: int | None = None,
+    ) -> list[MLBPlayerDTO]:
         endpoint = f"/{self.api_version}/sports/{sport_id}/players"
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if season is not None:
             params["season"] = season
         if team_mlb_id is not None:
@@ -588,12 +589,12 @@ class MLBApiAdapter(
         mlb_player_id: int,
         stats: str,
         group: str,
-        season: Optional[int] = None,
-        game_type: Optional[str] = None,
-        days_back: Optional[int] = None,
-    ) -> Optional[Dict[str, Any]]:
+        season: int | None = None,
+        game_type: str | None = None,
+        days_back: int | None = None,
+    ) -> dict[str, Any] | None:
         endpoint = f"/{self.api_version}/people/{mlb_player_id}/stats"
-        params: Dict[str, Any] = {"stats": stats, "group": group}
+        params: dict[str, Any] = {"stats": stats, "group": group}
         if season is not None:
             params["season"] = season
         if game_type:
@@ -623,7 +624,7 @@ class MLBApiAdapter(
             )
             return None
 
-    async def search_players(self, query: str) -> List[MLBPlayerDTO]:
+    async def search_players(self, query: str) -> list[MLBPlayerDTO]:
         endpoint = f"/{self.api_version}/people/search"
         try:
             data = await self._make_request(endpoint, params={"q": query})

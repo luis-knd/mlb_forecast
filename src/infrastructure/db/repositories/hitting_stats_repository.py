@@ -2,7 +2,7 @@
 Implementation of the HittingStatsRepositoryPort interface using SQLAlchemy.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import Session, joinedload
@@ -57,7 +57,7 @@ class HittingStatsRepository(HittingStatsRepositoryPort):
     def __init__(self, session: Session):
         self.session = session
 
-    async def get_by_id(self, stats_id: int) -> Optional[HittingStats]:
+    async def get_by_id(self, stats_id: int) -> HittingStats | None:
         """Get hitting statistics by its ID."""
         stats_model = (
             self.session.query(HittingStatsModel)
@@ -69,7 +69,7 @@ class HittingStatsRepository(HittingStatsRepositoryPort):
             return None
         return self._model_to_entity(stats_model)
 
-    async def get_by_team_and_season(self, team_id: int, season: int) -> Optional[HittingStats]:
+    async def get_by_team_and_season(self, team_id: int, season: int) -> HittingStats | None:
         """Get hitting statistics by team ID and season."""
         stats_model = (
             self.session.query(HittingStatsModel)
@@ -81,7 +81,7 @@ class HittingStatsRepository(HittingStatsRepositoryPort):
             return None
         return self._model_to_entity(stats_model)
 
-    async def list_by_team(self, team_id: int) -> List[HittingStats]:
+    async def list_by_team(self, team_id: int) -> list[HittingStats]:
         """List all hitting statistics for a specific team across seasons."""
         stats_models = (
             self.session.query(HittingStatsModel)
@@ -92,7 +92,7 @@ class HittingStatsRepository(HittingStatsRepositoryPort):
         )
         return [self._model_to_entity(model) for model in stats_models]
 
-    async def list_by_season(self, season: int) -> List[HittingStats]:
+    async def list_by_season(self, season: int) -> list[HittingStats]:
         """List hitting statistics for all teams in a specific season."""
         stats_models = (
             self.session.query(HittingStatsModel)
@@ -104,7 +104,7 @@ class HittingStatsRepository(HittingStatsRepositoryPort):
 
     async def list_top_teams_by_stat(
         self, season: int, stat_name: str, limit: int = 10, descending: bool = True
-    ) -> List[HittingStats]:
+    ) -> list[HittingStats]:
         """List top teams by a specific hitting statistic."""
         # Validate that the stat_name is a valid column
         if not hasattr(HittingStatsModel, stat_name):
@@ -141,7 +141,7 @@ class HittingStatsRepository(HittingStatsRepositoryPort):
         self.session.commit()
         return await self.get_by_id(stats_model.id)
 
-    def _get_existing_model(self, hitting_stats: HittingStats) -> Optional[HittingStatsModel]:
+    def _get_existing_model(self, hitting_stats: HittingStats) -> HittingStatsModel | None:
         if hitting_stats.id:
             stats_model = self.session.query(HittingStatsModel).filter(HittingStatsModel.id == hitting_stats.id).first()
             if stats_model is not None:
@@ -155,7 +155,7 @@ class HittingStatsRepository(HittingStatsRepositoryPort):
             .first()
         )
 
-    async def update_stats(self, stats_id: int, updated_stats: Dict[str, Any]) -> Optional[HittingStats]:
+    async def update_stats(self, stats_id: int, updated_stats: dict[str, Any]) -> HittingStats | None:
         """Update specific hitting statistics for a team."""
         stats_model = self.session.query(HittingStatsModel).filter(HittingStatsModel.id == stats_id).first()
         if not stats_model:
@@ -173,7 +173,8 @@ class HittingStatsRepository(HittingStatsRepositoryPort):
         """Delete hitting statistics by its ID."""
         return delete_model_by_id(self.session, HittingStatsModel, stats_id)
 
-    def _model_to_entity(self, model: HittingStatsModel) -> HittingStats:
+    @staticmethod
+    def _model_to_entity(model: HittingStatsModel) -> HittingStats:
         """Convert a HittingStatsModel to a HittingStats entity."""
         team = team_model_to_entity(model.team)
 
@@ -217,7 +218,8 @@ class HittingStatsRepository(HittingStatsRepositoryPort):
             team=team,
         )
 
-    def _update_stats_model(self, model: HittingStatsModel, entity: HittingStats) -> None:
+    @staticmethod
+    def _update_stats_model(model: HittingStatsModel, entity: HittingStats) -> None:
         """Update a HittingStatsModel with values from a HittingStats entity."""
         model.team_id = entity.team_id
         model.season = entity.season

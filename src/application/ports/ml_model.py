@@ -5,7 +5,7 @@ This defines how the application interacts with machine learning models for pred
 
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from src.domain.entities.game import Game
 from src.domain.entities.prediction import Prediction
@@ -15,28 +15,28 @@ class MLModelPort(ABC):
     """Interface for machine learning model operations."""
 
     @abstractmethod
-    async def train(self, historical_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def train(self, historical_data: list[dict[str, Any]]) -> dict[str, Any]:
         """Train the model with historical data and return performance metrics."""
         pass
 
     @abstractmethod
     async def predict_game_outcome(
         self,
-        home_team_stats: Dict[str, Any],
-        away_team_stats: Dict[str, Any],
+        home_team_stats: dict[str, Any],
+        away_team_stats: dict[str, Any],
         game_date: datetime,
-        historical_matchups: Optional[List[Game]] = None,
+        historical_matchups: list[Game] | None = None,
     ) -> Prediction:
         """Predict the outcome of a game based on team statistics and historical matchups."""
         pass
 
     @abstractmethod
-    async def evaluate_model(self, test_data: List[Dict[str, Any]]) -> Dict[str, float]:
+    async def evaluate_model(self, test_data: list[dict[str, Any]]) -> dict[str, float]:
         """Evaluate the model on test data and return performance metrics."""
         pass
 
     @abstractmethod
-    async def get_feature_importance(self) -> Dict[str, float]:
+    async def get_feature_importance(self) -> dict[str, float]:
         """Get the importance of each feature in the model."""
         pass
 
@@ -56,6 +56,6 @@ class MLModelPort(ABC):
         pass
 
     @abstractmethod
-    async def get_model_performance(self) -> Dict[str, float]:
+    async def get_model_performance(self) -> dict[str, float]:
         """Get the current model performance metrics."""
         pass

@@ -3,8 +3,6 @@ Use cases for player operations.
 These define the application's business logic for player operations.
 """
 
-from typing import Dict, List, Optional
-
 from src.application.ports.cache import CachePort
 from src.application.ports.mlb_api import MLBApiPort
 from src.application.ports.player_repository import PlayerRepositoryPort
@@ -19,7 +17,7 @@ ALLOWED_PLAYER_GROUPS = {"hitting", "pitching", "fielding", "catching", "running
 ALLOWED_GAME_TYPES = {"R", "S", "P", "W", "A"}
 
 
-def _cache_token(value: Optional[str]) -> str:
+def _cache_token(value: str | None) -> str:
     if value is None:
         return "none"
     normalized = value.strip().lower()
@@ -33,7 +31,7 @@ class GetPlayerUseCase:
         self.player_repository = player_repository
         self.cache = cache
 
-    async def execute(self, player_id: int) -> Optional[Player]:
+    async def execute(self, player_id: int) -> Player | None:
         """
         Get a player by its ID.
 
@@ -67,7 +65,7 @@ class GetPlayerByMlbIdUseCase:
         self.player_repository = player_repository
         self.cache = cache
 
-    async def execute(self, mlb_player_id: int) -> Optional[Player]:
+    async def execute(self, mlb_player_id: int) -> Player | None:
         cache_key = f"players:mlb_id:{mlb_player_id}"
 
         cached_player = await self.cache.get(cache_key)
@@ -88,7 +86,7 @@ class ListPlayersByTeamUseCase:
         self.player_repository = player_repository
         self.cache = cache
 
-    async def execute(self, team_id: int) -> List[Player]:
+    async def execute(self, team_id: int) -> list[Player]:
         """
         List players by team.
 
@@ -121,7 +119,7 @@ class ListPlayersByPositionUseCase:
         self.player_repository = player_repository
         self.cache = cache
 
-    async def execute(self, position: str) -> List[Player]:
+    async def execute(self, position: str) -> list[Player]:
         """
         List players by position.
 
@@ -154,7 +152,7 @@ class SearchPlayersUseCase:
         self.player_repository = player_repository
         self.cache = cache
 
-    async def execute(self, name: str) -> List[Player]:
+    async def execute(self, name: str) -> list[Player]:
         """
         Search players by name.
 
@@ -189,13 +187,13 @@ class ListPlayersUseCase:
 
     async def execute(
         self,
-        team_id: Optional[int] = None,
-        position: Optional[str] = None,
-        name: Optional[str] = None,
-        active: Optional[bool] = None,
+        team_id: int | None = None,
+        position: str | None = None,
+        name: str | None = None,
+        active: bool | None = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> List[Player]:
+    ) -> list[Player]:
         cache_key = (
             "players:list:"
             f"team={team_id if team_id is not None else 'none'}:"
@@ -234,10 +232,10 @@ class GetPlayerStatsUseCase:
         mlb_player_id: int,
         stats: str,
         group: str,
-        season: Optional[int] = None,
-        game_type: Optional[str] = None,
-        days_back: Optional[int] = None,
-    ) -> Optional[Dict]:
+        season: int | None = None,
+        game_type: str | None = None,
+        days_back: int | None = None,
+    ) -> dict | None:
         normalized_stats = stats.strip()
         normalized_group = group.strip().lower()
         normalized_game_type = game_type.strip().upper() if game_type else None
@@ -280,9 +278,9 @@ class GetPlayerStatsUseCase:
         self,
         normalized_stats: str,
         normalized_group: str,
-        season: Optional[int],
-        normalized_game_type: Optional[str],
-        days_back: Optional[int],
+        season: int | None,
+        normalized_game_type: str | None,
+        days_back: int | None,
     ) -> None:
         if normalized_stats not in ALLOWED_PLAYER_STATS:
             raise ValueError(f"stats must be one of: {', '.join(sorted(ALLOWED_PLAYER_STATS))}")
@@ -300,9 +298,9 @@ class GetPlayerStatsUseCase:
         mlb_player_id: int,
         normalized_stats: str,
         normalized_group: str,
-        season: Optional[int],
-        normalized_game_type: Optional[str],
-        days_back: Optional[int],
+        season: int | None,
+        normalized_game_type: str | None,
+        days_back: int | None,
     ) -> str:
         return (
             "player_stats:"
@@ -328,7 +326,7 @@ class IngestPlayersUseCase:
         self.mlb_api = mlb_api
         self.cache = cache
 
-    async def execute(self) -> List[Player]:
+    async def execute(self) -> list[Player]:
         """
         Ingest players from the MLB API.
 
@@ -387,12 +385,12 @@ class IngestPlayersBySourceUseCase:
     async def execute(
         self,
         source: str,
-        season: Optional[int] = None,
-        team_mlb_id: Optional[int] = None,
+        season: int | None = None,
+        team_mlb_id: int | None = None,
         roster_type: str = "active",
         sport_id: int = 1,
-        query: Optional[str] = None,
-    ) -> List[Player]:
+        query: str | None = None,
+    ) -> list[Player]:
         normalized_source = source.strip().lower()
         if normalized_source not in ALLOWED_INGEST_SOURCES:
             raise ValueError(f"source must be one of: {', '.join(sorted(ALLOWED_INGEST_SOURCES))}")
@@ -406,8 +404,8 @@ class IngestPlayersBySourceUseCase:
             sport_id=sport_id,
             query=query,
         )
-        team_id_cache: Dict[int, Optional[int]] = {}
-        ingested_players: List[Player] = []
+        team_id_cache: dict[int, int | None] = {}
+        ingested_players: list[Player] = []
 
         for player_dto in players_dto:
             candidate_team_mlb_id = player_dto.current_team_id or default_team_mlb_id
@@ -435,12 +433,12 @@ class IngestPlayersBySourceUseCase:
     async def _get_players_by_source(
         self,
         normalized_source: str,
-        season: Optional[int],
-        team_mlb_id: Optional[int],
+        season: int | None,
+        team_mlb_id: int | None,
         roster_type: str,
         sport_id: int,
-        query: Optional[str],
-    ) -> tuple[List, Optional[int]]:
+        query: str | None,
+    ) -> tuple[list, int | None]:
         if normalized_source == "team_roster":
             if team_mlb_id is None:
                 raise ValueError("teamId is required when source=team_roster")
@@ -469,9 +467,9 @@ class IngestPlayersBySourceUseCase:
 
     async def _resolve_internal_team_id(
         self,
-        mlb_team_id: Optional[int],
-        team_id_cache: Dict[int, Optional[int]],
-    ) -> Optional[int]:
+        mlb_team_id: int | None,
+        team_id_cache: dict[int, int | None],
+    ) -> int | None:
         if mlb_team_id is None:
             return None
 
@@ -490,7 +488,7 @@ class UpdatePlayerTeamUseCase:
         self.player_repository = player_repository
         self.cache = cache
 
-    async def execute(self, player_id: int, team_id: Optional[int]) -> Optional[Player]:
+    async def execute(self, player_id: int, team_id: int | None) -> Player | None:
         """
         Update a player's team.
 

@@ -5,23 +5,22 @@ This is a pure domain entity without any framework dependencies.
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 
 
 @dataclass
 class Team:
     """Team entity representing a baseball team in the MLB."""
 
-    id: Optional[int]
+    id: int | None
     mlb_id: int
     name: str
     abbreviation: str
     city: str
     division: str
     league: str
-    venue_name: Optional[str] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    venue_name: str | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     @classmethod
     def create(
@@ -32,7 +31,7 @@ class Team:
         city: str,
         division: str,
         league: str,
-        venue_name: Optional[str] = None,
+        venue_name: str | None = None,
     ) -> "Team":
         """Factory method to create a new Team entity."""
         return cls(
