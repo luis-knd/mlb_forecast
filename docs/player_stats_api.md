@@ -16,7 +16,8 @@ API_BASE_URL=${API_BASE_URL:-http://localhost:8000}
 - `GET /api/v1/players/{player_id}`
 - `GET /api/v1/players/{player_id}/stats`
 
-`player_id` in player endpoints is the MLB `personId`.
+`GET /api/v1/players/{player_id}` expects MLB `personId`.
+`GET /api/v1/players/{player_id}/stats` expects internal DB `player_id`.
 
 ## Ingestion Modes (`source`)
 `POST /api/v1/data/ingest/players` supports these values:
@@ -116,19 +117,25 @@ Optional:
 ### cURL: season hitting stats
 
 ```bash
-curl "$API_BASE_URL/api/v1/players/660271/stats?stats=season&group=hitting&season=2025"
+curl "$API_BASE_URL/api/v1/players/1/stats?stats=season&group=hitting&season=2025"
 ```
 
 ### cURL: career pitching postseason stats
 
 ```bash
-curl "$API_BASE_URL/api/v1/players/434378/stats?stats=career&group=pitching&gameType=P"
+curl "$API_BASE_URL/api/v1/players/1/stats?stats=career&group=pitching&gameType=P"
 ```
 
 ### cURL: game log hitting stats
 
 ```bash
-curl "$API_BASE_URL/api/v1/players/660271/stats?stats=gameLog&group=hitting&season=2024"
+curl "$API_BASE_URL/api/v1/players/1/stats?stats=gameLog&group=hitting&season=2024"
+```
+
+### cURL: all groups in a single call
+
+```bash
+curl "$API_BASE_URL/api/v1/players/1/stats?stats=season&group=all&season=2025"
 ```
 
 ## Allowed Values
@@ -147,6 +154,7 @@ curl "$API_BASE_URL/api/v1/players/660271/stats?stats=gameLog&group=hitting&seas
 - `fielding`
 - `catching`
 - `running`
+- `all` (internal API aggregation; StatsAPI is called once per concrete group)
 
 ### `gameType`
 - `R`: Regular season
@@ -179,10 +187,13 @@ The implementation calls these MLB StatsAPI resources:
   - `players:mlb_id:{player_id}`
   - `players:list:...`
 - Player stats:
-  - `player_stats:player={id}:stats={stats}:group={group}:...`
+  - `player_stats:player={mlb_id}:stats={stats}:group={group}:...`
 - Invalidation after ingestion:
   - `players:*`
   - `player_stats:*`
+
+For `group=all`, the API performs bounded concurrent calls to StatsAPI with groups
+`hitting`, `pitching`, `fielding`, `catching`, `running` and caches the aggregated payload.
 
 ## Reliability and Timeouts
 External MLB requests use configurable timeout/retry/backoff:

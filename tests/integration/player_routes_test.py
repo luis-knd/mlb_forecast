@@ -76,6 +76,7 @@ class TestPlayerRoutesIntegration:
     @patch("src.application.use_cases.player_use_cases.GetPlayerStatsUseCase.execute")
     def test_get_player_stats(self, mock_execute, integration_client, populated_players_db):
         # Given
+        internal_player_id = populated_players_db["player"].id
         mock_execute.return_value = {
             "player_id": 660271,
             "stats": "season",
@@ -85,14 +86,61 @@ class TestPlayerRoutesIntegration:
         }
 
         # When
-        response = integration_client.get("/api/v1/players/660271/stats?stats=season&group=hitting&season=2025")
+        response = integration_client.get(
+            f"/api/v1/players/{internal_player_id}/stats?stats=season&group=hitting&season=2025"
+        )
 
         # Then
         assert response.status_code == HTTP_200_OK
         body = response.json()
         assert body["status"] == "success"
-        assert body["data"]["player_id"] == 660271
+        assert body["data"]["player_id"] == internal_player_id
         assert body["data"]["stats"] == "season"
+        mock_execute.assert_called_once_with(
+            mlb_player_id=660271,
+            stats="season",
+            group="hitting",
+            season=2025,
+            game_type=None,
+            days_back=None,
+        )
+
+    @patch("src.application.use_cases.player_use_cases.GetPlayerStatsUseCase.execute")
+    def test_get_player_stats_group_all(self, mock_execute, integration_client, populated_players_db):
+        # Given
+        internal_player_id = populated_players_db["player"].id
+        mock_execute.return_value = {
+            "player_id": 660271,
+            "stats": "season",
+            "group": "all",
+            "season": 2025,
+            "stats_data": [
+                {"group": {"displayName": "hitting"}},
+                {"group": {"displayName": "pitching"}},
+            ],
+        }
+
+        # When
+        response = integration_client.get(
+            f"/api/v1/players/{internal_player_id}/stats?stats=season&group=all&season=2025"
+        )
+
+        # Then
+        assert response.status_code == HTTP_200_OK
+        body = response.json()
+        assert body["status"] == "success"
+        assert body["data"]["group"] == "all"
+        assert body["data"]["player_id"] == internal_player_id
+
+    def test_get_player_stats_not_found_for_unknown_internal_player_id(self, integration_client, populated_players_db):
+        # When
+        response = integration_client.get("/api/v1/players/999999/stats?stats=season&group=hitting&season=2025")
+
+        # Then
+        assert response.status_code == HTTP_404_NOT_FOUND
+        body = response.json()
+        assert body["status"] == "error"
+        assert body["message"] == "Resource not found"
 
     @patch("src.application.use_cases.player_use_cases.IngestPlayersBySourceUseCase.execute")
     def test_ingest_players(self, mock_execute, integration_client):

@@ -8,10 +8,12 @@ from src.application.ports.cache import CachePort
 from src.application.use_cases.player_use_cases import (
     GetPlayerByMlbIdUseCase,
     GetPlayerStatsUseCase,
+    GetPlayerUseCase,
     IngestPlayersBySourceUseCase,
     ListPlayersUseCase,
 )
 from src.infrastructure.cache.cache_provider import get_cache_adapter
+from src.infrastructure.config.settings import settings
 from src.infrastructure.db.database import get_db
 from src.infrastructure.db.repositories.player_repository import PlayerRepository
 from src.infrastructure.db.repositories.team_repository import TeamRepository
@@ -45,6 +47,7 @@ def get_player_use_cases(
 
     return {
         "list_players": ListPlayersUseCase(player_repository, cache),
+        "get_player": GetPlayerUseCase(player_repository, cache),
         "get_player_by_mlb_id": GetPlayerByMlbIdUseCase(player_repository, cache),
         "ingest_players_by_source": IngestPlayersBySourceUseCase(
             player_repository,
@@ -52,7 +55,11 @@ def get_player_use_cases(
             mlb_api_adapter,
             cache,
         ),
-        "get_player_stats": GetPlayerStatsUseCase(mlb_api_adapter, cache),
+        "get_player_stats": GetPlayerStatsUseCase(
+            mlb_api_adapter,
+            cache,
+            all_groups_concurrency=settings.MLB_PLAYER_STATS_ALL_GROUPS_CONCURRENCY,
+        ),
     }
 
 
@@ -138,9 +145,9 @@ async def get_player(
     },
 )
 async def get_player_stats(
-    player_id: int = Path(..., description="MLB personId"),
+    player_id: int = Path(..., description="Internal player ID"),
     stats: str = Query(..., description="Stats type (season, career, yearByYear, gameLog, statSplits, seasonAdvanced)"),
-    group: str = Query(..., description="Stats group (hitting, pitching, fielding, catching, running)"),
+    group: str = Query(..., description="Stats group (hitting, pitching, fielding, catching, running, all)"),
     season: int | None = Query(None, description="Season year"),
     game_type: str | None = Query(None, alias="gameType", description="Game type (R, S, P, W, A)"),
     days_back: int | None = Query(None, alias="daysBack", description="Rolling days back"),
@@ -149,13 +156,13 @@ async def get_player_stats(
     if player_id <= 0:
         raise DomainExceptions.InvalidDataError("player_id must be a positive integer")
 
-    player = await use_cases["get_player_by_mlb_id"].execute(mlb_player_id=player_id)
+    player = await use_cases["get_player"].execute(player_id=player_id)
     if not player:
         raise DomainExceptions.PlayerNotFoundError(player_id)
 
     try:
         player_stats = await use_cases["get_player_stats"].execute(
-            mlb_player_id=player_id,
+            mlb_player_id=player.mlb_id,
             stats=stats,
             group=group,
             season=season,
@@ -168,8 +175,9 @@ async def get_player_stats(
     if not player_stats:
         return ResponseHandler.not_found("Player stats", player_id)
 
+    response_payload = {**player_stats, "player_id": player_id}
     return ResponseHandler.success(
-        data=player_stats,
+        data=response_payload,
         message=(f"Player stats retrieved successfully for player {player_id} (stats={stats}, group={group})"),
     )
 

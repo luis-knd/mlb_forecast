@@ -1720,7 +1720,10 @@ paths:
         - Players
         - Stats
       summary: Get Player Stats
-      description: Get player statistics from MLB StatsAPI with validated filters.
+      description: >-
+        Get player statistics from MLB StatsAPI using an internal player ID.
+        The `group=all` value is aggregated by this API by querying each supported
+        group independently.
       operationId: get_player_stats_api_v1_players__player_id__stats_get
       parameters:
         - name: player_id
@@ -1729,8 +1732,8 @@ paths:
           schema:
             type: integer
             title: Player Id
-            description: MLB personId
-          description: MLB personId
+            description: Internal player ID
+          description: Internal player ID
         - name: stats
           in: query
           required: true
@@ -1756,6 +1759,7 @@ paths:
               - fielding
               - catching
               - running
+              - all
             title: Group
           description: Stats group
         - name: season
@@ -3295,6 +3299,7 @@ components:
         player_id:
           type: integer
           title: Player Id
+          description: Internal player ID
         stats:
           type: string
           title: Stats

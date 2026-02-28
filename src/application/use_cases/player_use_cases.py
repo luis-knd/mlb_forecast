@@ -3,6 +3,8 @@ Use cases for player operations.
 These define the application's business logic for player operations.
 """
 
+import asyncio
+
 from src.application.ports.cache import CachePort
 from src.application.ports.mlb_api import MLBApiPort
 from src.application.ports.player_repository import PlayerRepositoryPort
@@ -11,9 +13,11 @@ from src.domain.entities.player import Player
 
 CACHE_TTL_SECONDS = 3600
 PLAYER_STATS_TTL_SECONDS = 900
+PLAYER_STATS_GROUP_SEQUENCE = ("hitting", "pitching", "fielding", "catching", "running")
+DEFAULT_PLAYER_STATS_ALL_GROUPS_CONCURRENCY = 2
 ALLOWED_INGEST_SOURCES = {"team_roster", "sport_players", "search"}
 ALLOWED_PLAYER_STATS = {"season", "career", "yearByYear", "gameLog", "statSplits", "seasonAdvanced"}
-ALLOWED_PLAYER_GROUPS = {"hitting", "pitching", "fielding", "catching", "running"}
+ALLOWED_PLAYER_GROUPS = set(PLAYER_STATS_GROUP_SEQUENCE) | {"all"}
 ALLOWED_GAME_TYPES = {"R", "S", "P", "W", "A"}
 
 
@@ -223,9 +227,15 @@ class ListPlayersUseCase:
 class GetPlayerStatsUseCase:
     """Use case for retrieving player stats from MLB API with validation and cache."""
 
-    def __init__(self, mlb_api: MLBApiPort, cache: CachePort):
+    def __init__(
+        self,
+        mlb_api: MLBApiPort,
+        cache: CachePort,
+        all_groups_concurrency: int = DEFAULT_PLAYER_STATS_ALL_GROUPS_CONCURRENCY,
+    ):
         self.mlb_api = mlb_api
         self.cache = cache
+        self.all_groups_concurrency = max(1, all_groups_concurrency)
 
     async def execute(
         self,
@@ -236,10 +246,11 @@ class GetPlayerStatsUseCase:
         game_type: str | None = None,
         days_back: int | None = None,
     ) -> dict | None:
-        normalized_stats = stats.strip()
-        normalized_group = group.strip().lower()
-        normalized_game_type = game_type.strip().upper() if game_type else None
-
+        normalized_stats, normalized_group, normalized_game_type = self._normalize_query_params(
+            stats=stats,
+            group=group,
+            game_type=game_type,
+        )
         self._validate_query(
             normalized_stats=normalized_stats,
             normalized_group=normalized_group,
@@ -260,7 +271,63 @@ class GetPlayerStatsUseCase:
         if cached_stats:
             return cached_stats
 
-        player_stats = await self.mlb_api.get_player_stats(
+        player_stats = await self._fetch_stats_by_group(
+            mlb_player_id=mlb_player_id,
+            normalized_stats=normalized_stats,
+            normalized_group=normalized_group,
+            season=season,
+            normalized_game_type=normalized_game_type,
+            days_back=days_back,
+        )
+
+        if player_stats:
+            await self.cache.set(cache_key, player_stats, ttl=PLAYER_STATS_TTL_SECONDS)
+
+        return player_stats
+
+    @staticmethod
+    def _normalize_query_params(stats: str, group: str, game_type: str | None) -> tuple[str, str, str | None]:
+        normalized_stats = stats.strip()
+        normalized_group = group.strip().lower()
+        normalized_game_type = game_type.strip().upper() if game_type else None
+        return normalized_stats, normalized_group, normalized_game_type
+
+    async def _fetch_stats_by_group(
+        self,
+        mlb_player_id: int,
+        normalized_stats: str,
+        normalized_group: str,
+        season: int | None,
+        normalized_game_type: str | None,
+        days_back: int | None,
+    ) -> dict | None:
+        if normalized_group == "all":
+            return await self._fetch_all_groups_stats(
+                mlb_player_id=mlb_player_id,
+                normalized_stats=normalized_stats,
+                season=season,
+                normalized_game_type=normalized_game_type,
+                days_back=days_back,
+            )
+        return await self._fetch_single_group_stats(
+            mlb_player_id=mlb_player_id,
+            normalized_stats=normalized_stats,
+            normalized_group=normalized_group,
+            season=season,
+            normalized_game_type=normalized_game_type,
+            days_back=days_back,
+        )
+
+    async def _fetch_single_group_stats(
+        self,
+        mlb_player_id: int,
+        normalized_stats: str,
+        normalized_group: str,
+        season: int | None,
+        normalized_game_type: str | None,
+        days_back: int | None,
+    ) -> dict | None:
+        return await self.mlb_api.get_player_stats(
             mlb_player_id=mlb_player_id,
             stats=normalized_stats,
             group=normalized_group,
@@ -269,10 +336,51 @@ class GetPlayerStatsUseCase:
             days_back=days_back,
         )
 
-        if player_stats:
-            await self.cache.set(cache_key, player_stats, ttl=PLAYER_STATS_TTL_SECONDS)
+    async def _fetch_all_groups_stats(
+        self,
+        mlb_player_id: int,
+        normalized_stats: str,
+        season: int | None,
+        normalized_game_type: str | None,
+        days_back: int | None,
+    ) -> dict | None:
+        semaphore = asyncio.Semaphore(self.all_groups_concurrency)
 
-        return player_stats
+        async def _fetch_group(normalized_group: str) -> tuple[str, dict | None]:
+            async with semaphore:
+                stats_response = await self._fetch_single_group_stats(
+                    mlb_player_id=mlb_player_id,
+                    normalized_stats=normalized_stats,
+                    normalized_group=normalized_group,
+                    season=season,
+                    normalized_game_type=normalized_game_type,
+                    days_back=days_back,
+                )
+                return normalized_group, stats_response
+
+        group_results = await asyncio.gather(
+            *(_fetch_group(normalized_group) for normalized_group in PLAYER_STATS_GROUP_SEQUENCE)
+        )
+        if all(group_stats is None for _, group_stats in group_results):
+            return None
+
+        aggregated_stats_data: list[dict] = []
+        for _, group_stats in group_results:
+            if not group_stats:
+                continue
+            stats_data = group_stats.get("stats_data")
+            if isinstance(stats_data, list):
+                aggregated_stats_data.extend(stats_data)
+
+        return {
+            "player_id": mlb_player_id,
+            "stats": normalized_stats,
+            "group": "all",
+            "season": season,
+            "game_type": normalized_game_type,
+            "days_back": days_back,
+            "stats_data": aggregated_stats_data,
+        }
 
     def _validate_query(
         self,
