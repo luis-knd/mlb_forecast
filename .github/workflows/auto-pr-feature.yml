@@ -80,7 +80,7 @@ jobs:
             TITLE="${COMMIT_SUBJECT}"
             BODY="${COMMIT_MESSAGE}"
           elif [ -n "${TICKET_ID}" ]; then
-            TITLE="${TICKET_ID} - Auto PR: ${HEAD_BRANCH}"
+            TITLE="[${TICKET_ID}] - Auto PR: ${HEAD_BRANCH}"
             BODY="PR creado automáticamente al hacer push a ${HEAD_BRANCH}."
           else
             TITLE="Auto PR: ${HEAD_BRANCH}"
