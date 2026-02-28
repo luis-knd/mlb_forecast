@@ -207,3 +207,67 @@ class TestIngestPlayersBySourceUseCase:
         assert isinstance(result[0], Player)
         mlb_api.search_players.assert_called_once_with(query="ohtani")
         assert mock_cache.clear.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_filters_sport_players_by_team_id_when_team_filter_is_provided(self, mock_cache):
+        # Given
+        player_repository = AsyncMock()
+        player_repository.save = AsyncMock(side_effect=lambda player: player)
+
+        team_repository = AsyncMock()
+        team = Team.create(
+            mlb_id=133,
+            name="Athletics",
+            abbreviation="ATH",
+            city="West Sacramento",
+            division="American League West",
+            league="American League",
+        )
+        team.id = 3
+        team_repository.get_by_mlb_id = AsyncMock(return_value=team)
+
+        mlb_api = AsyncMock()
+        mlb_api.get_players_by_sport = AsyncMock(
+            return_value=[
+                MLBPlayerDTO(
+                    id=1,
+                    first_name="Pitcher",
+                    last_name="One",
+                    position="P",
+                    bats="R",
+                    throws="R",
+                    birth_date=None,
+                    active=True,
+                    current_team_id=133,
+                ),
+                MLBPlayerDTO(
+                    id=2,
+                    first_name="Infielder",
+                    last_name="Two",
+                    position="SS",
+                    bats="R",
+                    throws="R",
+                    birth_date=None,
+                    active=True,
+                    current_team_id=147,
+                ),
+            ]
+        )
+
+        use_case = IngestPlayersBySourceUseCase(
+            player_repository,
+            team_repository,
+            mlb_api,
+            mock_cache,
+        )
+
+        # When
+        result = await use_case.execute(source="sport_players", sport_id=1, season=2025, team_mlb_id=133)
+
+        # Then
+        assert len(result) == 1
+        assert result[0].mlb_id == 1
+        assert result[0].current_team_id == 3
+        mlb_api.get_players_by_sport.assert_called_once_with(sport_id=1, season=2025, team_mlb_id=133)
+        team_repository.get_by_mlb_id.assert_called_once_with(133)
+        assert player_repository.save.await_count == 1
