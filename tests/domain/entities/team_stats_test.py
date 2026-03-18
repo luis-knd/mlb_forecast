@@ -1,4 +1,4 @@
-from src.domain.entities.team_stats import TeamStats
+from domain.entities.team_stats import TeamStats
 
 
 def test_pythagorean_expectation_perfect():

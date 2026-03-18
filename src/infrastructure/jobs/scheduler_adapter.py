@@ -11,7 +11,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
-from src.application.ports.scheduler import SchedulerPort
+from application.ports.scheduler import SchedulerPort
 
 logger = logging.getLogger(__name__)
 

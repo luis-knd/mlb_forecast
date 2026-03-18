@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import date
 from typing import Any
 
-from src.application.dto.mlb_api_response import MLBGameDTO, MLBPlayerDTO, MLBTeamDTO
+from application.dto.mlb_api_response import MLBGameDTO, MLBPlayerDTO, MLBTeamDTO
 
 
 class MLBApiPort(ABC):

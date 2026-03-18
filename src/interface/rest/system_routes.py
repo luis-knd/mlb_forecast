@@ -8,18 +8,18 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from src.application.use_cases.system_use_cases import (
+from application.use_cases.system_use_cases import (
     ClearCacheUseCase,
     GetAppInfoUseCase,
     GetCacheStatsUseCase,
     HealthCheckUseCase,
     SystemRuntimeConfig,
 )
-from src.infrastructure.cache.cache_provider import get_cache_adapter
-from src.infrastructure.config.settings import settings
-from src.infrastructure.db.database import get_db
-from src.interface.rest.exception_handlers import DomainExceptions
-from src.interface.rest.generated.models.models import (
+from infrastructure.cache.cache_provider import get_cache_adapter
+from infrastructure.config.settings import settings
+from infrastructure.db.database import get_db
+from interface.rest.exception_handlers import DomainExceptions
+from interface.rest.generated.models.models import (
     AppInfoResponse,
     BadRequest,
     CacheClearResponse,
@@ -31,7 +31,7 @@ from src.interface.rest.generated.models.models import (
     ServiceUnavailable,
     UnprocessableEntity,
 )
-from src.interface.rest.response_handler import ResponseHandler
+from interface.rest.response_handler import ResponseHandler
 
 router = APIRouter()
 

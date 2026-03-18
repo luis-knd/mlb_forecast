@@ -3,15 +3,15 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.application.use_cases.prediction_use_cases import (
+from application.use_cases.prediction_use_cases import (
     GeneratePredictionUseCase,
     GetPredictionsForGameUseCase,
     ListUpcomingPredictionsUseCase,
     UpdatePredictionWithResultUseCase,
 )
-from src.domain.entities.game import Game
-from src.domain.entities.prediction import Prediction
-from src.domain.entities.team_stats import TeamStats
+from domain.entities.game import Game
+from domain.entities.prediction import Prediction
+from domain.entities.team_stats import TeamStats
 
 
 @pytest.fixture

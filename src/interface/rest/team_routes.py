@@ -4,16 +4,16 @@ from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from src.application.ports.cache import CachePort
-from src.application.use_cases.team_use_cases import GetTeamUseCase, IngestTeamsUseCase, ListTeamsUseCase
-from src.infrastructure.cache.cache_provider import get_cache_adapter
-from src.infrastructure.db.database import get_db
-from src.infrastructure.db.repositories.cached_team_repository import CachedTeamRepository
-from src.infrastructure.db.repositories.team_repository import TeamRepository
-from src.infrastructure.mlb_api.adapter import MLBApiAdapter
-from src.interface.rest.adapters.mappers import to_team_dto, to_team_dto_list
-from src.interface.rest.exception_handlers import DomainExceptions
-from src.interface.rest.generated.models.models import (
+from application.ports.cache import CachePort
+from application.use_cases.team_use_cases import GetTeamUseCase, IngestTeamsUseCase, ListTeamsUseCase
+from infrastructure.cache.cache_provider import get_cache_adapter
+from infrastructure.db.database import get_db
+from infrastructure.db.repositories.cached_team_repository import CachedTeamRepository
+from infrastructure.db.repositories.team_repository import TeamRepository
+from infrastructure.mlb_api.adapter import MLBApiAdapter
+from interface.rest.adapters.mappers import to_team_dto, to_team_dto_list
+from interface.rest.exception_handlers import DomainExceptions
+from interface.rest.generated.models.models import (
     BadRequest,
     DataIngestionResponse,
     DataIngestionResultDTO,
@@ -24,7 +24,7 @@ from src.interface.rest.generated.models.models import (
     TeamListResponse,
     UnprocessableEntity,
 )
-from src.interface.rest.response_handler import ResponseHandler
+from interface.rest.response_handler import ResponseHandler
 
 router = APIRouter()
 

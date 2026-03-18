@@ -4,8 +4,8 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from src.domain.entities.game import Game
-from src.domain.entities.team import Team
+from domain.entities.game import Game
+from domain.entities.team import Team
 
 
 def team_model_to_entity(model: Any | None) -> Team | None:

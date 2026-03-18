@@ -1,8 +1,8 @@
 from datetime import datetime
 
-from src.domain.entities.team_stats import TeamStats
-from src.infrastructure.db.models import FieldingStatsModel, HittingStatsModel, PitchingStatsModel, TeamModel
-from src.infrastructure.mappers.team_stats_mapper import TeamStatsMapper
+from domain.entities.team_stats import TeamStats
+from infrastructure.db.models import FieldingStatsModel, HittingStatsModel, PitchingStatsModel, TeamModel
+from infrastructure.mappers.team_stats_mapper import TeamStatsMapper
 
 
 def test_to_entity_maps_correctly():

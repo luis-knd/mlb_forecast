@@ -8,10 +8,10 @@ from datetime import date, datetime, timedelta
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session, joinedload
 
-from src.application.ports.game_repository import GameRepositoryPort
-from src.domain.entities.game import Game
-from src.infrastructure.db.models import GameModel
-from src.infrastructure.db.repositories.entity_mapping_helpers import game_model_to_entity
+from application.ports.game_repository import GameRepositoryPort
+from domain.entities.game import Game
+from infrastructure.db.models import GameModel
+from infrastructure.db.repositories.entity_mapping_helpers import game_model_to_entity
 
 
 class GameRepository(GameRepositoryPort):

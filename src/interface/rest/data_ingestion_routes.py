@@ -10,27 +10,27 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from src.application.use_cases.game_use_cases import IngestGamesUseCase
-from src.application.use_cases.team_stats_ingestion_use_cases import (
+from application.use_cases.game_use_cases import IngestGamesUseCase
+from application.use_cases.team_stats_ingestion_use_cases import (
     IngestAllTeamStatsUseCase,
     IngestTeamCatchingStatsUseCase,
     IngestTeamFieldingStatsUseCase,
     IngestTeamHittingStatsUseCase,
     IngestTeamPitchingStatsUseCase,
 )
-from src.application.use_cases.team_use_cases import IngestTeamsUseCase
-from src.infrastructure.cache.cache_provider import get_cache_adapter
-from src.infrastructure.db.database import get_db
-from src.infrastructure.db.repositories.cached_team_repository import CachedTeamRepository
-from src.infrastructure.db.repositories.catching_stats_repository import CatchingStatsRepository
-from src.infrastructure.db.repositories.fielding_stats_repository import FieldingStatsRepository
-from src.infrastructure.db.repositories.game_repository import GameRepository
-from src.infrastructure.db.repositories.hitting_stats_repository import HittingStatsRepository
-from src.infrastructure.db.repositories.pitching_stats_repository import PitchingStatsRepository
-from src.infrastructure.db.repositories.team_repository import TeamRepository
-from src.infrastructure.mlb_api.adapter import MLBApiAdapter
-from src.interface.rest.exception_handlers import DomainExceptions
-from src.interface.rest.generated.models.models import (
+from application.use_cases.team_use_cases import IngestTeamsUseCase
+from infrastructure.cache.cache_provider import get_cache_adapter
+from infrastructure.db.database import get_db
+from infrastructure.db.repositories.cached_team_repository import CachedTeamRepository
+from infrastructure.db.repositories.catching_stats_repository import CatchingStatsRepository
+from infrastructure.db.repositories.fielding_stats_repository import FieldingStatsRepository
+from infrastructure.db.repositories.game_repository import GameRepository
+from infrastructure.db.repositories.hitting_stats_repository import HittingStatsRepository
+from infrastructure.db.repositories.pitching_stats_repository import PitchingStatsRepository
+from infrastructure.db.repositories.team_repository import TeamRepository
+from infrastructure.mlb_api.adapter import MLBApiAdapter
+from interface.rest.exception_handlers import DomainExceptions
+from interface.rest.generated.models.models import (
     BadRequest,
     DataIngestionResultDTO,
     FullIngestionResponse,
@@ -40,7 +40,7 @@ from src.interface.rest.generated.models.models import (
     ServiceUnavailable,
     UnprocessableEntity,
 )
-from src.interface.rest.response_handler import ResponseHandler
+from interface.rest.response_handler import ResponseHandler
 
 router = APIRouter()
 MIN_SUPPORTED_SEASON = 1900

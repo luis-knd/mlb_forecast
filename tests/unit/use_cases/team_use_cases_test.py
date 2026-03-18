@@ -2,16 +2,16 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.application.dto.mlb_api_response import MLBTeamDTO
-from src.application.use_cases.team_use_cases import (
+from application.dto.mlb_api_response import MLBTeamDTO
+from application.use_cases.team_use_cases import (
     VALID_DIVISIONS,
     VALID_LEAGUES,
     GetTeamUseCase,
     IngestTeamsUseCase,
     ListTeamsUseCase,
 )
-from src.domain.entities.team import Team
-from src.interface.rest.exception_handlers import DomainExceptions
+from domain.entities.team import Team
+from interface.rest.exception_handlers import DomainExceptions
 
 
 class TestListTeamsUseCase:

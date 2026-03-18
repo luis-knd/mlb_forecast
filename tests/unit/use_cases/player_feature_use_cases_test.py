@@ -3,15 +3,15 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.application.dto.mlb_api_response import MLBPlayerDTO
-from src.application.use_cases.player_use_cases import (
+from application.dto.mlb_api_response import MLBPlayerDTO
+from application.use_cases.player_use_cases import (
     GetPlayerByMlbIdUseCase,
     GetPlayerStatsUseCase,
     IngestPlayersBySourceUseCase,
     ListPlayersUseCase,
 )
-from src.domain.entities.player import Player
-from src.domain.entities.team import Team
+from domain.entities.player import Player
+from domain.entities.team import Team
 
 
 @pytest.fixture

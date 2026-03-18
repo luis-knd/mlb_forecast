@@ -8,10 +8,10 @@ from datetime import datetime
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
-from src.application.ports.player_repository import PlayerRepositoryPort
-from src.domain.entities.player import Player
-from src.domain.entities.team import Team
-from src.infrastructure.db.models import PlayerModel, TeamModel
+from application.ports.player_repository import PlayerRepositoryPort
+from domain.entities.player import Player
+from domain.entities.team import Team
+from infrastructure.db.models import PlayerModel, TeamModel
 
 
 class PlayerRepository(PlayerRepositoryPort):

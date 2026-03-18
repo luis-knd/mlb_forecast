@@ -67,3 +67,31 @@ repos:
           (?x)^(
             src/interface/rest/generated/.*$
           )
+
+  # Branch name check
+  - repo: local
+    hooks:
+      - id: branch-name-check
+        name: Branch name and length check
+        entry: |
+          bash -c '
+          MAX_LENGTH=72
+          branch_name=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || git branch --show-current)
+          if [ -z "$branch_name" ] || [ "$branch_name" = "HEAD" ]; then
+            echo "Error: No se pudo resolver el nombre de la rama actual."
+            exit 1
+          fi
+          if [ ${#branch_name} -gt $MAX_LENGTH ]; then
+            echo "Error: El nombre de la rama '\''$branch_name'\'' excede la longitud máxima de caracteres $MAX_LENGTH."
+            exit 1
+          fi
+
+          if ! [[ $branch_name =~ ^(feature|bugfix|hotfix|release)/MLB-[0-9]+- ]]; then
+            echo "Error: El nombre de la rama '\''$branch_name'\'' no sigue el patrón requerido."
+            exit 1
+          fi
+
+          exit 0
+          '
+        language: system
+        stages: [ commit, push ]

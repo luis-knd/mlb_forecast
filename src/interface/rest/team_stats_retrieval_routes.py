@@ -8,15 +8,15 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from src.application.ports.cache import CachePort
-from src.application.use_cases.team_stats_use_cases import GetTeamStatsUseCase
-from src.domain.value_objects.team_stats_category import TeamStatsCategory
-from src.infrastructure.cache.cache_provider import get_cache_adapter
-from src.infrastructure.db.database import get_db
-from src.infrastructure.db.repositories.team_stats_repository import TeamStatsRepository
-from src.interface.rest.adapters.mappers import to_team_stats_dto
-from src.interface.rest.exception_handlers import DomainExceptions
-from src.interface.rest.generated.models.models import (
+from application.ports.cache import CachePort
+from application.use_cases.team_stats_use_cases import GetTeamStatsUseCase
+from domain.value_objects.team_stats_category import TeamStatsCategory
+from infrastructure.cache.cache_provider import get_cache_adapter
+from infrastructure.db.database import get_db
+from infrastructure.db.repositories.team_stats_repository import TeamStatsRepository
+from interface.rest.adapters.mappers import to_team_stats_dto
+from interface.rest.exception_handlers import DomainExceptions
+from interface.rest.generated.models.models import (
     BadRequest,
     InternalServerError,
     NotFound,
@@ -24,7 +24,7 @@ from src.interface.rest.generated.models.models import (
     TeamSeasonStatsDetailResponse,
     UnprocessableEntity,
 )
-from src.interface.rest.response_handler import ResponseHandler
+from interface.rest.response_handler import ResponseHandler
 
 router = APIRouter()
 

@@ -9,9 +9,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.infrastructure.config.settings import settings
-from src.infrastructure.db.database import Base, get_db
-from src.interface.rest.main import app
+from infrastructure.config.settings import settings
+from infrastructure.db.database import Base, get_db
+from interface.rest.main import app
 
 db_dir = Path(__file__).resolve().parent / "database"
 db_dir.mkdir(parents=True, exist_ok=True)
@@ -40,6 +40,7 @@ def setup_database():
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)
+    engine.dispose()
 
 
 @pytest.fixture
@@ -78,7 +79,7 @@ class TestModelsImport:
 
     def test_database_models_import(self):
         """Prueba que los modelos de base de datos se importen correctamente."""
-        from src.infrastructure.db.models import (
+        from infrastructure.db.models import (
             CatchingStatsModel,
             FieldingStatsModel,
             GameModel,

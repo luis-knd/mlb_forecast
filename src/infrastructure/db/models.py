@@ -9,7 +9,7 @@ from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Index
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.sql import func
 
-from src.infrastructure.db.database import Base
+from infrastructure.db.database import Base
 
 
 class TeamModel(Base):

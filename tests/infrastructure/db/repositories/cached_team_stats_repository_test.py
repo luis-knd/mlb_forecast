@@ -2,8 +2,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.domain.entities.team_stats import TeamStats
-from src.infrastructure.db.repositories.cached_team_stats_repository import CachedTeamStatsRepository
+from domain.entities.team_stats import TeamStats
+from infrastructure.db.repositories.cached_team_stats_repository import CachedTeamStatsRepository
 
 
 @pytest.fixture

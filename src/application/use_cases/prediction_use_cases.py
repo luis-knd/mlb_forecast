@@ -6,12 +6,12 @@ These define the application's business logic for prediction operations.
 from datetime import datetime
 from typing import Any
 
-from src.application.ports.cache import CachePort
-from src.application.ports.game_repository import GameRepositoryPort
-from src.application.ports.ml_model import MLModelPort
-from src.application.ports.prediction_repository import PredictionRepositoryPort
-from src.application.ports.team_stats_repository import TeamStatsRepositoryPort
-from src.domain.entities.prediction import Prediction
+from application.ports.cache import CachePort
+from application.ports.game_repository import GameRepositoryPort
+from application.ports.ml_model import MLModelPort
+from application.ports.prediction_repository import PredictionRepositoryPort
+from application.ports.team_stats_repository import TeamStatsRepositoryPort
+from domain.entities.prediction import Prediction
 
 
 class GeneratePredictionUseCase:

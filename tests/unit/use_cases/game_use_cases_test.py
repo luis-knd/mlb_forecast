@@ -3,10 +3,10 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.application.dto.mlb_api_response import MLBGameDTO
-from src.application.use_cases.game_use_cases import IngestGamesUseCase
-from src.domain.entities.game import Game
-from src.domain.entities.team import Team
+from application.dto.mlb_api_response import MLBGameDTO
+from application.use_cases.game_use_cases import IngestGamesUseCase
+from domain.entities.game import Game
+from domain.entities.team import Team
 
 
 class TestIngestGamesUseCase:

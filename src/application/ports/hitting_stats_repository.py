@@ -5,7 +5,7 @@ This defines how the application interacts with hitting statistics data storage.
 
 from abc import ABC, abstractmethod
 
-from src.domain.entities.hitting_stats import HittingStats
+from domain.entities.hitting_stats import HittingStats
 
 
 class HittingStatsRepositoryPort(ABC):

@@ -1,6 +1,6 @@
 import pytest
 
-from src.domain.entities.player import Player
+from domain.entities.player import Player
 
 
 class TestPlayerEntity:

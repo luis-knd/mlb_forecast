@@ -21,7 +21,7 @@ class TestTeamStatsIngestionRoutes:
             )
         ]
 
-    @patch("src.application.use_cases.team_stats_ingestion_use_cases.IngestAllTeamStatsUseCase.execute")
+    @patch("application.use_cases.team_stats_ingestion_use_cases.IngestAllTeamStatsUseCase.execute")
     def test_ingest_all_team_stats(self, mock_execute, integration_client, sample_stats):
         mock_execute.return_value = {
             "hitting_stats": sample_stats,
@@ -41,7 +41,7 @@ class TestTeamStatsIngestionRoutes:
         assert body["data"]["catching_stats_count"] == 1
         assert body["data"]["season"] == 2025
 
-    @patch("src.application.use_cases.team_stats_ingestion_use_cases.IngestTeamHittingStatsUseCase.execute")
+    @patch("application.use_cases.team_stats_ingestion_use_cases.IngestTeamHittingStatsUseCase.execute")
     def test_ingest_team_hitting_stats(self, mock_execute, integration_client, sample_stats):
         mock_execute.return_value = sample_stats
         response = integration_client.post("/api/v1/data/ingest/team_stats/hitting?season=2024")
@@ -52,7 +52,7 @@ class TestTeamStatsIngestionRoutes:
         assert body["data"]["hitting_stats_count"] == 1
         assert body["data"]["season"] == 2024
 
-    @patch("src.application.use_cases.team_stats_ingestion_use_cases.IngestTeamPitchingStatsUseCase.execute")
+    @patch("application.use_cases.team_stats_ingestion_use_cases.IngestTeamPitchingStatsUseCase.execute")
     def test_ingest_team_pitching_stats(self, mock_execute, integration_client, sample_stats):
         mock_execute.return_value = sample_stats
         response = integration_client.post("/api/v1/data/ingest/team_stats/pitching?season=2023")
@@ -63,7 +63,7 @@ class TestTeamStatsIngestionRoutes:
         assert body["data"]["pitching_stats_count"] == 1
         assert body["data"]["season"] == 2023
 
-    @patch("src.application.use_cases.team_stats_ingestion_use_cases.IngestTeamFieldingStatsUseCase.execute")
+    @patch("application.use_cases.team_stats_ingestion_use_cases.IngestTeamFieldingStatsUseCase.execute")
     def test_ingest_team_fielding_stats(self, mock_execute, integration_client, sample_stats):
         mock_execute.return_value = sample_stats
         response = integration_client.post("/api/v1/data/ingest/team_stats/fielding?season=2022")
@@ -74,7 +74,7 @@ class TestTeamStatsIngestionRoutes:
         assert body["data"]["fielding_stats_count"] == 1
         assert body["data"]["season"] == 2022
 
-    @patch("src.application.use_cases.team_stats_ingestion_use_cases.IngestTeamCatchingStatsUseCase.execute")
+    @patch("application.use_cases.team_stats_ingestion_use_cases.IngestTeamCatchingStatsUseCase.execute")
     def test_ingest_team_catching_stats(self, mock_execute, integration_client, sample_stats):
         mock_execute.return_value = sample_stats
         response = integration_client.post("/api/v1/data/ingest/team_stats/catching?season=2021")

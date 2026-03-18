@@ -2,8 +2,6 @@ name: PR - Lint and Types
 
 on:
   pull_request:
-    branches:
-      - develop
     paths:
       - "src/**"
       - "tests/**"
@@ -23,6 +21,7 @@ concurrency:
 
 jobs:
   lint_and_types:
+    if: ${{ github.event.pull_request.base.ref == github.event.repository.default_branch }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -38,15 +37,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
+          pip install pre-commit
 
-      - name: Lint (ruff)
-        run: ruff check src tests --select E,F,ERA --line-length 120 --exclude src/interface/rest/generated
-
-      - name: Lint (flake8)
-        run: flake8 src tests scripts
-
-      - name: Type check (mypy)
-        run: mypy --config-file pyproject.toml --explicit-package-bases
-
-      - name: Validate OpenAPI
-        run: openapi-spec-validator openapi/openapi.yml
+      - name: Run pre-commit checks
+        run: SKIP=branch-name-check pre-commit run --all-files

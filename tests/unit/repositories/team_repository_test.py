@@ -2,8 +2,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.domain.entities.team import Team
-from src.infrastructure.db.repositories.team_repository import TeamRepository
+from domain.entities.team import Team
+from infrastructure.db.repositories.team_repository import TeamRepository
 
 
 class TestTeamRepository:

@@ -1,4 +1,4 @@
-from src.interface.rest.main import app
+from interface.rest.main import app
 
 
 def test_games_get_endpoints_use_typed_200_responses() -> None:

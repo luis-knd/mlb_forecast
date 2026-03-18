@@ -8,15 +8,15 @@ from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from src.application.use_cases.prediction_use_cases import GeneratePredictionUseCase, GetPredictionsForGameUseCase
-from src.infrastructure.cache.cache_provider import get_cache_adapter
-from src.infrastructure.db.database import get_db
-from src.infrastructure.db.repositories.game_repository import GameRepository
-from src.infrastructure.db.repositories.prediction_repository import PredictionRepository
-from src.infrastructure.db.repositories.team_stats_repository import TeamStatsRepository
-from src.infrastructure.ml.model_adapter import MLModelAdapter
-from src.interface.rest.exception_handlers import DomainExceptions
-from src.interface.rest.generated.models.models import (
+from application.use_cases.prediction_use_cases import GeneratePredictionUseCase, GetPredictionsForGameUseCase
+from infrastructure.cache.cache_provider import get_cache_adapter
+from infrastructure.db.database import get_db
+from infrastructure.db.repositories.game_repository import GameRepository
+from infrastructure.db.repositories.prediction_repository import PredictionRepository
+from infrastructure.db.repositories.team_stats_repository import TeamStatsRepository
+from infrastructure.ml.model_adapter import MLModelAdapter
+from interface.rest.exception_handlers import DomainExceptions
+from interface.rest.generated.models.models import (
     BadRequest,
     InternalServerError,
     NotFound,
@@ -26,7 +26,7 @@ from src.interface.rest.generated.models.models import (
     ServiceUnavailable,
     UnprocessableEntity,
 )
-from src.interface.rest.response_handler import ResponseHandler
+from interface.rest.response_handler import ResponseHandler
 
 router = APIRouter()
 

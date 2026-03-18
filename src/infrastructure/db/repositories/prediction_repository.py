@@ -8,11 +8,11 @@ from typing import Any
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
-from src.application.ports.prediction_repository import PredictionRepositoryPort
-from src.domain.entities.game import Game
-from src.domain.entities.prediction import Prediction
-from src.infrastructure.db.models import GameModel, PredictionModel
-from src.infrastructure.db.repositories.entity_mapping_helpers import game_model_to_entity
+from application.ports.prediction_repository import PredictionRepositoryPort
+from domain.entities.game import Game
+from domain.entities.prediction import Prediction
+from infrastructure.db.models import GameModel, PredictionModel
+from infrastructure.db.repositories.entity_mapping_helpers import game_model_to_entity
 
 
 class PredictionRepository(PredictionRepositoryPort):

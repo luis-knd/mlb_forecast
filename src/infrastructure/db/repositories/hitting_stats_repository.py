@@ -7,10 +7,10 @@ from typing import Any
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import Session, joinedload
 
-from src.application.ports.hitting_stats_repository import HittingStatsRepositoryPort
-from src.domain.entities.hitting_stats import HittingStats
-from src.infrastructure.db.models import HittingStatsModel
-from src.infrastructure.db.repositories.entity_mapping_helpers import delete_model_by_id, team_model_to_entity
+from application.ports.hitting_stats_repository import HittingStatsRepositoryPort
+from domain.entities.hitting_stats import HittingStats
+from infrastructure.db.models import HittingStatsModel
+from infrastructure.db.repositories.entity_mapping_helpers import delete_model_by_id, team_model_to_entity
 
 HITTING_STAT_FIELDS = (
     "games_played",

@@ -35,7 +35,8 @@ WORKDIR /app
 
 # Copiar virtualenv desde el builder
 COPY --from=builder /opt/venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONPATH="/app:/app/src"
 
 # Copiar código de la aplicación
 COPY . .
@@ -43,8 +44,6 @@ COPY . .
 # Copiar y hacer ejecutable el script de entrada
 COPY scripts/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-
-ENV PATH="/opt/venv/bin:$PATH"
 
 # Crear usuario no-root y ajustar permisos
 RUN useradd --create-home --shell /bin/bash app && chown -R app:app /app /opt/venv

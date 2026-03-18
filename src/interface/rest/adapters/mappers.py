@@ -5,9 +5,9 @@ from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
-from src.domain.entities.player import Player
-from src.domain.entities.team import Team
-from src.interface.rest.generated.models.models import (
+from domain.entities.player import Player
+from domain.entities.team import Team
+from interface.rest.generated.models.models import (
     CatchingStatsDTO,
     FieldingStatsDTO,
     GameDTO,

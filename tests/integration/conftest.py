@@ -1,5 +1,3 @@
-import asyncio
-import contextlib
 from contextlib import ExitStack, asynccontextmanager
 from pathlib import Path
 from unittest.mock import AsyncMock
@@ -9,10 +7,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.infrastructure.cache.cache_provider import get_cache_adapter
-from src.infrastructure.db.database import Base, get_db
-from src.infrastructure.db.models import TeamModel
-from src.interface.rest.main import app
+from infrastructure.cache.cache_provider import get_cache_adapter
+from infrastructure.db.database import Base, get_db
+from infrastructure.db.models import TeamModel
+from interface.rest.main import app
 
 db_dir = Path(__file__).resolve().parents[1] / "database"
 db_dir.mkdir(parents=True, exist_ok=True)
@@ -20,24 +18,6 @@ db_path = db_dir / "test.db"
 TEST_DATABASE_URL = f"sqlite:///{db_path}"
 test_engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    asyncio.set_event_loop(loop)
-    yield loop
-
-    pending_tasks = [task for task in asyncio.all_tasks(loop) if not task.done()]
-    for task in pending_tasks:
-        task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            loop.run_until_complete(task)
-
-    loop.run_until_complete(loop.shutdown_asyncgens())
-    loop.run_until_complete(loop.shutdown_default_executor())
-    loop.close()
 
 
 @pytest.fixture(autouse=True)

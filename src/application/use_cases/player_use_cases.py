@@ -5,11 +5,11 @@ These define the application's business logic for player operations.
 
 import asyncio
 
-from src.application.ports.cache import CachePort
-from src.application.ports.mlb_api import MLBApiPort
-from src.application.ports.player_repository import PlayerRepositoryPort
-from src.application.ports.team_repository import TeamRepositoryPort
-from src.domain.entities.player import Player
+from application.ports.cache import CachePort
+from application.ports.mlb_api import MLBApiPort
+from application.ports.player_repository import PlayerRepositoryPort
+from application.ports.team_repository import TeamRepositoryPort
+from domain.entities.player import Player
 
 CACHE_TTL_SECONDS = 3600
 PLAYER_STATS_TTL_SECONDS = 900

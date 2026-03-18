@@ -2,8 +2,8 @@ from datetime import datetime
 
 import pytest
 
-from src.domain.entities.player import Player
-from src.infrastructure.db.repositories.player_repository import PlayerRepository
+from domain.entities.player import Player
+from infrastructure.db.repositories.player_repository import PlayerRepository
 
 
 class TestPlayerRepository:

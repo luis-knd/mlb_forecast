@@ -5,9 +5,9 @@ This module implements the TeamRepositoryPort interface using SQLAlchemy.
 
 from sqlalchemy.orm import Session
 
-from src.application.ports.team_repository import TeamRepositoryPort
-from src.domain.entities.team import Team
-from src.infrastructure.db.models import TeamModel
+from application.ports.team_repository import TeamRepositoryPort
+from domain.entities.team import Team
+from infrastructure.db.models import TeamModel
 
 
 class TeamRepository(TeamRepositoryPort):

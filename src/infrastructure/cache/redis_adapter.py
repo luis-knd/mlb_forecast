@@ -9,8 +9,8 @@ from typing import Any, Protocol
 
 import redis.asyncio as redis
 
-from src.application.ports.cache import CachePort
-from src.infrastructure.config.settings import settings
+from application.ports.cache import CachePort
+from infrastructure.config.settings import settings
 
 logger = logging.getLogger(__name__)
 

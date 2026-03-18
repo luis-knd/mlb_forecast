@@ -1,7 +1,7 @@
 import pytest
 from starlette.status import HTTP_201_CREATED
 
-from src.interface.rest.response_handler import ResponseHandler
+from interface.rest.response_handler import ResponseHandler
 
 
 @pytest.mark.parametrize(

@@ -5,12 +5,12 @@ These define the application's business logic for game operations.
 
 from datetime import date, datetime, timedelta
 
-from src.application.dto.mlb_api_response import MLBGameDTO
-from src.application.ports.cache import CachePort
-from src.application.ports.game_repository import GameRepositoryPort
-from src.application.ports.mlb_api import MLBApiPort
-from src.application.ports.team_repository import TeamRepositoryPort
-from src.domain.entities.game import Game
+from application.dto.mlb_api_response import MLBGameDTO
+from application.ports.cache import CachePort
+from application.ports.game_repository import GameRepositoryPort
+from application.ports.mlb_api import MLBApiPort
+from application.ports.team_repository import TeamRepositoryPort
+from domain.entities.game import Game
 
 
 class ListGamesUseCase:

@@ -2,7 +2,7 @@ from datetime import datetime
 
 from starlette.status import HTTP_200_OK, HTTP_404_NOT_FOUND
 
-from src.infrastructure.db.models import GameModel, TeamModel
+from infrastructure.db.models import GameModel, TeamModel
 
 
 def _create_team(test_db_session, mlb_id: int, name: str, abbreviation: str) -> TeamModel:

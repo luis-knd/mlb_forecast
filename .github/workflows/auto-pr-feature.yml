@@ -27,7 +27,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           REPO_FULL: ${{ github.repository }}
           OWNER: ${{ github.repository_owner }}
-          BASE_BRANCH: develop
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
           HEAD_BRANCH: ${{ github.ref_name }}
           HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
           MY_GITHUB_USERNAME: ${{ vars.MY_GITHUB_USERNAME }}
