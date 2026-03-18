@@ -20,7 +20,13 @@ from infrastructure.db.repositories.cached_team_repository import CachedTeamRepo
 from infrastructure.db.repositories.player_repository import PlayerRepository
 from infrastructure.db.repositories.team_repository import TeamRepository
 from infrastructure.mlb_api.adapter import MLBApiAdapter
-from interface.rest.adapters.mappers import to_player_payload, to_player_payload_list
+from interface.rest.adapters.hydration import (
+    PLAYER_ALLOWED_INCLUDES,
+    parse_include_selection,
+    to_player_response_payload,
+    to_player_response_payload_list,
+)
+from interface.rest.adapters.mappers import to_player_payload_list
 from interface.rest.exception_handlers import DomainExceptions
 from interface.rest.generated.models.models import (
     BadRequest,
@@ -154,10 +160,19 @@ async def list_players(
     active: bool | None = Query(None, description="Filter by active status"),
     limit: int = Query(50, ge=1, le=200, description="Maximum number of players to return"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
+    include: list[str] | None = Query(
+        None,
+        description=(
+            "Relations to hydrate. Supports comma-separated values and dot notation, "
+            "e.g. current_team or current_team.venue_name"
+        ),
+    ),
     use_cases: dict = Depends(get_player_use_cases),
 ) -> JSONResponse:
     if team_id is not None and team_id <= 0:
         raise DomainExceptions.InvalidDataError("team_id must be a positive integer")
+
+    include_selection = parse_include_selection(include, PLAYER_ALLOWED_INCLUDES)
 
     players = await use_cases["list_players"].execute(
         team_id=team_id,
@@ -168,7 +183,7 @@ async def list_players(
         offset=offset,
     )
 
-    players_payload = to_player_payload_list(players)
+    players_payload = to_player_response_payload_list(players, include_selection)
     return ResponseHandler.success(
         data=players_payload,
         message=f"Retrieved {len(players_payload)} players successfully",
@@ -189,17 +204,26 @@ async def list_players(
 )
 async def get_player(
     player_id: int = Path(..., description="MLB personId"),
+    include: list[str] | None = Query(
+        None,
+        description=(
+            "Relations to hydrate. Supports comma-separated values and dot notation, "
+            "e.g. current_team or current_team.venue_name"
+        ),
+    ),
     use_cases: dict = Depends(get_player_use_cases),
 ) -> JSONResponse:
     if player_id <= 0:
         raise DomainExceptions.InvalidDataError("player_id must be a positive integer")
+
+    include_selection = parse_include_selection(include, PLAYER_ALLOWED_INCLUDES)
 
     player = await use_cases["get_player_by_mlb_id"].execute(mlb_player_id=player_id)
     if not player:
         raise DomainExceptions.PlayerNotFoundError(player_id)
 
     return ResponseHandler.success(
-        data=to_player_payload(player),
+        data=to_player_response_payload(player, include_selection),
         message=f"Player {player.full_name()} retrieved successfully",
     )
 

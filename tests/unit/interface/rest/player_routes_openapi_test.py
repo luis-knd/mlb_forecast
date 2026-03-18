@@ -47,6 +47,38 @@ def test_player_stats_parameter_documents_internal_player_id():
     assert "Internal player ID" in player_id_parameter["description"]
 
 
+def test_player_read_endpoints_document_include_parameter_with_dot_notation_support():
+    # Given
+    openapi_schema = app.openapi()
+    player_paths = ["/api/v1/players", "/api/v1/players/{player_id}"]
+
+    # When / Then
+    for path in player_paths:
+        parameters = openapi_schema["paths"][path]["get"]["parameters"]
+        include_parameter = next(parameter for parameter in parameters if parameter["name"] == "include")
+        include_schema = (
+            include_parameter["schema"]["anyOf"][0]
+            if "anyOf" in include_parameter["schema"]
+            else include_parameter["schema"]
+        )
+        assert include_schema["type"] == "array"
+        assert include_schema["items"] == {"type": "string"}
+        assert "dot notation" in include_parameter["description"]
+        assert "current_team" in include_parameter["description"]
+
+
+def test_player_dto_documents_optional_current_team_relation():
+    # Given
+    openapi_schema = app.openapi()
+
+    # When
+    player_schema = openapi_schema["components"]["schemas"]["PlayerDTO"]
+
+    # Then
+    assert player_schema["properties"]["current_team"]["anyOf"][0] == {"$ref": "#/components/schemas/TeamDTO"}
+    assert player_schema["properties"]["current_team"]["description"] == "Hydrated current team relation"
+
+
 def _resolve_openapi_file() -> Path:
     for candidate in [Path(__file__).resolve(), *Path(__file__).resolve().parents]:
         openapi_path = candidate / "openapi" / "openapi.yml"
@@ -90,3 +122,25 @@ def test_player_stats_game_type_parameter_documents_code_meaning():
     assert "P=Postseason" in description
     assert "W=World Series" in description
     assert "A=All-Star" in description
+
+
+def test_openapi_contract_documents_player_include_parameter_and_current_team_relation():
+    # Given
+    openapi_file = _resolve_openapi_file()
+    contract_schema = yaml.safe_load(openapi_file.read_text(encoding="utf-8"))
+
+    # When
+    player_parameters = contract_schema["paths"]["/api/v1/players"]["get"]["parameters"]
+    include_parameter = next(parameter for parameter in player_parameters if parameter["name"] == "include")
+    player_schema = contract_schema["components"]["schemas"]["PlayerDTO"]
+
+    # Then
+    include_schema = (
+        include_parameter["schema"]["anyOf"][0]
+        if "anyOf" in include_parameter["schema"]
+        else include_parameter["schema"]
+    )
+    assert include_schema["type"] == "array"
+    assert include_schema["items"] == {"type": "string"}
+    assert "dot notation" in include_parameter["description"]
+    assert player_schema["properties"]["current_team"]["description"] == "Hydrated current team relation"

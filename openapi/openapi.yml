@@ -452,6 +452,17 @@ paths:
             default: 50
             title: Limit
           description: Maximum number of games to return
+        - name: include
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: array
+                items:
+                  type: string
+              - type: 'null'
+            title: Include
+          description: Relations to hydrate. Supports comma-separated values and dot notation, e.g. home_team or winning_team.name
       responses:
         '200':
           description: Successfully retrieved games list
@@ -514,6 +525,17 @@ paths:
             description: The ID of the game to get
             title: Game Id
           description: The ID of the game to get
+        - name: include
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: array
+                items:
+                  type: string
+              - type: 'null'
+            title: Include
+          description: Relations to hydrate. Supports comma-separated values and dot notation, e.g. home_team or winning_team.name
       responses:
         '200':
           description: Successfully retrieved game details
@@ -1614,6 +1636,17 @@ paths:
             default: 0
             title: Offset
           description: Pagination offset
+        - name: include
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: array
+                items:
+                  type: string
+              - type: 'null'
+            title: Include
+          description: Relations to hydrate. Supports comma-separated values and dot notation, e.g. current_team or current_team.venue_name
       responses:
         '200':
           description: Response successfully to retrieve players list
@@ -1672,6 +1705,17 @@ paths:
             title: Player Id
             description: MLB personId
           description: MLB personId
+        - name: include
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: array
+                items:
+                  type: string
+              - type: 'null'
+            title: Include
+          description: Relations to hydrate. Supports comma-separated values and dot notation, e.g. current_team or current_team.venue_name
       responses:
         '200':
           description: Successfully retrieved player details
@@ -2582,6 +2626,24 @@ components:
             - type: 'null'
           title: Winning Team Id
           description: Winning team ID
+        home_team:
+          anyOf:
+            - $ref: '#/components/schemas/TeamDTO'
+            - type: 'null'
+          title: Home Team
+          description: Hydrated home team relation
+        away_team:
+          anyOf:
+            - $ref: '#/components/schemas/TeamDTO'
+            - type: 'null'
+          title: Away Team
+          description: Hydrated away team relation
+        winning_team:
+          anyOf:
+            - $ref: '#/components/schemas/TeamDTO'
+            - type: 'null'
+          title: Winning Team
+          description: Hydrated winning team relation
         created_at:
           anyOf:
             - type: string
@@ -3211,6 +3273,12 @@ components:
             - type: integer
             - type: 'null'
           title: Current Team Id
+        current_team:
+          anyOf:
+            - $ref: '#/components/schemas/TeamDTO'
+            - type: 'null'
+          title: Current Team
+          description: Hydrated current team relation
         created_at:
           anyOf:
             - type: string
