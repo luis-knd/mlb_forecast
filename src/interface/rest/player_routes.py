@@ -12,9 +12,11 @@ from application.use_cases.player_use_cases import (
     IngestPlayersBySourceUseCase,
     ListPlayersUseCase,
 )
+from application.use_cases.team_use_cases import GetTeamUseCase
 from infrastructure.cache.cache_provider import get_cache_adapter
 from infrastructure.config.settings import settings
 from infrastructure.db.database import get_db
+from infrastructure.db.repositories.cached_team_repository import CachedTeamRepository
 from infrastructure.db.repositories.player_repository import PlayerRepository
 from infrastructure.db.repositories.team_repository import TeamRepository
 from infrastructure.mlb_api.adapter import MLBApiAdapter
@@ -43,15 +45,17 @@ def get_player_use_cases(
 ):
     player_repository = PlayerRepository(db)
     team_repository = TeamRepository(db)
+    cached_team_repository = CachedTeamRepository(team_repository, cache)
     mlb_api_adapter = MLBApiAdapter()
 
     return {
         "list_players": ListPlayersUseCase(player_repository, cache),
         "get_player": GetPlayerUseCase(player_repository, cache),
+        "get_team": GetTeamUseCase(cached_team_repository),
         "get_player_by_mlb_id": GetPlayerByMlbIdUseCase(player_repository, cache),
         "ingest_players_by_source": IngestPlayersBySourceUseCase(
             player_repository,
-            team_repository,
+            cached_team_repository,
             mlb_api_adapter,
             cache,
         ),
@@ -206,7 +210,7 @@ async def ingest_players(
     team_id: int | None = Query(
         None,
         alias="teamId",
-        description="MLB team ID required when source=team_roster and optional filter when source=sport_players",
+        description="Internal team ID required when source=team_roster and optional filter when source=sport_players",
     ),
     roster_type: str = Query("active", alias="rosterType", description="Roster type for team roster ingestion"),
     sport_id: int = Query(1, alias="sportId", description="Sport ID for sport_players mode"),
@@ -215,17 +219,24 @@ async def ingest_players(
 ) -> JSONResponse:
     start_time = datetime.now()
     current_year = datetime.now().year
+    normalized_source = source.strip().lower()
     if season is not None and (season < 1876 or season > current_year + 1):
         raise DomainExceptions.InvalidDataError(f"season must be between 1876 and {current_year + 1}")
     if team_id is not None and team_id <= 0:
         raise DomainExceptions.InvalidDataError("teamId must be a positive integer")
     if sport_id <= 0:
         raise DomainExceptions.InvalidDataError("sportId must be a positive integer")
+
+    resolved_team_mlb_id: int | None = None
+    if team_id is not None and normalized_source in {"team_roster", "sport_players"}:
+        team = await use_cases["get_team"].execute(team_id=team_id)
+        resolved_team_mlb_id = team.mlb_id
+
     try:
         players = await use_cases["ingest_players_by_source"].execute(
             source=source,
             season=season,
-            team_mlb_id=team_id,
+            team_mlb_id=resolved_team_mlb_id,
             roster_type=roster_type,
             sport_id=sport_id,
             query=query,

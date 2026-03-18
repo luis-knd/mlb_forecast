@@ -168,13 +168,19 @@ class TestPlayerRoutesIntegration:
         assert len(body["data"]["sample_players"]) == 1
 
     @patch("application.use_cases.player_use_cases.IngestPlayersBySourceUseCase.execute")
-    def test_ingest_players_sport_source_forwards_team_filter(self, mock_execute, integration_client):
+    def test_ingest_players_sport_source_forwards_internal_team_filter(
+        self,
+        mock_execute,
+        integration_client,
+        populated_test_db,
+    ):
         # Given
         mock_execute.return_value = []
+        athletics = next(team for team in populated_test_db if team.mlb_id == 133)
 
         # When
         response = integration_client.post(
-            "/api/v1/data/ingest/players?source=sport_players&teamId=133&season=2025&sportId=1"
+            f"/api/v1/data/ingest/players?source=sport_players&teamId={athletics.id}&season=2025&sportId=1"
         )
 
         # Then
@@ -212,7 +218,9 @@ class TestPlayerRoutesIntegration:
         ]
 
         # When
-        response = integration_client.post("/api/v1/data/ingest/players?source=team_roster&teamId=119&season=2025")
+        response = integration_client.post(
+            f"/api/v1/data/ingest/players?source=team_roster&teamId={populated_players_db['team'].id}&season=2025"
+        )
 
         # Then
         assert response.status_code == HTTP_201_CREATED
@@ -222,3 +230,15 @@ class TestPlayerRoutesIntegration:
         assert persisted_player.bats == "L"
         assert persisted_player.throws == "R"
         assert persisted_player.birth_date == datetime(1994, 7, 5)
+
+    @patch("application.use_cases.player_use_cases.IngestPlayersBySourceUseCase.execute")
+    def test_ingest_players_returns_not_found_for_unknown_internal_team(self, mock_execute, integration_client):
+        # When
+        response = integration_client.post("/api/v1/data/ingest/players?source=team_roster&teamId=999999&season=2025")
+
+        # Then
+        assert response.status_code == HTTP_404_NOT_FOUND
+        body = response.json()
+        assert body["status"] == "error"
+        assert body["message"] == "Resource not found"
+        mock_execute.assert_not_called()
