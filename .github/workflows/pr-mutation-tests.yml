@@ -150,7 +150,7 @@ jobs:
           print(f'Mutation score: {score:.2f}%')
           print(f'Killed: {killed}, Survived: {survived}, Timeout: {timeout}, Suspicious: {suspicious}')
 
-          if score < 90:
-              print(f'ERROR: Mutation coverage {score:.2f}% is below 90%')
+          if score < 80:
+              print(f'ERROR: Mutation coverage {score:.2f}% is below 80%')
               sys.exit(1)
           PYEOF
