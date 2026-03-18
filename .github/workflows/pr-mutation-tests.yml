@@ -65,11 +65,14 @@ jobs:
 
           changed = pathlib.Path('/tmp/changed_src_files.txt').read_text().strip().splitlines()
           changed = [f for f in changed if f]
+          changed_set = set(changed)
 
           pyproject_path = pathlib.Path('pyproject.toml')
           pyproject_text = pyproject_path.read_text(encoding='utf-8')
           pyproject_data = tomllib.loads(pyproject_text)
           mutmut_config = pyproject_data.get('tool', {}).get('mutmut', {})
+          all_source_files = sorted(str(path).replace('\\', '/') for path in pathlib.Path('src').rglob('*.py'))
+          unchanged = [path for path in all_source_files if path not in changed_set]
 
           def serialize_toml_value(value):
               if isinstance(value, bool):
@@ -84,10 +87,15 @@ jobs:
               raise TypeError(f'Unsupported mutmut config value: {value!r}')
 
           preserved_config = {
-              key: value for key, value in mutmut_config.items() if key != 'paths_to_mutate'
+              key: value for key, value in mutmut_config.items() if key not in {'paths_to_mutate', 'do_not_mutate'}
           }
+          paths_to_mutate = mutmut_config.get('paths_to_mutate', ['src/'])
+          do_not_mutate = list(mutmut_config.get('do_not_mutate', []))
+          do_not_mutate.extend(path for path in unchanged if path not in do_not_mutate)
 
-          replacement_lines = ['[tool.mutmut]', f'paths_to_mutate = {serialize_toml_value(changed)}']
+          replacement_lines = ['[tool.mutmut]']
+          replacement_lines.append(f'paths_to_mutate = {serialize_toml_value(paths_to_mutate)}')
+          replacement_lines.append(f'do_not_mutate = {serialize_toml_value(do_not_mutate)}')
           for key, value in preserved_config.items():
               replacement_lines.append(f'{key} = {serialize_toml_value(value)}')
           replacement = '\n'.join(replacement_lines)
@@ -105,9 +113,10 @@ jobs:
 
           pyproject_path.write_text(updated_text, encoding='utf-8')
 
-          print('Scoped [tool.mutmut] paths_to_mutate:')
+          print('Scoped [tool.mutmut] to changed files via do_not_mutate:')
           for p in changed:
               print(f'  {p}')
+          print(f'Ignored unchanged source files: {len(unchanged)}')
           PYEOF
 
       - name: Run mutation tests
