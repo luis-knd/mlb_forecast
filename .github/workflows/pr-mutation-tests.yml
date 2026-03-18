@@ -70,15 +70,27 @@ jobs:
           pyproject_text = pyproject_path.read_text(encoding='utf-8')
           pyproject_data = tomllib.loads(pyproject_text)
           mutmut_config = pyproject_data.get('tool', {}).get('mutmut', {})
-          tests_dir = mutmut_config.get('tests_dir', ['tests/'])
 
-          serialized_paths = ', '.join(f'"{path}"' for path in changed)
-          serialized_tests = ', '.join(f'"{path}"' for path in tests_dir)
-          replacement = (
-              '[tool.mutmut]\n'
-              f'paths_to_mutate = [{serialized_paths}]\n'
-              f'tests_dir = [{serialized_tests}]'
-          )
+          def serialize_toml_value(value):
+              if isinstance(value, bool):
+                  return 'true' if value else 'false'
+              if isinstance(value, str):
+                  return f'"{value}"'
+              if isinstance(value, list):
+                  serialized_items = ', '.join(serialize_toml_value(item) for item in value)
+                  return f'[{serialized_items}]'
+              if isinstance(value, (int, float)):
+                  return str(value)
+              raise TypeError(f'Unsupported mutmut config value: {value!r}')
+
+          preserved_config = {
+              key: value for key, value in mutmut_config.items() if key != 'paths_to_mutate'
+          }
+
+          replacement_lines = ['[tool.mutmut]', f'paths_to_mutate = {serialize_toml_value(changed)}']
+          for key, value in preserved_config.items():
+              replacement_lines.append(f'{key} = {serialize_toml_value(value)}')
+          replacement = '\n'.join(replacement_lines)
 
           tool_section = '[tool.mutmut]'
           section_start = pyproject_text.find(tool_section)
@@ -102,6 +114,7 @@ jobs:
         if: steps.changed.outputs.skip == 'false'
         env:
           PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: src
         run: mutmut run
 
       - name: Check mutation coverage
