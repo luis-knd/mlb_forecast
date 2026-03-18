@@ -39,6 +39,74 @@ from interface.rest.response_handler import ResponseHandler
 router = APIRouter()
 
 
+def _validate_ingest_players_request(
+    source: str,
+    season: int | None,
+    team_id: int | None,
+    sport_id: int,
+) -> str:
+    current_year = datetime.now().year
+    normalized_source = source.strip().lower()
+
+    if season is not None and (season < 1876 or season > current_year + 1):
+        raise DomainExceptions.InvalidDataError(f"season must be between 1876 and {current_year + 1}")
+    if team_id is not None and team_id <= 0:
+        raise DomainExceptions.InvalidDataError("teamId must be a positive integer")
+    if sport_id <= 0:
+        raise DomainExceptions.InvalidDataError("sportId must be a positive integer")
+
+    return normalized_source
+
+
+async def _resolve_team_mlb_id_for_ingestion(
+    normalized_source: str,
+    team_id: int | None,
+    use_cases: dict,
+) -> int | None:
+    if team_id is None or normalized_source not in {"team_roster", "sport_players"}:
+        return None
+
+    team = await use_cases["get_team"].execute(team_id=team_id)
+    return team.mlb_id
+
+
+async def _ingest_players_from_source(
+    source: str,
+    season: int | None,
+    team_mlb_id: int | None,
+    roster_type: str,
+    sport_id: int,
+    query: str | None,
+    use_cases: dict,
+):
+    try:
+        return await use_cases["ingest_players_by_source"].execute(
+            source=source,
+            season=season,
+            team_mlb_id=team_mlb_id,
+            roster_type=roster_type,
+            sport_id=sport_id,
+            query=query,
+        )
+    except ValueError as error:
+        raise DomainExceptions.InvalidDataError(str(error)) from error
+
+
+def _build_ingestion_result(players: list[object], start_time: datetime) -> DataIngestionResultDTO:
+    end_time = datetime.now()
+    duration = (end_time - start_time).total_seconds()
+
+    return DataIngestionResultDTO(
+        operation="player_ingestion",
+        records_processed=len(players),
+        records_created=len(players),
+        records_updated=0,
+        errors=[],
+        duration_seconds=duration,
+        timestamp=end_time,
+    )
+
+
 def get_player_use_cases(
     db: Session = Depends(get_db),
     cache: CachePort = Depends(get_cache_adapter),
@@ -218,42 +286,19 @@ async def ingest_players(
     use_cases: dict = Depends(get_player_use_cases),
 ) -> JSONResponse:
     start_time = datetime.now()
-    current_year = datetime.now().year
-    normalized_source = source.strip().lower()
-    if season is not None and (season < 1876 or season > current_year + 1):
-        raise DomainExceptions.InvalidDataError(f"season must be between 1876 and {current_year + 1}")
-    if team_id is not None and team_id <= 0:
-        raise DomainExceptions.InvalidDataError("teamId must be a positive integer")
-    if sport_id <= 0:
-        raise DomainExceptions.InvalidDataError("sportId must be a positive integer")
-
-    resolved_team_mlb_id: int | None = None
-    if team_id is not None and normalized_source in {"team_roster", "sport_players"}:
-        team = await use_cases["get_team"].execute(team_id=team_id)
-        resolved_team_mlb_id = team.mlb_id
-
-    try:
-        players = await use_cases["ingest_players_by_source"].execute(
-            source=source,
-            season=season,
-            team_mlb_id=resolved_team_mlb_id,
-            roster_type=roster_type,
-            sport_id=sport_id,
-            query=query,
-        )
-    except ValueError as error:
-        raise DomainExceptions.InvalidDataError(str(error)) from error
-    end_time = datetime.now()
-    duration = (end_time - start_time).total_seconds()
-    ingestion_result = DataIngestionResultDTO(
-        operation="player_ingestion",
-        records_processed=len(players),
-        records_created=len(players),
-        records_updated=0,
-        errors=[],
-        duration_seconds=duration,
-        timestamp=end_time,
+    normalized_source = _validate_ingest_players_request(source, season, team_id, sport_id)
+    resolved_team_mlb_id = await _resolve_team_mlb_id_for_ingestion(normalized_source, team_id, use_cases)
+    players = await _ingest_players_from_source(
+        source=source,
+        season=season,
+        team_mlb_id=resolved_team_mlb_id,
+        roster_type=roster_type,
+        sport_id=sport_id,
+        query=query,
+        use_cases=use_cases,
     )
+    ingestion_result = _build_ingestion_result(players, start_time)
+
     return ResponseHandler.created(
         data={
             "ingestion_summary": ingestion_result,

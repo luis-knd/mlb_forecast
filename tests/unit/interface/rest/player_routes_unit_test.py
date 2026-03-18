@@ -158,7 +158,7 @@ async def test_list_players_returns_success_response(sample_player):
 
 @pytest.mark.asyncio
 async def test_list_players_rejects_non_positive_team_id():
-    # Given / When / Then
+    # Given, When, Then
     with pytest.raises(DomainExceptions.InvalidDataError, match="team_id must be a positive integer"):
         await player_routes.list_players(team_id=0, use_cases={"list_players": AsyncMock()})
 
