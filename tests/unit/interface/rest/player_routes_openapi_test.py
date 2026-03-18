@@ -25,13 +25,14 @@ def test_players_get_endpoints_use_typed_200_responses():
         assert schema_name in openapi_schema["components"]["schemas"]
 
 
-def test_ingest_players_team_id_parameter_documents_sport_filter_behavior():
+def test_ingest_players_team_id_parameter_documents_internal_team_filter_behavior():
     # Given
     openapi_schema = app.openapi()
     ingest_players_parameters = openapi_schema["paths"]["/api/v1/data/ingest/players"]["post"]["parameters"]
     team_id_parameter = next(parameter for parameter in ingest_players_parameters if parameter["name"] == "teamId")
 
     # Then
+    assert "Internal team ID" in team_id_parameter["description"]
     assert "required when source=team_roster" in team_id_parameter["description"]
     assert "optional filter when source=sport_players" in team_id_parameter["description"]
 
@@ -63,6 +64,17 @@ def test_openapi_contract_documents_group_all_for_player_stats():
 
     # Then
     assert "all" in group_parameter["schema"]["enum"]
+
+
+def test_openapi_contract_documents_internal_team_id_for_ingestion():
+    # Given
+    openapi_file = _resolve_openapi_file()
+    contract_schema = yaml.safe_load(openapi_file.read_text(encoding="utf-8"))
+    ingest_players_parameters = contract_schema["paths"]["/api/v1/data/ingest/players"]["post"]["parameters"]
+    team_id_parameter = next(parameter for parameter in ingest_players_parameters if parameter["name"] == "teamId")
+
+    # Then
+    assert "Internal team ID" in team_id_parameter["description"]
 
 
 def test_player_stats_game_type_parameter_documents_code_meaning():

@@ -24,7 +24,7 @@ API_BASE_URL=${API_BASE_URL:-http://localhost:8000}
 
 - `team_roster`
   - Ingest players from one MLB team roster.
-  - Requires `teamId` (MLB team ID).
+  - Requires `teamId` (internal DB team ID).
   - Optional: `season`, `rosterType`.
   - Update semantics are non-destructive for profile fields: when incoming `position`, `bats`, `throws`, or `birth_date`
     are missing, existing persisted values are preserved.
@@ -38,7 +38,7 @@ API_BASE_URL=${API_BASE_URL:-http://localhost:8000}
 
 ### Parameter meanings for ingestion
 - `season`: target season (YYYY).
-- `teamId`: MLB team id (for example Yankees `147`).
+- `teamId`: internal team id from this application database (for example Dodgers `1`).
 - `rosterType`: roster subset (`active` by default).
 - `sportId`: sport identifier (`1` for MLB).
 - `q`: search text (name or partial text).
@@ -49,7 +49,7 @@ API_BASE_URL=${API_BASE_URL:-http://localhost:8000}
 
 ```bash
 curl -X POST \
-  "$API_BASE_URL/api/v1/data/ingest/players?source=team_roster&teamId=147&season=2025&rosterType=active"
+  "$API_BASE_URL/api/v1/data/ingest/players?source=team_roster&teamId=1&season=2025&rosterType=active"
 ```
 
 ### Ingest MLB players for a season (sport pool)
@@ -97,6 +97,8 @@ curl "$API_BASE_URL/api/v1/players?team_id=1"
 ```
 
 Note: `team_id` is the internal DB team id, not MLB `teamId`.
+
+For ingestion, `teamId` now also uses the internal DB team id. The route resolves the corresponding MLB team ID internally before calling StatsAPI.
 
 ### Get one player by MLB personId
 

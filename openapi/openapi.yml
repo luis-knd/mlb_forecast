@@ -1871,7 +1871,7 @@ paths:
               - type: integer
               - type: 'null'
             title: Team Id
-          description: MLB team ID required when source=team_roster and optional filter when source=sport_players
+          description: Internal team ID required when source=team_roster and optional filter when source=sport_players
         - name: rosterType
           in: query
           required: false
