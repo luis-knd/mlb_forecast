@@ -9,6 +9,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - MLB_API_BASE_URL=${MLB_API_BASE_URL}
       - ENVIRONMENT=${ENVIRONMENT}
+      - PYTHONPATH=/app:/app/src
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,6 +64,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - MLB_API_BASE_URL=${MLB_API_BASE_URL}
       - ENVIRONMENT=${ENVIRONMENT}
+      - PYTHONPATH=/app:/app/src
     depends_on:
       postgres:
         condition: service_healthy

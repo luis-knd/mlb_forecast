@@ -5,7 +5,7 @@ This defines how the application interacts with team data storage.
 
 from abc import ABC, abstractmethod
 
-from src.domain.entities.team import Team
+from domain.entities.team import Team
 
 
 class TeamRepositoryPort(ABC):

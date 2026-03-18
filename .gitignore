@@ -165,6 +165,8 @@ Thumbs.db
 
 # Archivos de test
 test.db
+/.mutmut-cache
+/mutants/
 
 # Directorios de exportación temporal
 exports/temp/

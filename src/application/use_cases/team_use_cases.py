@@ -1,7 +1,7 @@
-from src.application.ports.mlb_api import MLBApiPort
-from src.application.ports.team_repository import TeamRepositoryPort
-from src.domain.entities.team import Team
-from src.domain.exceptions import InvalidDataError, TeamNotFoundError
+from application.ports.mlb_api import MLBApiPort
+from application.ports.team_repository import TeamRepositoryPort
+from domain.entities.team import Team
+from domain.exceptions import InvalidDataError, TeamNotFoundError
 
 VALID_LEAGUES = {"American League", "American", "National League", "National"}
 VALID_DIVISIONS = {"East", "West", "Central"}

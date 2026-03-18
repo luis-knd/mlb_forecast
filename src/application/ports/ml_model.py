@@ -7,8 +7,8 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any
 
-from src.domain.entities.game import Game
-from src.domain.entities.prediction import Prediction
+from domain.entities.game import Game
+from domain.entities.prediction import Prediction
 
 
 class MLModelPort(ABC):

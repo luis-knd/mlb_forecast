@@ -2,7 +2,7 @@ from pathlib import Path
 
 import yaml
 
-from src.interface.rest.main import app
+from interface.rest.main import app
 
 
 def test_players_get_endpoints_use_typed_200_responses():
@@ -46,9 +46,17 @@ def test_player_stats_parameter_documents_internal_player_id():
     assert "Internal player ID" in player_id_parameter["description"]
 
 
+def _resolve_openapi_file() -> Path:
+    for candidate in [Path(__file__).resolve(), *Path(__file__).resolve().parents]:
+        openapi_path = candidate / "openapi" / "openapi.yml"
+        if openapi_path.exists():
+            return openapi_path
+    raise FileNotFoundError("openapi/openapi.yml not found in any ancestor directory")
+
+
 def test_openapi_contract_documents_group_all_for_player_stats():
     # Given
-    openapi_file = Path("openapi/openapi.yml")
+    openapi_file = _resolve_openapi_file()
     contract_schema = yaml.safe_load(openapi_file.read_text(encoding="utf-8"))
     player_stats_parameters = contract_schema["paths"]["/api/v1/players/{player_id}/stats"]["get"]["parameters"]
     group_parameter = next(parameter for parameter in player_stats_parameters if parameter["name"] == "group")

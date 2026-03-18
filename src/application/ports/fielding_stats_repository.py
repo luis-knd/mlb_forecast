@@ -5,7 +5,7 @@ This defines how the application interacts with fielding statistics data storage
 
 from abc import ABC, abstractmethod
 
-from src.domain.entities.fielding_stats import FieldingStats
+from domain.entities.fielding_stats import FieldingStats
 
 
 class FieldingStatsRepositoryPort(ABC):

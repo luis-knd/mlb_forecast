@@ -13,14 +13,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 
-from src.infrastructure.cache.cache_provider import connect_cache, disconnect_cache
-from src.infrastructure.config.settings import settings
-from src.infrastructure.db.database import create_tables
-from src.infrastructure.ml.model_adapter import MLModelAdapter
-from src.interface.rest.exception_handlers import DomainExceptions, ExceptionHandlerMiddleware, domain_exception_handler
-from src.interface.rest.generated.models.models import RootResponse
-from src.interface.rest.response_handler import ResponseHandler
-from src.interface.rest.routes import router as api_router
+from infrastructure.cache.cache_provider import connect_cache, disconnect_cache
+from infrastructure.config.settings import settings
+from infrastructure.db.database import create_tables
+from infrastructure.ml.model_adapter import MLModelAdapter
+from interface.rest.exception_handlers import DomainExceptions, ExceptionHandlerMiddleware, domain_exception_handler
+from interface.rest.generated.models.models import RootResponse
+from interface.rest.response_handler import ResponseHandler
+from interface.rest.routes import router as api_router
 
 # Initialize ML model (cache handled by cache_provider)
 ml_model_adapter = MLModelAdapter()

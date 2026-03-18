@@ -1,6 +1,6 @@
-from src.application.ports.cache import CachePort
-from src.application.ports.team_repository import TeamRepositoryPort
-from src.domain.entities.team import Team
+from application.ports.cache import CachePort
+from application.ports.team_repository import TeamRepositoryPort
+from domain.entities.team import Team
 
 
 class CachedTeamRepository(TeamRepositoryPort):

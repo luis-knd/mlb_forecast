@@ -9,7 +9,7 @@ from starlette.status import (
     HTTP_503_SERVICE_UNAVAILABLE,
 )
 
-from src.domain.entities.team import Team
+from domain.entities.team import Team
 
 
 class TestTeamRoutesIntegration:
@@ -226,7 +226,7 @@ class TestTeamRoutesIntegration:
         assert data["status"] == "error"
         assert expected_message in data["message"]
 
-    @patch("src.application.use_cases.team_use_cases.IngestTeamsUseCase.execute")
+    @patch("application.use_cases.team_use_cases.IngestTeamsUseCase.execute")
     def test_ingest_teams_with_mocked_external_api(self, mock_execute, integration_client, test_teams_data):
         # Given
         mock_teams = [
@@ -257,7 +257,7 @@ class TestTeamRoutesIntegration:
         assert "sample_teams" in data["data"]
         assert len(data["data"]["sample_teams"]) == 6
 
-    @patch("src.application.use_cases.team_use_cases.IngestTeamsUseCase.execute")
+    @patch("application.use_cases.team_use_cases.IngestTeamsUseCase.execute")
     def test_ingest_teams_external_service_error(self, mock_execute, integration_client):
         # Given
         mock_execute.side_effect = Exception("MLB API connection error")

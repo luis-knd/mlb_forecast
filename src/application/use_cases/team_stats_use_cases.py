@@ -5,12 +5,12 @@ These define the application's business logic for team statistics operations.
 
 from typing import Any
 
-from src.application.ports.cache import CachePort
-from src.application.ports.mlb_api import MLBApiPort
-from src.application.ports.team_repository import TeamRepositoryPort
-from src.application.ports.team_stats_repository import TeamStatsRepositoryPort
-from src.domain.entities.team_stats import TeamStats
-from src.domain.value_objects.team_stats_category import TeamStatsCategory
+from application.ports.cache import CachePort
+from application.ports.mlb_api import MLBApiPort
+from application.ports.team_repository import TeamRepositoryPort
+from application.ports.team_stats_repository import TeamStatsRepositoryPort
+from domain.entities.team_stats import TeamStats
+from domain.value_objects.team_stats_category import TeamStatsCategory
 
 
 class GetTeamStatsUseCase:

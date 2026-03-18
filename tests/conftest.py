@@ -2,8 +2,8 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.infrastructure.db.models import Base
-from src.infrastructure.db.repositories.team_stats_repository import TeamStatsRepository
+from infrastructure.db.models import Base
+from infrastructure.db.repositories.team_stats_repository import TeamStatsRepository
 
 
 @pytest.fixture(scope="function")
@@ -13,8 +13,11 @@ def db_session():
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     session = Session()
-    yield session
-    session.close()
+    try:
+        yield session
+    finally:
+        session.close()
+        engine.dispose()
 
 
 @pytest.fixture

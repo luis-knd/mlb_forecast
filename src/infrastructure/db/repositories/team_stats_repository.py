@@ -8,10 +8,10 @@ from typing import Any
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import Session, joinedload
 
-from src.application.ports.team_stats_repository import TeamStatsRepositoryPort
-from src.domain.entities.team_stats import TeamStats
-from src.infrastructure.db.models import CatchingStatsModel, FieldingStatsModel, HittingStatsModel, PitchingStatsModel
-from src.infrastructure.mappers.team_stats_mapper import TeamStatsMapper
+from application.ports.team_stats_repository import TeamStatsRepositoryPort
+from domain.entities.team_stats import TeamStats
+from infrastructure.db.models import CatchingStatsModel, FieldingStatsModel, HittingStatsModel, PitchingStatsModel
+from infrastructure.mappers.team_stats_mapper import TeamStatsMapper
 
 
 class TeamStatsRepository(TeamStatsRepositoryPort):

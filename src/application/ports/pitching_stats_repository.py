@@ -5,7 +5,7 @@ This defines how the application interacts with pitching statistics data storage
 
 from abc import ABC, abstractmethod
 
-from src.domain.entities.pitching_stats import PitchingStats
+from domain.entities.pitching_stats import PitchingStats
 
 
 class PitchingStatsRepositoryPort(ABC):

@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.infrastructure.cache.redis_adapter import RedisAdapter
+from infrastructure.cache.redis_adapter import RedisAdapter
 
 
 class TestRedisAdapter:

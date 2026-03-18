@@ -1,4 +1,4 @@
-from src.interface.rest.main import app
+from interface.rest.main import app
 
 
 def test_all_json_responses_have_structured_schema():

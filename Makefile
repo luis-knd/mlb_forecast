@@ -33,11 +33,14 @@ setup: ## Configuración inicial completa del proyecto
 	$(PYTHON) scripts/setup_venv.py
 	@echo "$(GREEN)✅ Configuración completada$(NC)"
 
-install: ## Instala dependencias en entorno virtual existente
+install: ## Instala todas las dependencias (producción + desarrollo) en entorno virtual existente
 	@echo "$(YELLOW)📦 Instalando dependencias...$(NC)"
 	$(VENV_PIP) install --upgrade pip
 	$(VENV_PIP) install -r requirements.txt
-	@echo "$(GREEN)✅ Dependencias instaladas$(NC)"
+	$(VENV_PIP) install -r requirements-dev.txt
+	@echo "$(GREEN)✅ Todas las dependencias instaladas$(NC)"
+
+install-dev: install ## Alias para instalar todas las dependencias
 
 env: ## Crea archivo .env desde ejemplo
 	@echo "$(YELLOW)📝 Creando archivo .env...$(NC)"
@@ -83,6 +86,10 @@ test: ## Ejecuta pruebas
 test-docker: ## Ejecuta pruebas dentro del contenedor app (sin depender de servicios)
 	@echo "$(YELLOW)🐳 Ejecutando pruebas en contenedor app...$(NC)"
 	$(COMPOSE) run --rm --no-deps app python -m pytest -v -W always
+
+test-mutation: ## Ejecuta pruebas de mutación (mutmut) en el contenedor (uso ocasional)
+	@echo "$(YELLOW)🧬 Ejecutando pruebas de mutación en contenedor app...$(NC)"
+	$(COMPOSE) exec app mutmut run $(ARGS)
 
 test-coverage: ## Ejecuta pruebas con coverage
 	@echo "$(YELLOW)📊 Ejecutando pruebas con coverage...$(NC)"

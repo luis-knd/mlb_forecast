@@ -6,7 +6,7 @@ This defines how the application interacts with game data storage.
 from abc import ABC, abstractmethod
 from datetime import date
 
-from src.domain.entities.game import Game
+from domain.entities.game import Game
 
 
 class GameRepositoryPort(ABC):

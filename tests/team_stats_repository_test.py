@@ -1,7 +1,7 @@
 import pytest
 
-from src.domain.entities.team_stats import TeamStats
-from src.infrastructure.db.models import FieldingStatsModel, HittingStatsModel, PitchingStatsModel
+from domain.entities.team_stats import TeamStats
+from infrastructure.db.models import FieldingStatsModel, HittingStatsModel, PitchingStatsModel
 
 
 @pytest.mark.asyncio

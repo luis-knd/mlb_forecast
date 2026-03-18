@@ -4,9 +4,9 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from starlette.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_404_NOT_FOUND
 
-from src.application.dto.mlb_api_response import MLBPlayerDTO
-from src.domain.entities.player import Player
-from src.infrastructure.db.models import PlayerModel, TeamModel
+from application.dto.mlb_api_response import MLBPlayerDTO
+from domain.entities.player import Player
+from infrastructure.db.models import PlayerModel, TeamModel
 
 
 @pytest.fixture
@@ -73,7 +73,7 @@ class TestPlayerRoutesIntegration:
         assert body["status"] == "error"
         assert body["message"] == "Resource not found"
 
-    @patch("src.application.use_cases.player_use_cases.GetPlayerStatsUseCase.execute")
+    @patch("application.use_cases.player_use_cases.GetPlayerStatsUseCase.execute")
     def test_get_player_stats(self, mock_execute, integration_client, populated_players_db):
         # Given
         internal_player_id = populated_players_db["player"].id
@@ -105,7 +105,7 @@ class TestPlayerRoutesIntegration:
             days_back=None,
         )
 
-    @patch("src.application.use_cases.player_use_cases.GetPlayerStatsUseCase.execute")
+    @patch("application.use_cases.player_use_cases.GetPlayerStatsUseCase.execute")
     def test_get_player_stats_group_all(self, mock_execute, integration_client, populated_players_db):
         # Given
         internal_player_id = populated_players_db["player"].id
@@ -142,7 +142,7 @@ class TestPlayerRoutesIntegration:
         assert body["status"] == "error"
         assert body["message"] == "Resource not found"
 
-    @patch("src.application.use_cases.player_use_cases.IngestPlayersBySourceUseCase.execute")
+    @patch("application.use_cases.player_use_cases.IngestPlayersBySourceUseCase.execute")
     def test_ingest_players(self, mock_execute, integration_client):
         # Given
         mock_execute.return_value = [
@@ -167,7 +167,7 @@ class TestPlayerRoutesIntegration:
         assert body["data"]["ingestion_summary"]["operation"] == "player_ingestion"
         assert len(body["data"]["sample_players"]) == 1
 
-    @patch("src.application.use_cases.player_use_cases.IngestPlayersBySourceUseCase.execute")
+    @patch("application.use_cases.player_use_cases.IngestPlayersBySourceUseCase.execute")
     def test_ingest_players_sport_source_forwards_team_filter(self, mock_execute, integration_client):
         # Given
         mock_execute.return_value = []
@@ -188,7 +188,7 @@ class TestPlayerRoutesIntegration:
             query=None,
         )
 
-    @patch("src.infrastructure.mlb_api.adapter.MLBApiAdapter.get_players_by_team", new_callable=AsyncMock)
+    @patch("infrastructure.mlb_api.adapter.MLBApiAdapter.get_players_by_team", new_callable=AsyncMock)
     def test_ingest_players_team_roster_preserves_existing_profile_fields_when_payload_is_partial(
         self,
         mock_get_players_by_team,

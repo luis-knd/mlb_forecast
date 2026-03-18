@@ -5,9 +5,9 @@ This module implements the CachedTeamStatsRepository decorator for Caching Strat
 
 from typing import Any
 
-from src.application.ports.cache import CachePort
-from src.application.ports.team_stats_repository import TeamStatsRepositoryPort
-from src.domain.entities.team_stats import TeamStats
+from application.ports.cache import CachePort
+from application.ports.team_stats_repository import TeamStatsRepositoryPort
+from domain.entities.team_stats import TeamStats
 
 
 class CachedTeamStatsRepository(TeamStatsRepositoryPort):

@@ -5,7 +5,7 @@ This defines how the application interacts with team statistics data storage.
 
 from abc import ABC, abstractmethod
 
-from src.domain.entities.team_stats import TeamStats
+from domain.entities.team_stats import TeamStats
 
 
 class TeamStatsRepositoryPort(ABC):

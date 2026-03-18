@@ -4,23 +4,23 @@ from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from src.application.ports.cache import CachePort
-from src.application.use_cases.player_use_cases import (
+from application.ports.cache import CachePort
+from application.use_cases.player_use_cases import (
     GetPlayerByMlbIdUseCase,
     GetPlayerStatsUseCase,
     GetPlayerUseCase,
     IngestPlayersBySourceUseCase,
     ListPlayersUseCase,
 )
-from src.infrastructure.cache.cache_provider import get_cache_adapter
-from src.infrastructure.config.settings import settings
-from src.infrastructure.db.database import get_db
-from src.infrastructure.db.repositories.player_repository import PlayerRepository
-from src.infrastructure.db.repositories.team_repository import TeamRepository
-from src.infrastructure.mlb_api.adapter import MLBApiAdapter
-from src.interface.rest.adapters.mappers import to_player_payload, to_player_payload_list
-from src.interface.rest.exception_handlers import DomainExceptions
-from src.interface.rest.generated.models.models import (
+from infrastructure.cache.cache_provider import get_cache_adapter
+from infrastructure.config.settings import settings
+from infrastructure.db.database import get_db
+from infrastructure.db.repositories.player_repository import PlayerRepository
+from infrastructure.db.repositories.team_repository import TeamRepository
+from infrastructure.mlb_api.adapter import MLBApiAdapter
+from interface.rest.adapters.mappers import to_player_payload, to_player_payload_list
+from interface.rest.exception_handlers import DomainExceptions
+from interface.rest.generated.models.models import (
     BadRequest,
     DataIngestionResponse,
     DataIngestionResultDTO,
@@ -32,7 +32,7 @@ from src.interface.rest.generated.models.models import (
     ServiceUnavailable,
     UnprocessableEntity,
 )
-from src.interface.rest.response_handler import ResponseHandler
+from interface.rest.response_handler import ResponseHandler
 
 router = APIRouter()
 

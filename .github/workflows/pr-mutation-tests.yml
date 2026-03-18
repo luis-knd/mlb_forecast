@@ -1,0 +1,156 @@
+name: PR - Mutation Tests
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "tests/**"
+      - ".github/workflows/**"
+      - "requirements*.txt"
+      - "pyproject.toml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-mutation-tests-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  mutation_tests:
+    if: ${{ github.event.pull_request.base.ref == github.event.repository.default_branch }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install development dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Patch mutmut for src-as-package layout
+        run: |
+          MUTMUT_PKG=$(python3 -c "import mutmut; print(mutmut.__file__.rsplit('/',1)[0])")
+          sed -i "s/    assert not name.startswith('src.'), .*/    if name.startswith('src.'):\n        name = name[len('src.'):]/" "$MUTMUT_PKG/__main__.py"
+          sed -i "s/orig\.__module__/orig.__module__.removeprefix('src.')/g" "$MUTMUT_PKG/trampoline_templates.py"
+
+      - name: Detect changed source files
+        id: changed
+        run: |
+          BASE="origin/${{ github.event.pull_request.base.ref }}"
+          CHANGED=$(git diff --name-only --diff-filter=ACMR "$BASE" HEAD -- 'src/' | grep '\.py$' || true)
+          if [ -z "$CHANGED" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "$CHANGED" > /tmp/changed_src_files.txt
+            echo "Changed source files:"
+            cat /tmp/changed_src_files.txt
+          fi
+
+      - name: Scope mutations to changed files
+        if: steps.changed.outputs.skip == 'false'
+        run: |
+          python3 << 'PYEOF'
+          import pathlib
+          import tomllib
+
+          changed = pathlib.Path('/tmp/changed_src_files.txt').read_text().strip().splitlines()
+          changed = [f for f in changed if f]
+          changed_set = set(changed)
+
+          pyproject_path = pathlib.Path('pyproject.toml')
+          pyproject_text = pyproject_path.read_text(encoding='utf-8')
+          pyproject_data = tomllib.loads(pyproject_text)
+          mutmut_config = pyproject_data.get('tool', {}).get('mutmut', {})
+          all_source_files = sorted(str(path).replace('\\', '/') for path in pathlib.Path('src').rglob('*.py'))
+          unchanged = [path for path in all_source_files if path not in changed_set]
+
+          def serialize_toml_value(value):
+              if isinstance(value, bool):
+                  return 'true' if value else 'false'
+              if isinstance(value, str):
+                  return f'"{value}"'
+              if isinstance(value, list):
+                  serialized_items = ', '.join(serialize_toml_value(item) for item in value)
+                  return f'[{serialized_items}]'
+              if isinstance(value, (int, float)):
+                  return str(value)
+              raise TypeError(f'Unsupported mutmut config value: {value!r}')
+
+          preserved_config = {
+              key: value for key, value in mutmut_config.items() if key not in {'paths_to_mutate', 'do_not_mutate'}
+          }
+          paths_to_mutate = mutmut_config.get('paths_to_mutate', ['src/'])
+          do_not_mutate = list(mutmut_config.get('do_not_mutate', []))
+          do_not_mutate.extend(path for path in unchanged if path not in do_not_mutate)
+
+          replacement_lines = ['[tool.mutmut]']
+          replacement_lines.append(f'paths_to_mutate = {serialize_toml_value(paths_to_mutate)}')
+          replacement_lines.append(f'do_not_mutate = {serialize_toml_value(do_not_mutate)}')
+          for key, value in preserved_config.items():
+              replacement_lines.append(f'{key} = {serialize_toml_value(value)}')
+          replacement = '\n'.join(replacement_lines)
+
+          tool_section = '[tool.mutmut]'
+          section_start = pyproject_text.find(tool_section)
+          if section_start == -1:
+              raise RuntimeError('[tool.mutmut] section not found in pyproject.toml')
+
+          next_section = pyproject_text.find('\n[', section_start + len(tool_section))
+          if next_section == -1:
+              updated_text = pyproject_text[:section_start].rstrip() + '\n\n' + replacement + '\n'
+          else:
+              updated_text = pyproject_text[:section_start].rstrip() + '\n\n' + replacement + pyproject_text[next_section:]
+
+          pyproject_path.write_text(updated_text, encoding='utf-8')
+
+          print('Scoped [tool.mutmut] to changed files via do_not_mutate:')
+          for p in changed:
+              print(f'  {p}')
+          print(f'Ignored unchanged source files: {len(unchanged)}')
+          PYEOF
+
+      - name: Run mutation tests
+        if: steps.changed.outputs.skip == 'false'
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: src
+        run: mutmut run
+
+      - name: Check mutation coverage
+        if: steps.changed.outputs.skip == 'false'
+        run: |
+          mutmut export-cicd-stats
+          python3 << 'PYEOF'
+          import json, sys
+
+          with open('mutants/mutmut-cicd-stats.json') as f:
+              stats = json.load(f)
+
+          killed = stats.get('killed', 0)
+          survived = stats.get('survived', 0)
+          timeout = stats.get('timeout', 0)
+          suspicious = stats.get('suspicious', 0)
+          total = killed + survived + timeout + suspicious
+
+          if total == 0:
+              print('No mutations found')
+              sys.exit(0)
+
+          score = (killed + timeout) * 100 / total
+          print(f'Mutation score: {score:.2f}%')
+          print(f'Killed: {killed}, Survived: {survived}, Timeout: {timeout}, Suspicious: {suspicious}')
+
+          if score < 80:
+              print(f'ERROR: Mutation coverage {score:.2f}% is below 80%')
+              sys.exit(1)
+          PYEOF

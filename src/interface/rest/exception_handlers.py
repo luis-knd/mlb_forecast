@@ -10,14 +10,14 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from src.domain.exceptions import (
+from domain.exceptions import (
     ExternalServiceError,
     GameNotFoundError,
     InvalidDataError,
     PlayerNotFoundError,
     TeamNotFoundError,
 )
-from src.interface.rest.response_handler import ResponseHandler
+from interface.rest.response_handler import ResponseHandler
 
 
 class ExceptionHandlerMiddleware:

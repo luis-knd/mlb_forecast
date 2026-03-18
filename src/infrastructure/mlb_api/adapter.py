@@ -11,9 +11,9 @@ from typing import Any, Protocol
 
 import httpx
 
-from src.application.dto.mlb_api_response import MLBGameDTO, MLBPlayerDTO, MLBTeamDTO
-from src.application.ports.mlb_api import MLBApiPort
-from src.infrastructure.config.settings import settings
+from application.dto.mlb_api_response import MLBGameDTO, MLBPlayerDTO, MLBTeamDTO
+from application.ports.mlb_api import MLBApiPort
+from infrastructure.config.settings import settings
 
 logger = logging.getLogger(__name__)
 

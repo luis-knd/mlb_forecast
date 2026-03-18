@@ -2,7 +2,7 @@ from unittest.mock import ANY
 
 import pytest
 
-from src.infrastructure.db.models import (
+from infrastructure.db.models import (
     CatchingStatsModel,
     FieldingStatsModel,
     HittingStatsModel,

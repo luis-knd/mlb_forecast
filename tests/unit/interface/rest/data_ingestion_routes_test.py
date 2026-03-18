@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from src.interface.rest.data_ingestion_routes import get_data_ingestion_use_cases
+from interface.rest.data_ingestion_routes import get_data_ingestion_use_cases
 
 
 def test_get_data_ingestion_use_cases_success():

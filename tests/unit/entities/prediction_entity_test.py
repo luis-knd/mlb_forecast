@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from src.domain.entities.prediction import Prediction
+from domain.entities.prediction import Prediction
 
 
 class TestPredictionEntity:

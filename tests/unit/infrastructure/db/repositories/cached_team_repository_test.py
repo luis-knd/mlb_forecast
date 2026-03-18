@@ -2,8 +2,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.domain.entities.team import Team
-from src.infrastructure.db.repositories.cached_team_repository import CachedTeamRepository
+from domain.entities.team import Team
+from infrastructure.db.repositories.cached_team_repository import CachedTeamRepository
 
 
 class TestCachedTeamRepository:

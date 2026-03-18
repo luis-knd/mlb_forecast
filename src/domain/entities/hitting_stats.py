@@ -6,8 +6,8 @@ This is a pure domain entity without any framework dependencies.
 from dataclasses import dataclass
 from datetime import datetime
 
-from src.domain.entities.stats_factory import build_stats_payload
-from src.domain.entities.team import Team
+from domain.entities.stats_factory import build_stats_payload
+from domain.entities.team import Team
 
 
 @dataclass

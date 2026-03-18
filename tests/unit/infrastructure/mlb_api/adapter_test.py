@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.infrastructure.mlb_api.adapter import MLBApiAdapter
+from infrastructure.mlb_api.adapter import MLBApiAdapter
 
 
 class TestMLBApiAdapter:

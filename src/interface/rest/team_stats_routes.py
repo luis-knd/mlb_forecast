@@ -5,21 +5,21 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from src.application.use_cases.team_stats_ingestion_use_cases import (
+from application.use_cases.team_stats_ingestion_use_cases import (
     IngestAllTeamStatsUseCase,
     IngestTeamCatchingStatsUseCase,
     IngestTeamFieldingStatsUseCase,
     IngestTeamHittingStatsUseCase,
     IngestTeamPitchingStatsUseCase,
 )
-from src.infrastructure.db.database import get_db
-from src.infrastructure.db.repositories.catching_stats_repository import CatchingStatsRepository
-from src.infrastructure.db.repositories.fielding_stats_repository import FieldingStatsRepository
-from src.infrastructure.db.repositories.hitting_stats_repository import HittingStatsRepository
-from src.infrastructure.db.repositories.pitching_stats_repository import PitchingStatsRepository
-from src.infrastructure.db.repositories.team_repository import TeamRepository
-from src.infrastructure.mlb_api.adapter import MLBApiAdapter
-from src.interface.rest.generated.models.models import (
+from infrastructure.db.database import get_db
+from infrastructure.db.repositories.catching_stats_repository import CatchingStatsRepository
+from infrastructure.db.repositories.fielding_stats_repository import FieldingStatsRepository
+from infrastructure.db.repositories.hitting_stats_repository import HittingStatsRepository
+from infrastructure.db.repositories.pitching_stats_repository import PitchingStatsRepository
+from infrastructure.db.repositories.team_repository import TeamRepository
+from infrastructure.mlb_api.adapter import MLBApiAdapter
+from interface.rest.generated.models.models import (
     BadRequest,
     InternalServerError,
     NotFound,
@@ -27,7 +27,7 @@ from src.interface.rest.generated.models.models import (
     TeamStatsIngestionResponse,
     UnprocessableEntity,
 )
-from src.interface.rest.response_handler import ResponseHandler
+from interface.rest.response_handler import ResponseHandler
 
 router = APIRouter()
 

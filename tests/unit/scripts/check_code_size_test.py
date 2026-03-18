@@ -4,8 +4,16 @@ import subprocess
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-CHECKER_SCRIPT = PROJECT_ROOT / "scripts/quality/check_code_size.py"
+
+def _find_checker_script() -> Path:
+    for candidate in Path(__file__).resolve().parents:
+        script = candidate / "scripts" / "quality" / "check_code_size.py"
+        if script.exists():
+            return script
+    raise FileNotFoundError("scripts/quality/check_code_size.py not found in any ancestor directory")
+
+
+CHECKER_SCRIPT = _find_checker_script()
 
 
 def _run_checker(

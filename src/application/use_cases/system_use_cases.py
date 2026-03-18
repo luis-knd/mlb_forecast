@@ -11,7 +11,7 @@ from typing import Any, Protocol, cast
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from src.application.ports.cache import CachePort
+from application.ports.cache import CachePort
 
 logger = logging.getLogger(__name__)
 

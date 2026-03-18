@@ -6,7 +6,7 @@ This defines how the application interacts with prediction data storage.
 from abc import ABC, abstractmethod
 from typing import Any
 
-from src.domain.entities.prediction import Prediction
+from domain.entities.prediction import Prediction
 
 
 class PredictionRepositoryPort(ABC):

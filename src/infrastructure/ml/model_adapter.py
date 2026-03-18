@@ -16,10 +16,10 @@ from sklearn.metrics import accuracy_score, f1_score, mean_absolute_error, preci
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-from src.application.ports.ml_model import MLModelPort
-from src.domain.entities.game import Game
-from src.domain.entities.prediction import Prediction
-from src.infrastructure.config.settings import settings
+from application.ports.ml_model import MLModelPort
+from domain.entities.game import Game
+from domain.entities.prediction import Prediction
+from infrastructure.config.settings import settings
 
 logger = logging.getLogger(__name__)
 

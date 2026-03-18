@@ -8,8 +8,8 @@ from alembic import context
 from sqlalchemy import engine_from_config
 from sqlalchemy.pool import NullPool
 
-from src.infrastructure.config.settings import settings
-from src.infrastructure.db.database import Base
+from infrastructure.config.settings import settings
+from infrastructure.db.database import Base
 
 config = context.config
 if config.config_file_name:

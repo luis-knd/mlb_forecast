@@ -514,6 +514,7 @@ make run-docker         # Ejecutar con Docker completo (--no-cache)
 # 🧪 Testing y calidad
 make test               # Ejecutar pruebas
 make test-coverage      # Pruebas con coverage
+make test-mutation      # Pruebas de mutación (uso ocasional)
 make lint               # Verificar código con linters
 make format             # Formatear código
 
@@ -537,6 +538,9 @@ make help               # Ver todos los comandos
 ### Comandos Manuales (Sin Makefile)
 
 ```bash
+# Crear el entorno virtual
+python3 -m venv venv
+
 # Activar entorno virtual
 source venv/bin/activate  # Linux/macOS
 venv\Scripts\activate     # Windows
@@ -651,9 +655,33 @@ docker exec -it mlb_forecast_backend-app-1 python -m pytest tests/integration/te
 
 Ejecutar test puntual
 
-`````bash
-docker exec -it mlb_forecast_backend-app-1 python -m pytest tests/t````est_basic.py::TestBasicEndpoints::test_health_endpoint -v -W always
-`````
+```bash
+docker exec -it mlb_forecast_backend-app-1 python -m pytest tests/test_basic.py::TestBasicEndpoints::test_health_endpoint -v -W always
+```
+
+### 🧬 Pruebas de Mutación (mutmut)
+
+Las pruebas de mutación evalúan la calidad de los tests unitarios introduciendo pequeños cambios (mutaciones) en el código y verificando si los tests fallan (matan al mutante).
+
+> [!IMPORTANT]
+> Se recomienda ejecutar estas pruebas **dentro de Docker** para evitar incompatibilidades con versiones locales de Python (especialmente Python 3.14).
+
+**Ejecución completa:**
+```bash
+make test-mutation
+```
+
+**Ejecución en módulos específicos (Recomendado):**
+```bash
+make test-mutation ARGS="--paths-to-mutate=src/domain"
+```
+
+**Ver resultados:**
+Los resultados se guardan en el archivo `.mutmut-cache`. Puedes generar un informe HTML ejecutando:
+```bash
+docker exec -it mlb_forecast_backend-app-1 mutmut html
+```
+Y luego abrir `html/index.html` en tu navegador.
 
 ## 📈 Monitoreo y Logs
 

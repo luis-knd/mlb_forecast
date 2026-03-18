@@ -5,7 +5,7 @@ This defines how the application interacts with player data storage.
 
 from abc import ABC, abstractmethod
 
-from src.domain.entities.player import Player
+from domain.entities.player import Player
 
 
 class PlayerRepositoryPort(ABC):

@@ -513,7 +513,7 @@ def validate_openapi() -> bool:
         "python -m venv /tmp/.venv && "
         ". /tmp/.venv/bin/activate && "
         "python -m pip install -q --upgrade pip && "
-        "pip install -q openapi-spec-validator==0.8.0b1 && "
+        "pip install -q openapi-spec-validator==0.8.4 && "
         'openapi-spec-validator openapi/openapi.yml"'
     )
     return run_command(cmd_b, "Validando OpenAPI (contenedor efímero)")
@@ -645,7 +645,7 @@ def generate_from_openapi() -> bool:
         "python -m venv /tmp/.venv && "
         ". /tmp/.venv/bin/activate && "
         "python -m pip install -q --upgrade pip && "
-        "pip install -q datamodel-code-generator==0.30.1 PyYAML==6.0.2 Jinja2==3.1.4 && "
+        "pip install -q datamodel-code-generator==0.25.6 PyYAML==6.0.2 Jinja2==3.1.4 && "
         f'{models_codegen_cmd}"'
     )
 
@@ -655,7 +655,7 @@ def generate_from_openapi() -> bool:
         f"set -e; "
         f"python -m venv /tmp/.venv && . /tmp/.venv/bin/activate && "
         f"python -m pip install -q --upgrade pip && "
-        f"(python -m pip install -q fastapi-code-generator==0.5.4 || true); "
+        f"(python -m pip install -q fastapi-code-generator==0.5.2 || true); "
         f"rm -rf {routers_tmp} && mkdir -p {routers_tmp}; "
         # Attempt several CLI variants to accommodate different versions
         # 1) Preferred short flags

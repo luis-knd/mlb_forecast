@@ -11,7 +11,7 @@ from typing import Any
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
-from src.infrastructure.config.settings import settings
+from infrastructure.config.settings import settings
 
 # Create SQLAlchemy engine
 

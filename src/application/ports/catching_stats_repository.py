@@ -5,7 +5,7 @@ This defines how the application interacts with catching statistics data storage
 
 from abc import ABC, abstractmethod
 
-from src.domain.entities.catching_stats import CatchingStats
+from domain.entities.catching_stats import CatchingStats
 
 
 class CatchingStatsRepositoryPort(ABC):

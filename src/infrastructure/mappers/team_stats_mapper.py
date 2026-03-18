@@ -1,6 +1,6 @@
-from src.domain.entities.team import Team
-from src.domain.entities.team_stats import TeamStats
-from src.infrastructure.db.models import FieldingStatsModel, HittingStatsModel, PitchingStatsModel, TeamModel
+from domain.entities.team import Team
+from domain.entities.team_stats import TeamStats
+from infrastructure.db.models import FieldingStatsModel, HittingStatsModel, PitchingStatsModel, TeamModel
 
 HITTING_TO_TEAM_STATS_FIELDS = {
     "games_played": "games_played",
