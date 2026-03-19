@@ -138,6 +138,7 @@ async def test_list_players_returns_success_response(sample_player):
         active=True,
         limit=10,
         offset=5,
+        include=None,
         use_cases=use_cases,
     )
 
@@ -146,6 +147,7 @@ async def test_list_players_returns_success_response(sample_player):
     assert body["status"] == "success"
     assert body["data"][0]["id"] == 7
     assert body["data"][0]["mlb_id"] == 660271
+    assert "current_team" not in body["data"][0]
     use_cases["list_players"].execute.assert_awaited_once_with(
         team_id=1,
         position="DH",
@@ -157,10 +159,69 @@ async def test_list_players_returns_success_response(sample_player):
 
 
 @pytest.mark.asyncio
+async def test_list_players_hydrates_current_team_when_include_requests_relation(sample_player, sample_team):
+    # Given
+    sample_player.current_team = sample_team
+    use_cases = {"list_players": AsyncMock()}
+    use_cases["list_players"].execute.return_value = [sample_player]
+
+    # When
+    response = await player_routes.list_players(
+        team_id=None,
+        position=None,
+        name=None,
+        active=None,
+        limit=50,
+        offset=0,
+        include=["current_team"],
+        use_cases=use_cases,
+    )
+
+    # Then
+    body = _decode_response(response)
+    assert body["status"] == "success"
+    assert body["data"][0]["current_team"]["mlb_id"] == sample_team.mlb_id
+    assert body["data"][0]["current_team"]["name"] == sample_team.name
+    use_cases["list_players"].execute.assert_awaited_once_with(
+        team_id=None,
+        position=None,
+        name=None,
+        active=None,
+        limit=50,
+        offset=0,
+    )
+
+
+@pytest.mark.asyncio
 async def test_list_players_rejects_non_positive_team_id():
     # Given, When, Then
     with pytest.raises(DomainExceptions.InvalidDataError, match="team_id must be a positive integer"):
-        await player_routes.list_players(team_id=0, use_cases={"list_players": AsyncMock()})
+        await player_routes.list_players(
+            team_id=0,
+            position=None,
+            name=None,
+            active=None,
+            limit=50,
+            offset=0,
+            include=None,
+            use_cases={"list_players": AsyncMock()},
+        )
+
+
+@pytest.mark.asyncio
+async def test_list_players_rejects_unknown_include_path():
+    # Given / When / Then
+    with pytest.raises(DomainExceptions.InvalidDataError, match="Invalid include path 'unknown'"):
+        await player_routes.list_players(
+            team_id=None,
+            position=None,
+            name=None,
+            active=None,
+            limit=50,
+            offset=0,
+            include=["unknown"],
+            use_cases={"list_players": AsyncMock()},
+        )
 
 
 @pytest.mark.asyncio
@@ -170,7 +231,7 @@ async def test_get_player_returns_success_response(sample_player):
     use_cases["get_player_by_mlb_id"].execute.return_value = sample_player
 
     # When
-    response = await player_routes.get_player(player_id=660271, use_cases=use_cases)
+    response = await player_routes.get_player(player_id=660271, include=None, use_cases=use_cases)
 
     # Then
     body = _decode_response(response)
@@ -180,10 +241,31 @@ async def test_get_player_returns_success_response(sample_player):
 
 
 @pytest.mark.asyncio
+async def test_get_player_hydrates_current_team_when_nested_include_is_requested(sample_player, sample_team):
+    # Given
+    sample_player.current_team = sample_team
+    use_cases = {"get_player_by_mlb_id": AsyncMock()}
+    use_cases["get_player_by_mlb_id"].execute.return_value = sample_player
+
+    # When
+    response = await player_routes.get_player(
+        player_id=660271,
+        include=["current_team.venue_name"],
+        use_cases=use_cases,
+    )
+
+    # Then
+    body = _decode_response(response)
+    assert body["status"] == "success"
+    assert body["data"]["current_team"] == {"venue_name": sample_team.venue_name}
+    use_cases["get_player_by_mlb_id"].execute.assert_awaited_once_with(mlb_player_id=660271)
+
+
+@pytest.mark.asyncio
 async def test_get_player_rejects_non_positive_player_id():
     # Given / When / Then
     with pytest.raises(DomainExceptions.InvalidDataError, match="player_id must be a positive integer"):
-        await player_routes.get_player(player_id=0, use_cases={"get_player_by_mlb_id": AsyncMock()})
+        await player_routes.get_player(player_id=0, include=None, use_cases={"get_player_by_mlb_id": AsyncMock()})
 
 
 @pytest.mark.asyncio
@@ -194,7 +276,7 @@ async def test_get_player_raises_not_found_for_unknown_player():
 
     # When / Then
     with pytest.raises(DomainExceptions.PlayerNotFoundError):
-        await player_routes.get_player(player_id=660271, use_cases=use_cases)
+        await player_routes.get_player(player_id=660271, include=None, use_cases=use_cases)
 
 
 @pytest.mark.asyncio

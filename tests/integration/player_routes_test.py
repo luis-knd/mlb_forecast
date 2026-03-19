@@ -2,7 +2,7 @@ from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from starlette.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_404_NOT_FOUND
+from starlette.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 
 from application.dto.mlb_api_response import MLBPlayerDTO
 from domain.entities.player import Player
@@ -51,6 +51,17 @@ class TestPlayerRoutesIntegration:
         assert body["status"] == "success"
         assert len(body["data"]) == 1
         assert body["data"][0]["mlb_id"] == 660271
+        assert "current_team" not in body["data"][0]
+
+    def test_list_players_hydrates_current_team_when_requested(self, integration_client, populated_players_db):
+        # When
+        response = integration_client.get("/api/v1/players?include=current_team")
+
+        # Then
+        assert response.status_code == HTTP_200_OK
+        body = response.json()
+        assert body["data"][0]["current_team"]["mlb_id"] == 119
+        assert body["data"][0]["current_team"]["name"] == "Los Angeles Dodgers"
 
     def test_get_player_by_mlb_id(self, integration_client, populated_players_db):
         # When
@@ -62,6 +73,28 @@ class TestPlayerRoutesIntegration:
         assert body["status"] == "success"
         assert body["data"]["mlb_id"] == 660271
         assert body["data"]["full_name"] == "Shohei Ohtani"
+        assert "current_team" not in body["data"]
+
+    def test_get_player_by_mlb_id_hydrates_current_team_when_nested_include_is_requested(
+        self, integration_client, populated_players_db
+    ):
+        # When
+        response = integration_client.get("/api/v1/players/660271?include=current_team.venue_name")
+
+        # Then
+        assert response.status_code == HTTP_200_OK
+        body = response.json()
+        assert body["data"]["current_team"] == {"venue_name": "Dodger Stadium"}
+
+    def test_list_players_returns_bad_request_for_unknown_include(self, integration_client, populated_players_db):
+        # When
+        response = integration_client.get("/api/v1/players?include=unknown")
+
+        # Then
+        assert response.status_code == HTTP_400_BAD_REQUEST
+        body = response.json()
+        assert body["status"] == "error"
+        assert "Invalid include path 'unknown'" in body["errors"][0]
 
     def test_get_player_not_found(self, integration_client, populated_players_db):
         # When

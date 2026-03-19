@@ -16,7 +16,13 @@ from infrastructure.db.database import get_db
 from infrastructure.db.repositories.game_repository import GameRepository
 from infrastructure.db.repositories.team_repository import TeamRepository
 from infrastructure.mlb_api.adapter import MLBApiAdapter
-from interface.rest.adapters.mappers import to_game_dto, to_game_dto_list
+from interface.rest.adapters.hydration import (
+    GAME_ALLOWED_INCLUDES,
+    parse_include_selection,
+    to_game_response_payload,
+    to_game_response_payload_list,
+)
+from interface.rest.adapters.mappers import to_game_dto_list
 from interface.rest.exception_handlers import DomainExceptions
 from interface.rest.generated.models.models import (
     BadRequest,
@@ -68,6 +74,13 @@ async def list_games(
     team_id: int | None = Query(None, description="Filter by team ID"),
     status: str | None = Query(None, description="Filter by game status (scheduled, in_progress, completed)"),
     limit: int = Query(50, le=200, description="Maximum number of games to return"),
+    include: list[str] | None = Query(
+        None,
+        description=(
+            "Relations to hydrate. Supports comma-separated values and dot notation, "
+            "e.g. home_team or winning_team.name"
+        ),
+    ),
     use_cases: dict = Depends(get_game_use_cases),
 ) -> JSONResponse:
     """
@@ -102,6 +115,7 @@ async def list_games(
     if team_id is not None and team_id <= 0:
         raise DomainExceptions.InvalidDataError("Team ID must be a positive integer")
 
+    include_selection = parse_include_selection(include, GAME_ALLOWED_INCLUDES)
     list_games_use_case = use_cases["list_games"]
 
     # Convert date string to a date object if provided
@@ -111,7 +125,7 @@ async def list_games(
 
     games = await list_games_use_case.execute(game_date=game_date, team_id=team_id, status=status, limit=limit)
 
-    games_dto = to_game_dto_list(games)
+    games_dto = to_game_response_payload_list(games, include_selection)
 
     return ResponseHandler.success(data=games_dto, message=f"Retrieved {len(games_dto)} games successfully")
 
@@ -130,6 +144,13 @@ async def list_games(
 )
 async def get_game(
     game_id: int = Path(..., description="The ID of the game to get"),
+    include: list[str] | None = Query(
+        None,
+        description=(
+            "Relations to hydrate. Supports comma-separated values and dot notation, "
+            "e.g. home_team or winning_team.name"
+        ),
+    ),
     use_cases: dict = Depends(get_game_use_cases),
 ) -> JSONResponse:
     """
@@ -149,13 +170,14 @@ async def get_game(
     if game_id <= 0:
         raise DomainExceptions.InvalidDataError("Game ID must be a positive integer")
 
+    include_selection = parse_include_selection(include, GAME_ALLOWED_INCLUDES)
     get_game_use_case = use_cases["get_game"]
     game = await get_game_use_case.execute(game_id=game_id)
 
     if not game:
         raise DomainExceptions.GameNotFoundError(game_id)
 
-    game_dto = to_game_dto(game)
+    game_dto = to_game_response_payload(game, include_selection)
 
     return ResponseHandler.success(data=game_dto, message=f"Game {game_id} retrieved successfully")
 

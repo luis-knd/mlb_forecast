@@ -452,6 +452,17 @@ paths:
             default: 50
             title: Limit
           description: Maximum number of games to return
+        - name: include
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: array
+                items:
+                  type: string
+              - type: 'null'
+            title: Include
+          description: Relations to hydrate. Supports comma-separated values and dot notation. Root includes like home_team return the full relation, while nested paths like winning_team.name return only the requested team fields.
       responses:
         '200':
           description: Successfully retrieved games list
@@ -514,6 +525,17 @@ paths:
             description: The ID of the game to get
             title: Game Id
           description: The ID of the game to get
+        - name: include
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: array
+                items:
+                  type: string
+              - type: 'null'
+            title: Include
+          description: Relations to hydrate. Supports comma-separated values and dot notation. Root includes like home_team return the full relation, while nested paths like winning_team.name return only the requested team fields.
       responses:
         '200':
           description: Successfully retrieved game details
@@ -1614,6 +1636,17 @@ paths:
             default: 0
             title: Offset
           description: Pagination offset
+        - name: include
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: array
+                items:
+                  type: string
+              - type: 'null'
+            title: Include
+          description: Relations to hydrate. Supports comma-separated values and dot notation. Root includes like current_team return the full relation, while nested paths like current_team.venue_name return only the requested team fields.
       responses:
         '200':
           description: Response successfully to retrieve players list
@@ -1672,6 +1705,17 @@ paths:
             title: Player Id
             description: MLB personId
           description: MLB personId
+        - name: include
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: array
+                items:
+                  type: string
+              - type: 'null'
+            title: Include
+          description: Relations to hydrate. Supports comma-separated values and dot notation. Root includes like current_team return the full relation, while nested paths like current_team.venue_name return only the requested team fields.
       responses:
         '200':
           description: Successfully retrieved player details
@@ -2582,6 +2626,24 @@ components:
             - type: 'null'
           title: Winning Team Id
           description: Winning team ID
+        home_team:
+          anyOf:
+            - $ref: '#/components/schemas/HydratedTeamDTO'
+            - type: 'null'
+          title: Home Team
+          description: Hydrated home team relation with only the requested team fields when dot notation is used
+        away_team:
+          anyOf:
+            - $ref: '#/components/schemas/HydratedTeamDTO'
+            - type: 'null'
+          title: Away Team
+          description: Hydrated away team relation with only the requested team fields when dot notation is used
+        winning_team:
+          anyOf:
+            - $ref: '#/components/schemas/HydratedTeamDTO'
+            - type: 'null'
+          title: Winning Team
+          description: Hydrated winning team relation with only the requested team fields when dot notation is used
         created_at:
           anyOf:
             - type: string
@@ -3061,6 +3123,73 @@ components:
         - league
       title: TeamDTO
       description: Data Transfer Object for Team entity.
+    HydratedTeamDTO:
+      properties:
+        id:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Id
+          description: Internal team ID
+        mlb_id:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Mlb Id
+          description: Official MLB team ID
+        name:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Name
+          description: Team name
+        abbreviation:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Abbreviation
+          description: Team abbreviation (e.g., NYY)
+        city:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: City
+          description: Team city
+        division:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Division
+          description: Division (East, Central, West)
+        league:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: League
+          description: League (American, National)
+        venue_name:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Venue Name
+          description: Home venue name
+        created_at:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Created At
+          description: Record creation timestamp
+        updated_at:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Updated At
+          description: Record last update timestamp
+      type: object
+      title: HydratedTeamDTO
+      description: Team relation payload returned by opt-in hydration. Root includes return the full relation; nested include paths return only the requested team fields.
     TeamDetailResponse:
       properties:
         status:
@@ -3211,6 +3340,12 @@ components:
             - type: integer
             - type: 'null'
           title: Current Team Id
+        current_team:
+          anyOf:
+            - $ref: '#/components/schemas/HydratedTeamDTO'
+            - type: 'null'
+          title: Current Team
+          description: Hydrated current team relation with only the requested team fields when dot notation is used
         created_at:
           anyOf:
             - type: string
