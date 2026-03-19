@@ -49,5 +49,5 @@ def test_game_dto_documents_optional_hydrated_team_relations() -> None:
 
     # Then
     for field_name in ["home_team", "away_team", "winning_team"]:
-        assert game_schema["properties"][field_name]["anyOf"][0] == {"$ref": "#/components/schemas/TeamDTO"}
-        assert game_schema["properties"][field_name]["description"].startswith("Hydrated ")
+        assert game_schema["properties"][field_name]["anyOf"][0] == {"$ref": "#/components/schemas/HydratedTeamDTO"}
+        assert "requested team fields" in game_schema["properties"][field_name]["description"]

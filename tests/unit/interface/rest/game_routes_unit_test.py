@@ -119,7 +119,7 @@ class TestListGamesRoute:
 
         # Then
         body = _response_body(response)
-        assert body["data"][0]["home_team"]["venue_name"] == "Los Angeles Dodgers Park"
+        assert body["data"][0]["home_team"] == {"venue_name": "Los Angeles Dodgers Park"}
         assert body["data"][0]["away_team"]["city"] == "New York"
         assert body["data"][0]["winning_team"]["mlb_id"] == 119
 
@@ -218,7 +218,7 @@ class TestGetGameRoute:
         # Then
         body = _response_body(response)
         assert body["data"]["home_team"]["name"] == "Los Angeles Dodgers"
-        assert body["data"]["winning_team"]["name"] == "Los Angeles Dodgers"
+        assert body["data"]["winning_team"] == {"name": "Los Angeles Dodgers"}
 
     @pytest.mark.asyncio
     async def test_rejects_non_positive_game_id(self):

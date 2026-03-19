@@ -79,6 +79,7 @@ def test_parse_include_selection_returns_empty_tree_when_query_is_missing():
 
     # Then
     assert selection.tree == {}
+    assert selection.full_relations == frozenset()
     assert selection.includes("current_team") is False
 
 
@@ -91,6 +92,7 @@ def test_parse_include_selection_merges_comma_separated_and_nested_paths():
 
     # Then
     assert selection.includes("current_team") is True
+    assert selection.includes_full_relation("current_team") is True
     assert selection.tree == {"current_team": {"venue_name": {}, "league": {}}}
 
 
@@ -103,6 +105,7 @@ def test_parse_include_selection_ignores_blank_and_duplicate_values():
 
     # Then
     assert selection.tree == {"current_team": {}}
+    assert selection.includes_full_relation("current_team") is True
 
 
 def test_parse_include_selection_rejects_unknown_paths():
@@ -140,7 +143,7 @@ def test_to_player_response_payload_includes_null_relation_when_requested_but_mi
     assert payload["current_team"] is None
 
 
-def test_to_player_response_payload_list_includes_current_team_when_requested():
+def test_to_player_response_payload_list_includes_full_current_team_when_root_is_requested():
     # Given
     team = _build_team()
     players = [_build_player(team=team)]
@@ -150,11 +153,38 @@ def test_to_player_response_payload_list_includes_current_team_when_requested():
     payload = to_player_response_payload_list(players, selection)
 
     # Then
-    assert payload[0]["current_team"].mlb_id == 119
-    assert payload[0]["current_team"].venue_name == "Dodger Stadium"
+    assert payload[0]["current_team"]["mlb_id"] == 119
+    assert payload[0]["current_team"]["venue_name"] == "Dodger Stadium"
+    assert payload[0]["current_team"]["league"] == "National League"
 
 
-def test_to_game_response_payload_list_includes_requested_relations_for_nested_paths():
+def test_to_player_response_payload_projects_only_requested_nested_current_team_fields():
+    # Given
+    player = _build_player(team=_build_team())
+    selection = parse_include_selection("current_team.venue_name", PLAYER_ALLOWED_INCLUDES)
+
+    # When
+    payload = to_player_response_payload(player, selection)
+
+    # Then
+    assert payload["current_team"] == {"venue_name": "Dodger Stadium"}
+
+
+def test_to_player_response_payload_returns_full_current_team_when_root_and_nested_paths_are_combined():
+    # Given
+    player = _build_player(team=_build_team())
+    selection = parse_include_selection(["current_team", "current_team.venue_name"], PLAYER_ALLOWED_INCLUDES)
+
+    # When
+    payload = to_player_response_payload(player, selection)
+
+    # Then
+    assert payload["current_team"]["mlb_id"] == 119
+    assert payload["current_team"]["venue_name"] == "Dodger Stadium"
+    assert payload["current_team"]["league"] == "National League"
+
+
+def test_to_game_response_payload_list_projects_nested_relations_and_keeps_full_root_relations():
     # Given
     home_team = _build_team(team_id=11, mlb_id=119, name="Los Angeles Dodgers")
     away_team = _build_team(team_id=12, mlb_id=121, name="New York Mets")
@@ -168,9 +198,10 @@ def test_to_game_response_payload_list_includes_requested_relations_for_nested_p
     payload = to_game_response_payload_list([game], selection)
 
     # Then
-    assert payload[0]["home_team"].name == "Los Angeles Dodgers"
-    assert payload[0]["away_team"].city == "Los Angeles"
-    assert payload[0]["winning_team"].mlb_id == 119
+    assert payload[0]["home_team"] == {"venue_name": "Dodger Stadium"}
+    assert payload[0]["away_team"] == {"city": "Los Angeles"}
+    assert payload[0]["winning_team"]["mlb_id"] == 119
+    assert payload[0]["winning_team"]["name"] == "Los Angeles Dodgers"
 
 
 def test_to_game_response_payload_omits_relations_when_not_requested():

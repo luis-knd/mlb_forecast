@@ -257,7 +257,7 @@ async def test_get_player_hydrates_current_team_when_nested_include_is_requested
     # Then
     body = _decode_response(response)
     assert body["status"] == "success"
-    assert body["data"]["current_team"]["venue_name"] == sample_team.venue_name
+    assert body["data"]["current_team"] == {"venue_name": sample_team.venue_name}
     use_cases["get_player_by_mlb_id"].execute.assert_awaited_once_with(mlb_player_id=660271)
 
 

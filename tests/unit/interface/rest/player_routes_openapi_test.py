@@ -75,8 +75,8 @@ def test_player_dto_documents_optional_current_team_relation():
     player_schema = openapi_schema["components"]["schemas"]["PlayerDTO"]
 
     # Then
-    assert player_schema["properties"]["current_team"]["anyOf"][0] == {"$ref": "#/components/schemas/TeamDTO"}
-    assert player_schema["properties"]["current_team"]["description"] == "Hydrated current team relation"
+    assert player_schema["properties"]["current_team"]["anyOf"][0] == {"$ref": "#/components/schemas/HydratedTeamDTO"}
+    assert "requested team fields" in player_schema["properties"]["current_team"]["description"]
 
 
 def _resolve_openapi_file() -> Path:
@@ -143,4 +143,4 @@ def test_openapi_contract_documents_player_include_parameter_and_current_team_re
     assert include_schema["type"] == "array"
     assert include_schema["items"] == {"type": "string"}
     assert "dot notation" in include_parameter["description"]
-    assert player_schema["properties"]["current_team"]["description"] == "Hydrated current team relation"
+    assert "requested team fields" in player_schema["properties"]["current_team"]["description"]

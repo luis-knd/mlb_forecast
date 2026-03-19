@@ -7,7 +7,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, RootModel, ConfigDict, Extra, Field
+from pydantic import BaseModel, RootModel, ConfigDict, Field
 
 
 class AppInfoData(BaseModel):
@@ -199,6 +199,19 @@ class TeamDTO(BaseModel):
     updated_at: Optional[datetime] = Field(None, description="Record last update timestamp", title="Updated At")
 
 
+class HydratedTeamDTO(BaseModel):
+    id: Optional[int] = Field(None, description="Internal team ID", title="Id")
+    mlb_id: Optional[int] = Field(None, description="Official MLB team ID", title="Mlb Id")
+    name: Optional[str] = Field(None, description="Team name", title="Name")
+    abbreviation: Optional[str] = Field(None, description="Team abbreviation (e.g., NYY)", title="Abbreviation")
+    city: Optional[str] = Field(None, description="Team city", title="City")
+    division: Optional[str] = Field(None, description="Division (East, Central, West)", title="Division")
+    league: Optional[str] = Field(None, description="League (American, National)", title="League")
+    venue_name: Optional[str] = Field(None, description="Home venue name", title="Venue Name")
+    created_at: Optional[datetime] = Field(None, description="Record creation timestamp", title="Created At")
+    updated_at: Optional[datetime] = Field(None, description="Record last update timestamp", title="Updated At")
+
+
 class TeamDetailResponse(BaseModel):
     status: str = Field("success", title="Status")
     code: int = Field(..., description="HTTP status code", title="Code")
@@ -227,7 +240,11 @@ class PlayerDTO(BaseModel):
     birth_date: Optional[datetime] = Field(None, title="Birth Date")
     active: bool = Field(..., title="Active")
     current_team_id: Optional[int] = Field(None, title="Current Team Id")
-    current_team: Optional[TeamDTO] = Field(None, description="Hydrated current team relation", title="Current Team")
+    current_team: Optional[HydratedTeamDTO] = Field(
+        None,
+        description="Hydrated current team relation with only the requested team fields when dot notation is used",
+        title="Current Team",
+    )
     created_at: Optional[datetime] = Field(None, title="Created At")
     updated_at: Optional[datetime] = Field(None, title="Updated At")
 
@@ -476,9 +493,21 @@ class GameDTO(BaseModel):
     home_score: Optional[int] = Field(None, description="Home team final score", title="Home Score")
     away_score: Optional[int] = Field(None, description="Away team final score", title="Away Score")
     winning_team_id: Optional[int] = Field(None, description="Winning team ID", title="Winning Team Id")
-    home_team: Optional[TeamDTO] = Field(None, description="Hydrated home team relation", title="Home Team")
-    away_team: Optional[TeamDTO] = Field(None, description="Hydrated away team relation", title="Away Team")
-    winning_team: Optional[TeamDTO] = Field(None, description="Hydrated winning team relation", title="Winning Team")
+    home_team: Optional[HydratedTeamDTO] = Field(
+        None,
+        description="Hydrated home team relation with only the requested team fields when dot notation is used",
+        title="Home Team",
+    )
+    away_team: Optional[HydratedTeamDTO] = Field(
+        None,
+        description="Hydrated away team relation with only the requested team fields when dot notation is used",
+        title="Away Team",
+    )
+    winning_team: Optional[HydratedTeamDTO] = Field(
+        None,
+        description="Hydrated winning team relation with only the requested team fields when dot notation is used",
+        title="Winning Team",
+    )
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp", title="Created At")
     updated_at: Optional[datetime] = Field(None, description="Record last update timestamp", title="Updated At")
 

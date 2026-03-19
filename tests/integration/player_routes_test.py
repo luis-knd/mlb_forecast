@@ -84,7 +84,7 @@ class TestPlayerRoutesIntegration:
         # Then
         assert response.status_code == HTTP_200_OK
         body = response.json()
-        assert body["data"]["current_team"]["venue_name"] == "Dodger Stadium"
+        assert body["data"]["current_team"] == {"venue_name": "Dodger Stadium"}
 
     def test_list_players_returns_bad_request_for_unknown_include(self, integration_client, populated_players_db):
         # When

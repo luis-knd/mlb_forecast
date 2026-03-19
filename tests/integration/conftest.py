@@ -13,6 +13,7 @@ from application.use_cases.player_use_cases import GetPlayerStatsUseCase, Ingest
 from domain.entities.game import Game
 from domain.entities.player import Player
 from domain.entities.team import Team
+from domain.exceptions import InvalidDataError, TeamNotFoundError
 from infrastructure.cache.cache_provider import get_cache_adapter
 from infrastructure.config.settings import settings
 from infrastructure.db.database import Base, get_db
@@ -164,6 +165,21 @@ class IntegrationGetPlayerByMlbIdUseCase:
             session.close()
 
 
+class IntegrationGetTeamUseCase:
+    async def execute(self, team_id: int) -> Team:
+        if team_id <= 0:
+            raise InvalidDataError("Invalid team ID. Must be a positive integer")
+
+        session = TestSessionLocal()
+        try:
+            team_model = session.query(TeamModel).filter(TeamModel.id == team_id).first()
+            if team_model is None:
+                raise TeamNotFoundError(team_id)
+            return _team_model_to_entity(team_model)
+        finally:
+            session.close()
+
+
 class IntegrationListGamesUseCase:
     async def execute(
         self,
@@ -269,6 +285,7 @@ def integration_client(mock_cache_for_integration):
         return {
             "list_players": IntegrationListPlayersUseCase(),
             "get_player": IntegrationGetPlayerUseCase(),
+            "get_team": IntegrationGetTeamUseCase(),
             "get_player_by_mlb_id": IntegrationGetPlayerByMlbIdUseCase(),
             "ingest_players_by_source": IngestPlayersBySourceUseCase(
                 player_repository,

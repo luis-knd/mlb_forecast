@@ -109,8 +109,7 @@ class TestGameRoutesIntegration:
         # Then
         assert response.status_code == HTTP_200_OK
         body = response.json()
-        assert body["data"]["winning_team"]["mlb_id"] == 133
-        assert body["data"]["winning_team"]["name"] == "Oakland Athletics"
+        assert body["data"]["winning_team"] == {"name": "Oakland Athletics"}
 
     def test_list_games_returns_bad_request_for_unknown_include(self, integration_client, test_db_session):
         # Given

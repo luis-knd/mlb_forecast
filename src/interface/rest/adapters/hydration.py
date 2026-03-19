@@ -32,14 +32,22 @@ GAME_ALLOWED_INCLUDES: AllowedIncludeTree = {
     "away_team": _TEAM_ALLOWED_INCLUDES,
     "winning_team": _TEAM_ALLOWED_INCLUDES,
 }
+TEAM_PAYLOAD_FIELDS = tuple(_TEAM_ALLOWED_INCLUDES.keys())
 
 
 @dataclass(frozen=True)
 class IncludeSelection:
     tree: IncludeTree
+    full_relations: frozenset[str]
 
     def includes(self, relation_name: str) -> bool:
         return relation_name in self.tree
+
+    def includes_full_relation(self, relation_name: str) -> bool:
+        return relation_name in self.full_relations
+
+    def relation_fields(self, relation_name: str) -> IncludeTree:
+        return self.tree.get(relation_name, {})
 
 
 def parse_include_selection(
@@ -47,12 +55,16 @@ def parse_include_selection(
     allowed_tree: AllowedIncludeTree,
 ) -> IncludeSelection:
     include_tree: IncludeTree = {}
+    full_relations: set[str] = set()
 
     for include_path in _normalize_include_values(raw_include):
         _validate_include_path(include_path, allowed_tree)
-        _merge_include_path(include_tree, include_path.split("."))
+        segments = include_path.split(".")
+        _merge_include_path(include_tree, segments)
+        if len(segments) == 1:
+            full_relations.add(segments[0])
 
-    return IncludeSelection(tree=include_tree)
+    return IncludeSelection(tree=include_tree, full_relations=frozenset(full_relations))
 
 
 def to_player_response_payload(player: Player, include: IncludeSelection) -> dict[str, Any]:
@@ -73,7 +85,11 @@ def to_player_response_payload(player: Player, include: IncludeSelection) -> dic
     }
 
     if include.includes("current_team"):
-        payload["current_team"] = _to_team_payload(player.current_team)
+        payload["current_team"] = _to_team_payload(
+            player.current_team,
+            selected_fields=include.relation_fields("current_team"),
+            include_full_relation=include.includes_full_relation("current_team"),
+        )
 
     return payload
 
@@ -99,11 +115,23 @@ def to_game_response_payload(game: Game, include: IncludeSelection) -> dict[str,
     }
 
     if include.includes("home_team"):
-        payload["home_team"] = _to_team_payload(game.home_team)
+        payload["home_team"] = _to_team_payload(
+            game.home_team,
+            selected_fields=include.relation_fields("home_team"),
+            include_full_relation=include.includes_full_relation("home_team"),
+        )
     if include.includes("away_team"):
-        payload["away_team"] = _to_team_payload(game.away_team)
+        payload["away_team"] = _to_team_payload(
+            game.away_team,
+            selected_fields=include.relation_fields("away_team"),
+            include_full_relation=include.includes_full_relation("away_team"),
+        )
     if include.includes("winning_team"):
-        payload["winning_team"] = _to_team_payload(game.winning_team)
+        payload["winning_team"] = _to_team_payload(
+            game.winning_team,
+            selected_fields=include.relation_fields("winning_team"),
+            include_full_relation=include.includes_full_relation("winning_team"),
+        )
 
     return payload
 
@@ -150,7 +178,16 @@ def _merge_include_path(include_tree: IncludeTree, segments: list[str]) -> None:
         current_tree = current_tree.setdefault(segment, {})
 
 
-def _to_team_payload(team: Team | None) -> Any:
+def _to_team_payload(
+    team: Team | None,
+    selected_fields: IncludeTree,
+    include_full_relation: bool,
+) -> Any:
     if team is None:
         return None
-    return to_team_dto(team)
+    team_payload = to_team_dto(team).model_dump()
+
+    if include_full_relation or not selected_fields:
+        return team_payload
+
+    return {field_name: team_payload[field_name] for field_name in TEAM_PAYLOAD_FIELDS if field_name in selected_fields}
