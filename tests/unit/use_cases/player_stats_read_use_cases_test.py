@@ -4,11 +4,17 @@ from unittest.mock import AsyncMock
 import pytest
 
 from application.use_cases.player_stats_read_use_cases import (
+    PLAYER_STATS_READ_TTL_SECONDS,
     GetPersistedPlayerCareerStatsUseCase,
     GetPersistedPlayerGameLogsUseCase,
     GetPersistedPlayerSeasonStatsUseCase,
     GetPersistedPlayerStatSplitsUseCase,
     GetPersistedPlayerYearByYearStatsUseCase,
+    _build_cache_key,
+    _filter_group,
+    _get_cached_or_load,
+    _sort_group_records,
+    _sort_history_records,
 )
 from domain.entities.player_stats_records import PlayerStatsGroupRecord, PlayerStatsHistoryRecord
 
@@ -200,3 +206,111 @@ async def test_get_persisted_player_stat_splits_sorts_records(mock_repository, m
 
     # Then
     assert [record.external_reference for record in result] == ["a", "b"]
+
+
+@pytest.mark.asyncio
+async def test_read_helpers_build_cache_key_and_store_loaded_values():
+    # Given
+    cache = AsyncMock()
+    cache.get.return_value = None
+    loader = AsyncMock(return_value=["loaded"])
+    cache_key = _build_cache_key(
+        player_id=7,
+        stats="gameLog",
+        group="hitting",
+        game_type="R",
+        season=2025,
+        days_back=7,
+        limit=25,
+    )
+
+    # When
+    result = await _get_cached_or_load(cache, cache_key, loader)
+
+    # Then
+    assert cache_key == (
+        "player_stats:persisted:player=7:stats=gameLog:group=hitting:gameType=R:season=2025:daysBack=7:limit=25"
+    )
+    assert result == ["loaded"]
+    cache.get.assert_awaited_once_with(cache_key)
+    loader.assert_awaited_once_with()
+    cache.set.assert_awaited_once_with(cache_key, ["loaded"], ttl=PLAYER_STATS_READ_TTL_SECONDS)
+
+
+def test_read_helpers_filter_and_sort_records_deterministically():
+    # Given
+    group_records = [
+        _group_record("pitching", 2025, 10, {"wins": 1}),
+        _group_record("hitting", 2025, 12, {"hits": 3}),
+        _group_record("hitting", 2024, 11, {"hits": 5}),
+    ]
+    history_records = [
+        _history_record("hitting", "missing-date", None),
+        _history_record("hitting", "dated-b", datetime(2025, 3, 10)),
+        _history_record("hitting", "dated-a", datetime(2025, 3, 20)),
+    ]
+
+    # When
+    all_groups = _filter_group(group_records, "all")
+    filtered_groups = _filter_group(group_records, "hitting")
+    sorted_groups = _sort_group_records(group_records)
+    sorted_history = _sort_history_records(history_records)
+
+    # Then
+    assert all_groups is group_records
+    assert [record.team_id for record in filtered_groups] == [12, 11]
+    assert [(record.season, record.stat_group, record.team_id) for record in sorted_groups] == [
+        (2025, "pitching", 10),
+        (2025, "hitting", 12),
+        (2024, "hitting", 11),
+    ]
+    assert [record.external_reference for record in sorted_history] == ["dated-a", "dated-b", "missing-date"]
+
+
+@pytest.mark.asyncio
+async def test_history_read_use_cases_use_none_group_when_all_is_requested(mock_repository, mock_cache):
+    # Given
+    mock_repository.list_history_records.return_value = []
+    game_logs_use_case = GetPersistedPlayerGameLogsUseCase(mock_repository, mock_cache)
+    stat_splits_use_case = GetPersistedPlayerStatSplitsUseCase(mock_repository, mock_cache)
+
+    # When
+    game_log_records = await game_logs_use_case.execute(
+        player_id=7,
+        season=2025,
+        group="all",
+        game_type="R",
+        days_back=None,
+        limit=5,
+    )
+    stat_split_records = await stat_splits_use_case.execute(
+        player_id=7,
+        season=2025,
+        group="all",
+        game_type="R",
+        limit=3,
+    )
+
+    # Then
+    assert game_log_records == []
+    assert stat_split_records == []
+    assert mock_repository.list_history_records.await_args_list[0].kwargs["stat_group"] is None
+    assert mock_repository.list_history_records.await_args_list[1].kwargs["stat_group"] is None
+
+
+@pytest.mark.asyncio
+async def test_get_persisted_player_career_stats_filters_specific_group(mock_repository, mock_cache):
+    # Given
+    mock_repository.list_group_records.return_value = [
+        _group_record("hitting", 2024, 11, {"hits": 100, "plate_appearances": 400, "batting_average": 0.25}),
+        _group_record("pitching", 2025, 11, {"wins": 2, "innings_pitched": 10.0, "earned_run_average": 3.0}),
+    ]
+    use_case = GetPersistedPlayerCareerStatsUseCase(mock_repository, mock_cache)
+
+    # When
+    result = await use_case.execute(player_id=7, group="hitting", game_type=None)
+
+    # Then
+    assert len(result) == 1
+    assert result[0].stat_group == "hitting"
+    mock_repository.list_group_records.assert_awaited_once_with(player_id=7, game_type="R")

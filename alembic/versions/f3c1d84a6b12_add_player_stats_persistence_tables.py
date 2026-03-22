@@ -10,12 +10,16 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.engine.reflection import Inspector
 
 # revision identifiers, used by Alembic.
 revision = "f3c1d84a6b12"
 down_revision = "b652ea929021"
 branch_labels = None
 depends_on = None
+
+AGGREGATE_CONTEXT_COLUMNS = ["player_id", "team_id", "season", "game_type"]
+HISTORY_CONTEXT_COLUMNS = ["player_id", "season", "game_type", "stat_group", "external_reference"]
 
 
 def _metadata_columns(team_nullable: bool = False) -> list[sa.Column]:
@@ -59,7 +63,51 @@ def _history_columns() -> list[sa.Column]:
     ]
 
 
+def _get_inspector() -> Inspector:
+    return sa.inspect(op.get_bind())
+
+
+def _table_exists(inspector: Inspector, table_name: str) -> bool:
+    return table_name in inspector.get_table_names()
+
+
+def _existing_index_names(inspector: Inspector, table_name: str) -> set[str]:
+    return {index["name"] for index in inspector.get_indexes(table_name)}
+
+
+def _existing_unique_constraint_names(inspector: Inspector, table_name: str) -> set[str]:
+    return {constraint["name"] for constraint in inspector.get_unique_constraints(table_name)}
+
+
+def _create_index_if_missing(table_name: str, index_name: str, columns: list[str], inspector: Inspector) -> None:
+    if index_name not in _existing_index_names(inspector, table_name):
+        op.create_index(index_name, table_name, columns, unique=False)
+
+
+def _create_unique_constraint_if_missing(
+    table_name: str,
+    constraint_name: str,
+    columns: list[str],
+    inspector: Inspector,
+) -> None:
+    if constraint_name not in _existing_unique_constraint_names(inspector, table_name):
+        op.create_unique_constraint(constraint_name, table_name, columns)
+
+
+def _drop_index_if_exists(table_name: str, index_name: str, inspector: Inspector) -> None:
+    if index_name in _existing_index_names(inspector, table_name):
+        op.drop_index(index_name, table_name=table_name)
+
+
 def _create_aggregate_table(table_name: str, extra_columns: list[sa.Column], unique_name: str) -> None:
+    inspector = _get_inspector()
+    if _table_exists(inspector, table_name):
+        _create_unique_constraint_if_missing(table_name, unique_name, AGGREGATE_CONTEXT_COLUMNS, inspector)
+        _create_index_if_missing(table_name, f"ix_{table_name}_id", ["id"], inspector)
+        _create_index_if_missing(table_name, f"idx_{table_name}_player_season", ["player_id", "season"], inspector)
+        _create_index_if_missing(table_name, f"idx_{table_name}_player_group", ["player_id", "game_type"], inspector)
+        return
+
     op.create_table(
         table_name,
         *_metadata_columns(),
@@ -72,13 +120,26 @@ def _create_aggregate_table(table_name: str, extra_columns: list[sa.Column], uni
 
 
 def _drop_aggregate_table(table_name: str) -> None:
-    op.drop_index(f"idx_{table_name}_player_group", table_name=table_name)
-    op.drop_index(f"idx_{table_name}_player_season", table_name=table_name)
-    op.drop_index(f"ix_{table_name}_id", table_name=table_name)
+    inspector = _get_inspector()
+    if not _table_exists(inspector, table_name):
+        return
+    _drop_index_if_exists(table_name, f"idx_{table_name}_player_group", inspector)
+    _drop_index_if_exists(table_name, f"idx_{table_name}_player_season", inspector)
+    _drop_index_if_exists(table_name, f"ix_{table_name}_id", inspector)
     op.drop_table(table_name)
 
 
 def _create_history_table(table_name: str, unique_name: str, extra_indexes: list[tuple[str, list[str]]]) -> None:
+    inspector = _get_inspector()
+    if _table_exists(inspector, table_name):
+        _create_unique_constraint_if_missing(table_name, unique_name, HISTORY_CONTEXT_COLUMNS, inspector)
+        _create_index_if_missing(table_name, f"ix_{table_name}_id", ["id"], inspector)
+        _create_index_if_missing(table_name, f"idx_{table_name}_player_season", ["player_id", "season"], inspector)
+        _create_index_if_missing(table_name, f"idx_{table_name}_player_group", ["player_id", "stat_group"], inspector)
+        for index_name, columns in extra_indexes:
+            _create_index_if_missing(table_name, index_name, columns, inspector)
+        return
+
     op.create_table(
         table_name,
         *_history_columns(),
@@ -99,11 +160,14 @@ def _create_history_table(table_name: str, unique_name: str, extra_indexes: list
 
 
 def _drop_history_table(table_name: str, extra_index_names: list[str]) -> None:
+    inspector = _get_inspector()
+    if not _table_exists(inspector, table_name):
+        return
     for index_name in extra_index_names:
-        op.drop_index(index_name, table_name=table_name)
-    op.drop_index(f"idx_{table_name}_player_group", table_name=table_name)
-    op.drop_index(f"idx_{table_name}_player_season", table_name=table_name)
-    op.drop_index(f"ix_{table_name}_id", table_name=table_name)
+        _drop_index_if_exists(table_name, index_name, inspector)
+    _drop_index_if_exists(table_name, f"idx_{table_name}_player_group", inspector)
+    _drop_index_if_exists(table_name, f"idx_{table_name}_player_season", inspector)
+    _drop_index_if_exists(table_name, f"ix_{table_name}_id", inspector)
     op.drop_table(table_name)
 
 

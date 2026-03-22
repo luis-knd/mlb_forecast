@@ -89,3 +89,40 @@ def test_player_stats_history_record_create_rejects_unknown_type():
             external_reference="123",
             payload={},
         )
+
+
+def test_player_stats_records_create_copy_mutable_inputs_and_trim_values():
+    # Given
+    metrics = {"hits": 4}
+    payload = {"outs": 6}
+
+    # When
+    group_record = PlayerStatsGroupRecord.create(
+        player_id=7,
+        team_id=11,
+        season=2025,
+        game_type=" r ",
+        stat_group=" running ",
+        metrics=metrics,
+    )
+    history_record = PlayerStatsHistoryRecord.create(
+        player_id=7,
+        team_id=11,
+        season=2025,
+        game_type=" p ",
+        stat_group=" hitting ",
+        stat_type="gameLog ",
+        external_reference="abc",
+        payload=payload,
+    )
+    metrics["hits"] = 10
+    payload["outs"] = 12
+
+    # Then
+    assert group_record.game_type == "R"
+    assert group_record.stat_group == "running"
+    assert group_record.metrics == {"hits": 4}
+    assert history_record.game_type == "P"
+    assert history_record.stat_group == "hitting"
+    assert history_record.stat_type == "gameLog"
+    assert history_record.payload == {"outs": 6}

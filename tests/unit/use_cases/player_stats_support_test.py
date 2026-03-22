@@ -5,10 +5,13 @@ import pytest
 from application.use_cases.player_stats_support import (
     aggregate_metrics,
     build_aggregated_group_record,
+    build_career_group_record,
     build_external_reference,
+    build_group_record,
     build_history_context,
     build_history_record,
     group_records_by_season,
+    iter_response_splits,
     limit_recent_history,
     merge_metrics,
     normalize_aggregate_metrics,
@@ -139,6 +142,113 @@ def test_build_external_reference_hashes_split_payload_when_no_game_identifier_e
 
     # Then
     assert external_reference.startswith("statSplits-3-")
+
+
+def test_iter_response_splits_and_external_reference_prioritize_game_identifiers():
+    # Given
+    stats_response = {
+        "stats_data": [
+            {"splits": [{"game": {"gamePk": 111}, "date": "2025-03-20"}]},
+            {"splits": [{"gamePk": 222, "date": "2025-03-21"}]},
+        ]
+    }
+
+    # When
+    splits = list(iter_response_splits(stats_response))
+    game_reference = build_external_reference("gameLog", {"game": {"gamePk": 111}, "gamePk": 222, "date": "x"}, 0)
+    dated_reference = build_external_reference("gameLog", {"date": "2025-03-20"}, 1)
+
+    # Then
+    assert len(splits) == 2
+    assert splits[0]["game"]["gamePk"] == 111
+    assert splits[1]["gamePk"] == 222
+    assert game_reference == "111"
+    assert dated_reference == "2025-03-20"
+
+
+def test_history_context_uses_fallback_fields_and_strips_blank_values():
+    # Given
+    split_payload = {"split": {"id": "vsLeft", "value": "", "code": "L", "displayName": " Lefties "}}
+
+    # When
+    context = build_history_context(split_payload)
+    missing_context = build_history_context({"split": "invalid"})
+
+    # Then
+    assert context == ("L", "L", "Lefties")
+    assert missing_context == (None, None, None)
+
+
+def test_build_group_and_career_records_preserve_metadata_and_derive_aggregate_source():
+    # Given
+    source_updated_at = datetime(2025, 3, 20, 10, 0, 0)
+    first_record = build_group_record(
+        player_id=7,
+        team_id=1,
+        season=2025,
+        game_type="R",
+        stat_group="hitting",
+        metrics={"hits": 10, "plate_appearances": 40, "batting_average": 0.25},
+        raw_payload={"source": "season"},
+        source_updated_at=source_updated_at,
+    )
+    second_record = build_group_record(
+        player_id=7,
+        team_id=2,
+        season=2025,
+        game_type="R",
+        stat_group="hitting",
+        metrics={"hits": 6, "plate_appearances": 20, "batting_average": 0.4},
+        raw_payload={"source": "seasonAdvanced"},
+    )
+    first_record.updated_at = datetime(2025, 3, 20, 11, 0, 0)
+    second_record.created_at = datetime(2025, 3, 20, 9, 0, 0)
+    second_record.updated_at = datetime(2025, 3, 20, 12, 0, 0)
+
+    # When
+    career_record = build_career_group_record(7, "R", "hitting", [first_record, second_record])
+
+    # Then
+    assert first_record.raw_payload == {"source": "season"}
+    assert first_record.source_updated_at == source_updated_at
+    assert career_record.source == "derived"
+    assert career_record.team_id is None
+    assert career_record.season == 0
+    assert career_record.metrics["hits"] == 16
+    assert career_record.created_at == second_record.created_at
+    assert career_record.updated_at == second_record.updated_at
+
+
+def test_aggregate_metrics_handles_zero_weight_and_recent_history_without_window():
+    # Given
+    zero_weight_records = [
+        _build_group_record("hitting", 2025, 1, {"hits": 1, "plate_appearances": 0, "batting_average": 0.5}),
+        _build_group_record("hitting", 2025, 2, {"hits": 2, "plate_appearances": 0, "batting_average": 0.3}),
+    ]
+    records = [
+        PlayerStatsHistoryRecord.create(
+            player_id=7,
+            team_id=1,
+            season=2025,
+            game_type="R",
+            stat_group="hitting",
+            stat_type="gameLog",
+            external_reference="aware",
+            payload={},
+            event_date=datetime.now(UTC) - timedelta(hours=1),
+        )
+    ]
+
+    # When
+    aggregated_metrics = aggregate_metrics(zero_weight_records, "hitting")
+    unchanged_records = limit_recent_history(records, None)
+    recent_records = limit_recent_history(records, 1)
+
+    # Then
+    assert aggregated_metrics["hits"] == 3
+    assert aggregated_metrics["batting_average"] == 0.0
+    assert unchanged_records is records
+    assert [record.external_reference for record in recent_records] == ["aware"]
 
 
 def test_aggregate_metrics_grouping_and_recent_history_filters_are_deterministic():
