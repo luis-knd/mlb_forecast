@@ -45,4 +45,4 @@ do_not_mutate = [
     "src/interface/rest/routes.py",
 ]
 tests_dir = ["tests/"]
-also_copy = ["pyproject.toml", "openapi/", "scripts/quality/"]
+also_copy = ["pyproject.toml", "openapi/", "scripts/quality/", "alembic/"]
