@@ -1877,6 +1877,681 @@ paths:
               schema:
                 $ref: '#/components/schemas/ServiceUnavailable'
                 description: Service Unavailable
+  /api/v1/players/{player_id}/stats/season:
+    get:
+      tags:
+        - Players
+        - Stats
+      summary: Get Persisted Player Season Stats
+      description: Retrieve persisted player season stats from the internal database.
+      operationId: get_persisted_player_season_stats_api_v1_players__player_id__stats_season_get
+      parameters:
+        - name: player_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            title: Player Id
+            description: Internal player ID
+          description: Internal player ID
+        - name: season
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1876
+            title: Season
+          description: Season year
+        - name: group
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - hitting
+              - pitching
+              - fielding
+              - catching
+              - running
+              - all
+            default: all
+            title: Group
+          description: Stats group to retrieve from persisted data
+        - name: gameType
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            default: R
+            title: Game Type
+          description: Persisted game type code
+      responses:
+        '200':
+          description: Successfully retrieved persisted player season stats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerStatsAggregateResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+  /api/v1/players/{player_id}/stats/career:
+    get:
+      tags:
+        - Players
+        - Stats
+      summary: Get Persisted Player Career Stats
+      description: Retrieve career aggregates derived from persisted player season stats.
+      operationId: get_persisted_player_career_stats_api_v1_players__player_id__stats_career_get
+      parameters:
+        - name: player_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            title: Player Id
+            description: Internal player ID
+          description: Internal player ID
+        - name: group
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - hitting
+              - pitching
+              - fielding
+              - catching
+              - running
+              - all
+            default: all
+            title: Group
+          description: Stats group to retrieve from persisted data
+        - name: gameType
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            default: R
+            title: Game Type
+          description: Persisted game type code
+      responses:
+        '200':
+          description: Successfully retrieved persisted player career stats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerStatsAggregateResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+  /api/v1/players/{player_id}/stats/year-by-year:
+    get:
+      tags:
+        - Players
+        - Stats
+      summary: Get Persisted Player Year By Year Stats
+      description: Retrieve year-by-year aggregates derived from persisted player season stats.
+      operationId: get_persisted_player_year_by_year_stats_api_v1_players__player_id__stats_year_by_year_get
+      parameters:
+        - name: player_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            title: Player Id
+            description: Internal player ID
+          description: Internal player ID
+        - name: group
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - hitting
+              - pitching
+              - fielding
+              - catching
+              - running
+              - all
+            default: all
+            title: Group
+          description: Stats group to retrieve from persisted data
+        - name: gameType
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            default: R
+            title: Game Type
+          description: Persisted game type code
+      responses:
+        '200':
+          description: Successfully retrieved persisted player year-by-year stats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerStatsAggregateResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+  /api/v1/players/{player_id}/stats/game-log:
+    get:
+      tags:
+        - Players
+        - Stats
+      summary: Get Persisted Player Game Logs
+      description: Retrieve persisted player game logs from the internal database.
+      operationId: get_persisted_player_game_logs_api_v1_players__player_id__stats_game_log_get
+      parameters:
+        - name: player_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            title: Player Id
+            description: Internal player ID
+          description: Internal player ID
+        - name: season
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1876
+            title: Season
+          description: Season year
+        - name: group
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - hitting
+              - pitching
+              - fielding
+              - catching
+              - running
+              - all
+            default: all
+            title: Group
+          description: Stats group to retrieve from persisted data
+        - name: gameType
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            default: R
+            title: Game Type
+          description: Persisted game type code
+        - name: daysBack
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: integer
+              - type: 'null'
+            minimum: 1
+            title: Days Back
+          description: Optional rolling window in days
+        - name: limit
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: integer
+              - type: 'null'
+            minimum: 1
+            maximum: 500
+            title: Limit
+          description: Optional maximum records to return
+      responses:
+        '200':
+          description: Successfully retrieved persisted player game logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerStatsHistoryResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+  /api/v1/players/{player_id}/stats/splits:
+    get:
+      tags:
+        - Players
+        - Stats
+      summary: Get Persisted Player Stat Splits
+      description: Retrieve persisted player stat splits from the internal database.
+      operationId: get_persisted_player_stat_splits_api_v1_players__player_id__stats_splits_get
+      parameters:
+        - name: player_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            title: Player Id
+            description: Internal player ID
+          description: Internal player ID
+        - name: season
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1876
+            title: Season
+          description: Season year
+        - name: group
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - hitting
+              - pitching
+              - fielding
+              - catching
+              - running
+              - all
+            default: all
+            title: Group
+          description: Stats group to retrieve from persisted data
+        - name: gameType
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            default: R
+            title: Game Type
+          description: Persisted game type code
+        - name: limit
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: integer
+              - type: 'null'
+            minimum: 1
+            maximum: 500
+            title: Limit
+          description: Optional maximum records to return
+      responses:
+        '200':
+          description: Successfully retrieved persisted player stat splits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerStatsHistoryResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+  /api/v1/data/ingest/player_stats/season:
+    post:
+      tags:
+        - Players
+        - Stats
+        - Data Ingestion
+      summary: Ingest Persisted Player Season Stats
+      description: Persist player season stats from StatsAPI into internal aggregate tables.
+      operationId: ingest_persisted_player_season_stats_api_v1_data_ingest_player_stats_season_post
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1876
+            default: 2026
+            title: Season
+          description: Season year to ingest
+        - name: group
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - hitting
+              - pitching
+              - fielding
+              - catching
+              - running
+              - all
+            default: all
+            title: Group
+          description: Stats group to ingest from StatsAPI
+        - name: gameType
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            default: R
+            title: Game Type
+          description: Persisted game type code
+        - name: playerId
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: integer
+              - type: 'null'
+            title: Player Id
+          description: Internal player ID to ingest
+        - name: teamId
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: integer
+              - type: 'null'
+            title: Team Id
+          description: Internal team ID to ingest all roster players
+        - name: forceRefresh
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+            title: Force Refresh
+          description: Force refresh even for historical seasons
+      responses:
+        '201':
+          description: Successfully ingested persisted player season stats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerStatsIngestionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
+  /api/v1/data/ingest/player_stats/history:
+    post:
+      tags:
+        - Players
+        - Stats
+        - Data Ingestion
+      summary: Ingest Persisted Player History Stats
+      description: Persist player game logs and stat splits from StatsAPI into internal history tables.
+      operationId: ingest_persisted_player_history_stats_api_v1_data_ingest_player_stats_history_post
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1876
+            default: 2026
+            title: Season
+          description: Season year to ingest
+        - name: group
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - hitting
+              - pitching
+              - fielding
+              - catching
+              - running
+              - all
+            default: all
+            title: Group
+          description: Stats group to ingest from StatsAPI
+        - name: gameType
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            default: R
+            title: Game Type
+          description: Persisted game type code
+        - name: playerId
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: integer
+              - type: 'null'
+            title: Player Id
+          description: Internal player ID to ingest
+        - name: teamId
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: integer
+              - type: 'null'
+            title: Team Id
+          description: Internal team ID to ingest all roster players
+        - name: daysBack
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: integer
+              - type: 'null'
+            minimum: 1
+            title: Days Back
+          description: Optional rolling daysBack for game logs
+        - name: forceRefresh
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+            title: Force Refresh
+          description: Force refresh even for historical seasons
+      responses:
+        '201':
+          description: Successfully ingested persisted player history stats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerStatsIngestionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntity'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailable'
   /api/v1/data/ingest/players:
     post:
       tags:
@@ -3499,6 +4174,347 @@ components:
         - data
       title: PlayerStatsResponse
       description: Response model for player stats endpoint.
+    PlayerStatsAggregateRecordDTO:
+      properties:
+        player_id:
+          type: integer
+          title: Player Id
+        team_id:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Team Id
+        season:
+          type: integer
+          title: Season
+        game_type:
+          type: string
+          title: Game Type
+        stat_group:
+          type: string
+          title: Stat Group
+        metrics:
+          type: object
+          additionalProperties: true
+          title: Metrics
+        source:
+          type: string
+          title: Source
+        source_updated_at:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Source Updated At
+        ingested_at:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Ingested At
+        created_at:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Created At
+        updated_at:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Updated At
+      type: object
+      required:
+        - player_id
+        - season
+        - game_type
+        - stat_group
+        - metrics
+        - source
+      title: PlayerStatsAggregateRecordDTO
+      description: Persisted player aggregate stats record.
+    PlayerStatsAggregateData:
+      properties:
+        player_id:
+          type: integer
+          title: Player Id
+        stats:
+          type: string
+          title: Stats
+        group:
+          type: string
+          title: Group
+        season:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Season
+        game_type:
+          type: string
+          title: Game Type
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerStatsAggregateRecordDTO'
+          title: Records
+      type: object
+      required:
+        - player_id
+        - stats
+        - group
+        - game_type
+        - records
+      title: PlayerStatsAggregateData
+      description: Persisted player aggregate stats collection.
+    PlayerStatsAggregateResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          $ref: '#/components/schemas/PlayerStatsAggregateData'
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+        - code
+        - data
+      title: PlayerStatsAggregateResponse
+      description: Response model for persisted player aggregate stats endpoints.
+    PlayerStatsHistoryRecordDTO:
+      properties:
+        player_id:
+          type: integer
+          title: Player Id
+        team_id:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Team Id
+        season:
+          type: integer
+          title: Season
+        game_type:
+          type: string
+          title: Game Type
+        stat_group:
+          type: string
+          title: Stat Group
+        external_reference:
+          type: string
+          title: External Reference
+        event_date:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Event Date
+        payload:
+          type: object
+          additionalProperties: true
+          title: Payload
+        context_key:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Context Key
+        context_value:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Context Value
+        context_label:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Context Label
+        source:
+          type: string
+          title: Source
+        ingested_at:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Ingested At
+        created_at:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Created At
+        updated_at:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Updated At
+      type: object
+      required:
+        - player_id
+        - season
+        - game_type
+        - stat_group
+        - external_reference
+        - payload
+        - source
+      title: PlayerStatsHistoryRecordDTO
+      description: Persisted player history record.
+    PlayerStatsHistoryData:
+      properties:
+        player_id:
+          type: integer
+          title: Player Id
+        stats:
+          type: string
+          title: Stats
+        group:
+          type: string
+          title: Group
+        season:
+          type: integer
+          title: Season
+        game_type:
+          type: string
+          title: Game Type
+        days_back:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Days Back
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerStatsHistoryRecordDTO'
+          title: Records
+      type: object
+      required:
+        - player_id
+        - stats
+        - group
+        - season
+        - game_type
+        - records
+      title: PlayerStatsHistoryData
+      description: Persisted player history stats collection.
+    PlayerStatsHistoryResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          $ref: '#/components/schemas/PlayerStatsHistoryData'
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+        - code
+        - data
+      title: PlayerStatsHistoryResponse
+      description: Response model for persisted player history stats endpoints.
+    PlayerStatsIngestionData:
+      properties:
+        operation:
+          type: string
+          title: Operation
+        players_processed:
+          type: integer
+          title: Players Processed
+        group_records_upserted:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Group Records Upserted
+        group_records_skipped:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Group Records Skipped
+        history_records_replaced:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: History Records Replaced
+        history_contexts_skipped:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: History Contexts Skipped
+        season:
+          type: integer
+          title: Season
+        group:
+          type: string
+          title: Group
+        game_type:
+          type: string
+          title: Game Type
+        days_back:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Days Back
+      type: object
+      required:
+        - operation
+        - players_processed
+        - season
+        - group
+        - game_type
+      title: PlayerStatsIngestionData
+      description: Ingestion summary for persisted player stats endpoints.
+    PlayerStatsIngestionResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: success
+        code:
+          type: integer
+          title: Code
+          description: HTTP status code
+        data:
+          $ref: '#/components/schemas/PlayerStatsIngestionData'
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+          description: List of error messages
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+        - code
+        - data
+      title: PlayerStatsIngestionResponse
+      description: Response model for persisted player stats ingestion endpoints.
     PlayerIngestionData:
       properties:
         ingestion_summary:

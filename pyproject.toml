@@ -31,5 +31,18 @@ pythonpath = ["src"]
 
 [tool.mutmut]
 paths_to_mutate = ["src/"]
+do_not_mutate = [
+    # Generated contract models are structural output, not handwritten behavior.
+    "src/interface/rest/generated/models/models.py",
+    # SQLAlchemy table declarations are verified through integration tests.
+    "src/infrastructure/db/player_stats_models.py",
+    # Abstract ports do not contain executable domain logic.
+    "src/application/ports/player_stats_repository.py",
+    # Persistence and HTTP adapters are exercised via integration/contract tests.
+    "src/infrastructure/db/repositories/player_stats_repository.py",
+    "src/interface/rest/adapters/player_stats_mappers.py",
+    "src/interface/rest/player_stats_routes.py",
+    "src/interface/rest/routes.py",
+]
 tests_dir = ["tests/"]
-also_copy = ["pyproject.toml", "openapi/", "scripts/quality/"]
+also_copy = ["pyproject.toml", "openapi/", "scripts/quality/", "alembic/"]
