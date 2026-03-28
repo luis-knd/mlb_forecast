@@ -24,6 +24,40 @@ from interface.rest.routes import router as api_router
 
 # Initialize ML model (cache handled by cache_provider)
 ml_model_adapter = MLModelAdapter()
+OPENAPI_TAG_METADATA = [
+    {
+        "name": "Teams",
+        "description": "Team catalogue, lookup endpoints and team-focused operations.",
+    },
+    {
+        "name": "Games",
+        "description": "Game schedule, retrieval and game-related ingestion workflows.",
+    },
+    {
+        "name": "Players",
+        "description": "Player lookup, hydration and player-focused operations.",
+    },
+    {
+        "name": "Stats",
+        "description": "Read-only statistical views served from persisted data.",
+    },
+    {
+        "name": "Predictions",
+        "description": "Prediction generation and prediction retrieval endpoints.",
+    },
+    {
+        "name": "Data Ingestion",
+        "description": "Write-oriented endpoints that ingest or refresh external MLB data.",
+    },
+    {
+        "name": "System",
+        "description": "Operational endpoints for health, cache and runtime diagnostics.",
+    },
+    {
+        "name": "ML Model",
+        "description": "Machine learning maintenance operations such as retraining.",
+    },
+]
 
 
 @asynccontextmanager
@@ -61,56 +95,28 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="""
-    # MLB Predictions Backend API
+    # MLB Forecast API
 
-    Enterprise-grade MLB game prediction platform delivering real-time analytics and machine learning insights.
+    Backend API for MLB forecasts, persisted stats retrieval, and ingestion workflows backed by PostgreSQL,
+    Redis, and MLB StatsAPI integrations.
 
-    ## 🚀 Core Features
+    ## Main domains
 
-    ### ⚾ **Data Ingestion Pipeline**
-    - Real-time game results from official MLB APIs
-    - Historical statistics and performance metrics
-    - Live game schedules and league standings
-    - Automated data validation and cleansing
+    - Teams and team season stats
+    - Games and schedules
+    - Players and persisted player stats
+    - Predictions
+    - Data ingestion and ML maintenance
+    - System diagnostics for health, cache, and runtime information
 
-    ### 🤖 **Advanced Machine Learning**
-    - Probabilistic game outcome predictions
-    - Total runs and score forecasting
-    - Player performance analytics
-    - Continuous model training and optimization
+    ## Contract
 
-    ### ⚡ **High-Performance Architecture**
-    - Multi-layer Redis caching system
-    - Optimized database queries with indexing
-    - Asynchronous processing for scalability
-    - Sub-second API response times
+    - `openapi/openapi.yml` is the design-first contract for public endpoints.
+    - The static contract and the OpenAPI served by FastAPI should stay aligned.
 
-    ### 📊 **Analytics & Insights**
-    - Team performance trending
-    - Head-to-head historical analysis
-    - Weather impact on game outcomes
-    - Injury reports integration
+    ## Response envelope
 
-    ## 🔧 Technical Stack
-
-    - **Framework**: FastAPI with async/await patterns
-    - **Database**: PostgreSQL with optimized schemas
-    - **Cache**: Redis for high-speed data retrieval
-    - **ML**: Scikit-learn with automated retraining
-    - **Architecture**: Hexagonal/Clean architecture principles
-
-    ## 📈 API Capabilities
-
-    - Hexagonal architecture for modularity
-    - RESTful endpoints with OpenAPI documentation
-    - Real-time prediction scoring
-    - Batch prediction processing
-    - Model performance monitoring
-    - Comprehensive error handling and logging
-
-    ## 📝 API Response Format
-
-    All endpoints return responses in the following standardized format:
+    All JSON endpoints return the standard response envelope:
 
     ```json
     {
@@ -124,6 +130,7 @@ app = FastAPI(
     """,
     version=settings.API_VERSION,
     lifespan=lifespan,
+    openapi_tags=OPENAPI_TAG_METADATA,
 )
 
 # Configure CORS

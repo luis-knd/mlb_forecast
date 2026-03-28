@@ -4,6 +4,7 @@ version = "1.0.0"
 description = "MLB Forecast Backend API"
 readme = "README.md"
 requires-python = ">=3.11"
+license = {text = "MIT"}
 authors = [
     {name = "Luis Candelario", email = "lcandelario@lcandesign.com"},
 ]
