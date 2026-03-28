@@ -7,14 +7,12 @@ from sqlalchemy.orm import Session
 from application.ports.cache import CachePort
 from application.use_cases.player_use_cases import (
     GetPlayerByMlbIdUseCase,
-    GetPlayerStatsUseCase,
     GetPlayerUseCase,
     IngestPlayersBySourceUseCase,
     ListPlayersUseCase,
 )
 from application.use_cases.team_use_cases import GetTeamUseCase
 from infrastructure.cache.cache_provider import get_cache_adapter
-from infrastructure.config.settings import settings
 from infrastructure.db.database import get_db
 from infrastructure.db.repositories.cached_team_repository import CachedTeamRepository
 from infrastructure.db.repositories.player_repository import PlayerRepository
@@ -36,7 +34,6 @@ from interface.rest.generated.models.models import (
     NotFound,
     PlayerDetailResponse,
     PlayerListResponse,
-    PlayerStatsResponse,
     ServiceUnavailable,
     UnprocessableEntity,
 )
@@ -133,11 +130,6 @@ def get_player_use_cases(
             mlb_api_adapter,
             cache,
         ),
-        "get_player_stats": GetPlayerStatsUseCase(
-            mlb_api_adapter,
-            cache,
-            all_groups_concurrency=settings.MLB_PLAYER_STATS_ALL_GROUPS_CONCURRENCY,
-        ),
     }
 
 
@@ -225,60 +217,6 @@ async def get_player(
     return ResponseHandler.success(
         data=to_player_response_payload(player, include_selection),
         message=f"Player {player.full_name()} retrieved successfully",
-    )
-
-
-@router.get(
-    "/players/{player_id}/stats",
-    tags=["Players", "Stats"],
-    response_model=PlayerStatsResponse,
-    responses={
-        "400": {"model": BadRequest},
-        "404": {"model": NotFound},
-        "422": {"model": UnprocessableEntity},
-        "500": {"model": InternalServerError},
-        "503": {"model": ServiceUnavailable},
-    },
-)
-async def get_player_stats(
-    player_id: int = Path(..., description="Internal player ID"),
-    stats: str = Query(..., description="Stats type (season, career, yearByYear, gameLog, statSplits, seasonAdvanced)"),
-    group: str = Query(..., description="Stats group (hitting, pitching, fielding, catching, running, all)"),
-    season: int | None = Query(None, description="Season year"),
-    game_type: str | None = Query(
-        None,
-        alias="gameType",
-        description="Game type code: R=Regular Season, S=Spring Training, P=Postseason, W=World Series, A=All-Star",
-    ),
-    days_back: int | None = Query(None, alias="daysBack", description="Rolling days back"),
-    use_cases: dict = Depends(get_player_use_cases),
-) -> JSONResponse:
-    if player_id <= 0:
-        raise DomainExceptions.InvalidDataError("player_id must be a positive integer")
-
-    player = await use_cases["get_player"].execute(player_id=player_id)
-    if not player:
-        raise DomainExceptions.PlayerNotFoundError(player_id)
-
-    try:
-        player_stats = await use_cases["get_player_stats"].execute(
-            mlb_player_id=player.mlb_id,
-            stats=stats,
-            group=group,
-            season=season,
-            game_type=game_type,
-            days_back=days_back,
-        )
-    except ValueError as error:
-        raise DomainExceptions.InvalidDataError(str(error)) from error
-
-    if not player_stats:
-        return ResponseHandler.not_found("Player stats", player_id)
-
-    response_payload = {**player_stats, "player_id": player_id}
-    return ResponseHandler.success(
-        data=response_payload,
-        message=(f"Player stats retrieved successfully for player {player_id} (stats={stats}, group={group})"),
     )
 
 

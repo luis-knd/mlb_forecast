@@ -14,10 +14,14 @@ API_BASE_URL=${API_BASE_URL:-http://localhost:8000}
 - `POST /api/v1/data/ingest/players`
 - `GET /api/v1/players`
 - `GET /api/v1/players/{player_id}`
-- `GET /api/v1/players/{player_id}/stats`
+- `GET /api/v1/players/{player_id}/stats/season`
+- `GET /api/v1/players/{player_id}/stats/career`
+- `GET /api/v1/players/{player_id}/stats/year-by-year`
+- `GET /api/v1/players/{player_id}/stats/game-log`
+- `GET /api/v1/players/{player_id}/stats/splits`
 
 `GET /api/v1/players/{player_id}` expects MLB `personId`.
-`GET /api/v1/players/{player_id}/stats` expects internal DB `player_id`.
+All persisted player-stats endpoints expect internal DB `player_id`.
 
 ## Ingestion Modes (`source`)
 `POST /api/v1/data/ingest/players` supports these values:
@@ -106,49 +110,39 @@ For ingestion, `teamId` now also uses the internal DB team id. The route resolve
 curl "$API_BASE_URL/api/v1/players/660271"
 ```
 
-## Querying Player Stats
-`GET /api/v1/players/{player_id}/stats` requires:
-- `stats`
-- `group`
-
-Optional:
-- `season`
-- `gameType`
-- `daysBack`
+## Querying Persisted Player Stats
 
 ### cURL: season hitting stats
 
 ```bash
-curl "$API_BASE_URL/api/v1/players/1/stats?stats=season&group=hitting&season=2025"
+curl "$API_BASE_URL/api/v1/players/1/stats/season?group=hitting&season=2025"
 ```
 
 ### cURL: career pitching postseason stats
 
 ```bash
-curl "$API_BASE_URL/api/v1/players/1/stats?stats=career&group=pitching&gameType=P"
+curl "$API_BASE_URL/api/v1/players/1/stats/career?group=pitching&gameType=P"
+```
+
+### cURL: year-by-year running stats
+
+```bash
+curl "$API_BASE_URL/api/v1/players/1/stats/year-by-year?group=running&gameType=R"
 ```
 
 ### cURL: game log hitting stats
 
 ```bash
-curl "$API_BASE_URL/api/v1/players/1/stats?stats=gameLog&group=hitting&season=2024"
+curl "$API_BASE_URL/api/v1/players/1/stats/game-log?group=hitting&season=2024"
 ```
 
-### cURL: all groups in a single call
+### cURL: situational hitting splits
 
 ```bash
-curl "$API_BASE_URL/api/v1/players/1/stats?stats=season&group=all&season=2025"
+curl "$API_BASE_URL/api/v1/players/1/stats/splits?group=hitting&season=2024"
 ```
 
 ## Allowed Values
-
-### `stats`
-- `season`: season totals
-- `career`: career totals
-- `yearByYear`: season-by-season stats
-- `gameLog`: game-by-game stats
-- `statSplits`: situational splits
-- `seasonAdvanced`: advanced season stats
 
 ### `group`
 - `hitting`
@@ -188,14 +182,11 @@ The implementation calls these MLB StatsAPI resources:
 - Player reads:
   - `players:mlb_id:{player_id}`
   - `players:list:...`
-- Player stats:
-  - `player_stats:player={mlb_id}:stats={stats}:group={group}:...`
+- Persisted player stats:
+  - `player_stats:persisted:player={player_id}:stats={stats}:group={group}:...`
 - Invalidation after ingestion:
   - `players:*`
   - `player_stats:*`
-
-For `group=all`, the API performs bounded concurrent calls to StatsAPI with groups
-`hitting`, `pitching`, `fielding`, `catching`, `running` and caches the aggregated payload.
 
 ## Reliability and Timeouts
 External MLB requests use configurable timeout/retry/backoff:
