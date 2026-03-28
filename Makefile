@@ -91,6 +91,10 @@ test-mutation: ## Ejecuta pruebas de mutación (mutmut) en el contenedor (uso oc
 	@echo "$(YELLOW)🧬 Ejecutando pruebas de mutación en contenedor app...$(NC)"
 	$(COMPOSE) exec app mutmut run $(ARGS)
 
+test-mutation-scoped: ## Ejecuta mutmut acotado a archivos src cambiados vs la rama base
+	@echo "$(YELLOW)🧬 Ejecutando pruebas de mutación acotadas en contenedor app...$(NC)"
+	$(COMPOSE) exec app python scripts/quality/run_scoped_mutmut.py $(ARGS)
+
 test-coverage: ## Ejecuta pruebas con coverage
 	@echo "$(YELLOW)📊 Ejecutando pruebas con coverage...$(NC)"
 	$(VENV_PIP) install pytest-cov

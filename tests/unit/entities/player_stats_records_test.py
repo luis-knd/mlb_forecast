@@ -34,7 +34,10 @@ def test_player_stats_group_record_create_normalizes_values_and_builds_cache_key
 
 def test_player_stats_group_record_create_rejects_unknown_group():
     # Given / When / Then
-    with pytest.raises(ValueError, match="stat_group must be one of"):
+    with pytest.raises(
+        ValueError,
+        match=r"^stat_group must be one of: catching, fielding, hitting, pitching, running$",
+    ):
         PlayerStatsGroupRecord.create(
             player_id=7,
             team_id=11,
@@ -86,7 +89,7 @@ def test_player_stats_history_record_create_normalizes_values_and_builds_cache_k
 
 def test_player_stats_history_record_create_rejects_unknown_type():
     # Given / When / Then
-    with pytest.raises(ValueError, match="stat_type must be one of"):
+    with pytest.raises(ValueError, match=r"^stat_type must be one of: gameLog, statSplits$"):
         PlayerStatsHistoryRecord.create(
             player_id=7,
             team_id=11,

@@ -81,6 +81,11 @@ def test_safe_int_normalizes_expected_values(value, expected):
     assert safe_int(value) == expected
 
 
+def test_safe_int_returns_zero_for_empty_string():
+    # Given / When / Then
+    assert safe_int("") == 0
+
+
 @pytest.mark.parametrize(
     ("value", "expected"),
     [
@@ -96,6 +101,11 @@ def test_safe_float_normalizes_expected_values(value, expected):
     assert safe_float(value) == expected
 
 
+def test_safe_float_returns_zero_for_empty_string():
+    # Given / When / Then
+    assert safe_float("") == 0.0
+
+
 def test_parse_datetime_candidate_supports_strings_and_datetimes():
     # Given
     existing_datetime = datetime(2025, 3, 20, 10, 0)
@@ -106,6 +116,11 @@ def test_parse_datetime_candidate_supports_strings_and_datetimes():
     assert parse_datetime_candidate(None) is None
     assert parse_datetime_candidate("") is None
     assert parse_datetime_candidate("bad-date") is None
+
+
+def test_parse_datetime_candidate_normalizes_uppercase_z_suffix():
+    # Given / When / Then
+    assert parse_datetime_candidate("2025-03-20T10:00:00Z") == datetime(2025, 3, 20, 10, 0, tzinfo=UTC)
 
 
 def test_iter_response_splits_yields_known_splits_and_ignores_missing_blocks():
