@@ -5,6 +5,8 @@ These use cases persist player seasonal aggregates and history for future foreca
 
 from __future__ import annotations
 
+from collections import defaultdict
+from collections.abc import Iterable
 from datetime import datetime
 from typing import Any
 
@@ -14,6 +16,7 @@ from application.ports.player_repository import PlayerRepositoryPort
 from application.ports.player_stats_repository import PlayerStatsRepositoryPort
 from application.ports.team_repository import TeamRepositoryPort
 from application.use_cases.player_stats_support import (
+    aggregate_metrics,
     build_group_record,
     build_history_record,
     iter_response_splits,
@@ -50,11 +53,48 @@ def _should_refresh_existing_records(
     return season >= datetime.now().year
 
 
-def _index_splits_by_team(stats_response: dict[str, Any] | None) -> dict[int | None, dict[str, Any]]:
-    indexed_splits: dict[int | None, dict[str, Any]] = {}
+def _group_splits_by_team(stats_response: dict[str, Any] | None) -> dict[int | None, list[dict[str, Any]]]:
+    grouped_splits: dict[int | None, list[dict[str, Any]]] = defaultdict(list)
     for split_payload in iter_response_splits(stats_response or {}):
-        indexed_splits[resolve_team_mlb_id(split_payload)] = split_payload
-    return indexed_splits
+        grouped_splits[resolve_team_mlb_id(split_payload)].append(split_payload)
+    return dict(grouped_splits)
+
+
+def _aggregate_split_metrics(stat_group: str, split_payloads: Iterable[dict[str, Any]]) -> dict[str, Any]:
+    metrics_payloads = list(split_payloads)
+    if len(metrics_payloads) == 1:
+        return normalize_aggregate_metrics(stat_group, metrics_payloads[0].get("stat", {}))
+
+    metrics_records = [
+        PlayerStatsGroupRecord.create(
+            player_id=0,
+            team_id=None,
+            season=0,
+            game_type="R",
+            stat_group=stat_group,
+            metrics=normalize_aggregate_metrics(stat_group, split_payload.get("stat", {})),
+        )
+        for split_payload in metrics_payloads
+    ]
+    return aggregate_metrics(metrics_records, stat_group)
+
+
+def _aggregate_advanced_metrics(stat_group: str, split_payloads: Iterable[dict[str, Any]]) -> dict[str, Any]:
+    aggregated_metrics: dict[str, Any] = {}
+    for split_payload in split_payloads:
+        aggregated_metrics = merge_metrics(
+            aggregated_metrics,
+            normalize_aggregate_metrics(stat_group, split_payload.get("stat", {})),
+        )
+    return aggregated_metrics
+
+
+def _collapse_split_payloads(split_payloads: list[dict[str, Any]]) -> dict[str, Any] | list[dict[str, Any]] | None:
+    if not split_payloads:
+        return None
+    if len(split_payloads) == 1:
+        return split_payloads[0]
+    return split_payloads
 
 
 class _PlayerStatsIngestionBase:
@@ -145,7 +185,7 @@ class IngestPlayerSeasonStatsUseCase(_PlayerStatsIngestionBase):
         season: int,
         game_type: str,
         stat_group: str,
-    ) -> tuple[dict[str, Any] | None, dict[int | None, dict[str, Any]]]:
+    ) -> tuple[dict[str, Any] | None, dict[int | None, list[dict[str, Any]]]]:
         season_response = await self.mlb_api.get_player_stats(
             mlb_player_id=player_mlb_id,
             stats="season",
@@ -163,7 +203,7 @@ class IngestPlayerSeasonStatsUseCase(_PlayerStatsIngestionBase):
             season=season,
             game_type=game_type,
         )
-        return season_response, _index_splits_by_team(advanced_response)
+        return season_response, _group_splits_by_team(advanced_response)
 
     async def _build_group_records(
         self,
@@ -172,23 +212,22 @@ class IngestPlayerSeasonStatsUseCase(_PlayerStatsIngestionBase):
         game_type: str,
         stat_group: str,
         season_response: dict[str, Any],
-        advanced_splits_by_team: dict[int | None, dict[str, Any]],
+        advanced_splits_by_team: dict[int | None, list[dict[str, Any]]],
     ) -> list[PlayerStatsGroupRecord]:
         if player.id is None:
             return []
 
         group_records: list[PlayerStatsGroupRecord] = []
-        for season_split in iter_response_splits(season_response):
-            team_id = await self._resolve_internal_team_id(player, season_split)
+        for team_mlb_id, season_splits in _group_splits_by_team(season_response).items():
+            team_id = await self._resolve_internal_team_id(player, season_splits[0])
             if team_id is None:
                 continue
-            team_mlb_id = resolve_team_mlb_id(season_split)
-            advanced_split = advanced_splits_by_team.get(team_mlb_id)
-            merged_metrics = normalize_aggregate_metrics(stat_group, season_split.get("stat", {}))
-            if advanced_split is not None:
+            merged_metrics = _aggregate_split_metrics(stat_group, season_splits)
+            advanced_splits = advanced_splits_by_team.get(team_mlb_id, [])
+            if advanced_splits:
                 merged_metrics = merge_metrics(
                     merged_metrics,
-                    normalize_aggregate_metrics(stat_group, advanced_split.get("stat", {})),
+                    _aggregate_advanced_metrics(stat_group, advanced_splits),
                 )
             group_records.append(
                 build_group_record(
@@ -198,7 +237,10 @@ class IngestPlayerSeasonStatsUseCase(_PlayerStatsIngestionBase):
                     game_type=game_type,
                     stat_group=stat_group,
                     metrics=merged_metrics,
-                    raw_payload={"season": season_split, "seasonAdvanced": advanced_split},
+                    raw_payload={
+                        "season": _collapse_split_payloads(season_splits),
+                        "seasonAdvanced": _collapse_split_payloads(advanced_splits),
+                    },
                 )
             )
         return group_records

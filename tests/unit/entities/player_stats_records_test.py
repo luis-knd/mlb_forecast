@@ -26,6 +26,9 @@ def test_player_stats_group_record_create_normalizes_values_and_builds_cache_key
     assert record.raw_payload == {"sample": True}
     assert record.created_at is not None
     assert record.updated_at is not None
+    assert record.ingested_at is not None
+    assert record.created_at == record.updated_at == record.ingested_at
+    assert record.source == "statsapi"
     assert record.cache_key() == "player_stats:aggregate:player=7:season=2025:gameType=R:group=hitting"
 
 
@@ -73,6 +76,9 @@ def test_player_stats_history_record_create_normalizes_values_and_builds_cache_k
     assert record.context_key == "home"
     assert record.context_value == "yes"
     assert record.context_label == "Home split"
+    assert record.source == "statsapi"
+    assert record.ingested_at is not None
+    assert record.created_at == record.updated_at == record.ingested_at
     assert record.cache_key() == "player_stats:history:player=7:season=2025:gameType=R:group=pitching:type=gameLog"
 
 
