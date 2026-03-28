@@ -9,13 +9,12 @@ from sqlalchemy import create_engine, or_
 from sqlalchemy.orm import sessionmaker
 
 from application.use_cases.game_use_cases import IngestGamesUseCase, ListUpcomingGamesUseCase
-from application.use_cases.player_use_cases import GetPlayerStatsUseCase, IngestPlayersBySourceUseCase
+from application.use_cases.player_use_cases import IngestPlayersBySourceUseCase
 from domain.entities.game import Game
 from domain.entities.player import Player
 from domain.entities.team import Team
 from domain.exceptions import InvalidDataError, TeamNotFoundError
 from infrastructure.cache.cache_provider import get_cache_adapter
-from infrastructure.config.settings import settings
 from infrastructure.db.database import Base, get_db
 from infrastructure.db.models import GameModel, PlayerModel, TeamModel
 from infrastructure.db.repositories.game_repository import GameRepository
@@ -292,11 +291,6 @@ def integration_client(mock_cache_for_integration):
                 team_repository,
                 mlb_api_adapter,
                 mock_cache_for_integration,
-            ),
-            "get_player_stats": GetPlayerStatsUseCase(
-                mlb_api_adapter,
-                mock_cache_for_integration,
-                all_groups_concurrency=settings.MLB_PLAYER_STATS_ALL_GROUPS_CONCURRENCY,
             ),
         }
 

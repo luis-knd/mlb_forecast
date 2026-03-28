@@ -6,7 +6,6 @@ import pytest
 from application.dto.mlb_api_response import MLBPlayerDTO
 from application.use_cases.player_use_cases import (
     GetPlayerByMlbIdUseCase,
-    GetPlayerStatsUseCase,
     IngestPlayersBySourceUseCase,
     ListPlayersUseCase,
 )
@@ -92,113 +91,6 @@ class TestListPlayersUseCase:
             offset=0,
         )
         mock_cache.set.assert_called_once()
-
-
-class TestGetPlayerStatsUseCase:
-    @pytest.mark.asyncio
-    async def test_raises_error_for_invalid_stats_type(self, mock_cache):
-        # Given
-        mlb_api = AsyncMock()
-        use_case = GetPlayerStatsUseCase(mlb_api, mock_cache)
-
-        # When / Then
-        with pytest.raises(ValueError, match="stats must be one of"):
-            await use_case.execute(
-                mlb_player_id=660271,
-                stats="invalid",
-                group="hitting",
-            )
-
-    @pytest.mark.asyncio
-    async def test_fetches_stats_and_caches_response(self, mock_cache):
-        # Given
-        mlb_api = AsyncMock()
-        mlb_api.get_player_stats = AsyncMock(return_value={"player_id": 660271, "stats_data": [{"x": 1}]})
-        use_case = GetPlayerStatsUseCase(mlb_api, mock_cache)
-
-        # When
-        result = await use_case.execute(
-            mlb_player_id=660271,
-            stats="season",
-            group="hitting",
-            season=2025,
-            game_type="r",
-            days_back=30,
-        )
-
-        # Then
-        assert result is not None
-        mlb_api.get_player_stats.assert_called_once_with(
-            mlb_player_id=660271,
-            stats="season",
-            group="hitting",
-            season=2025,
-            game_type="R",
-            days_back=30,
-        )
-        mock_cache.set.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_aggregates_all_groups_with_deterministic_order(self, mock_cache):
-        # Given
-        mlb_api = AsyncMock()
-
-        async def _group_response(**kwargs):
-            group = kwargs["group"]
-            return {
-                "player_id": kwargs["mlb_player_id"],
-                "stats": kwargs["stats"],
-                "group": group,
-                "season": kwargs["season"],
-                "game_type": kwargs["game_type"],
-                "days_back": kwargs["days_back"],
-                "stats_data": [{"group_name": group}],
-            }
-
-        mlb_api.get_player_stats = AsyncMock(side_effect=_group_response)
-        use_case = GetPlayerStatsUseCase(mlb_api, mock_cache, all_groups_concurrency=2)
-
-        # When
-        result = await use_case.execute(
-            mlb_player_id=660271,
-            stats="season",
-            group="all",
-            season=2025,
-            game_type="r",
-            days_back=30,
-        )
-
-        # Then
-        assert result is not None
-        assert result["group"] == "all"
-        assert [entry["group_name"] for entry in result["stats_data"]] == [
-            "hitting",
-            "pitching",
-            "fielding",
-            "catching",
-            "running",
-        ]
-        assert mlb_api.get_player_stats.await_count == 5
-        mock_cache.set.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_returns_none_when_all_group_queries_return_no_data(self, mock_cache):
-        # Given
-        mlb_api = AsyncMock()
-        mlb_api.get_player_stats = AsyncMock(return_value=None)
-        use_case = GetPlayerStatsUseCase(mlb_api, mock_cache)
-
-        # When
-        result = await use_case.execute(
-            mlb_player_id=660271,
-            stats="season",
-            group="all",
-        )
-
-        # Then
-        assert result is None
-        assert mlb_api.get_player_stats.await_count == 5
-        mock_cache.set.assert_not_called()
 
 
 class TestIngestPlayersBySourceUseCase:

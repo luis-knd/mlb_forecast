@@ -44,7 +44,6 @@ def sample_team() -> Team:
     return team
 
 
-@patch("interface.rest.player_routes.GetPlayerStatsUseCase")
 @patch("interface.rest.player_routes.IngestPlayersBySourceUseCase")
 @patch("interface.rest.player_routes.GetPlayerByMlbIdUseCase")
 @patch("interface.rest.player_routes.GetTeamUseCase")
@@ -64,7 +63,6 @@ def test_get_player_use_cases_wires_dependencies(
     mock_get_team_use_case_cls,
     mock_get_player_by_mlb_id_use_case_cls,
     mock_ingest_players_by_source_use_case_cls,
-    mock_get_player_stats_use_case_cls,
 ):
     # Given
     mock_db = MagicMock()
@@ -78,7 +76,6 @@ def test_get_player_use_cases_wires_dependencies(
     get_team_use_case = MagicMock()
     get_player_by_mlb_id_use_case = MagicMock()
     ingest_players_by_source_use_case = MagicMock()
-    get_player_stats_use_case = MagicMock()
 
     mock_player_repository_cls.return_value = player_repository
     mock_team_repository_cls.return_value = team_repository
@@ -89,7 +86,6 @@ def test_get_player_use_cases_wires_dependencies(
     mock_get_team_use_case_cls.return_value = get_team_use_case
     mock_get_player_by_mlb_id_use_case_cls.return_value = get_player_by_mlb_id_use_case
     mock_ingest_players_by_source_use_case_cls.return_value = ingest_players_by_source_use_case
-    mock_get_player_stats_use_case_cls.return_value = get_player_stats_use_case
 
     # When
     use_cases = player_routes.get_player_use_cases(db=mock_db, cache=mock_cache)
@@ -101,7 +97,6 @@ def test_get_player_use_cases_wires_dependencies(
         "get_team": get_team_use_case,
         "get_player_by_mlb_id": get_player_by_mlb_id_use_case,
         "ingest_players_by_source": ingest_players_by_source_use_case,
-        "get_player_stats": get_player_stats_use_case,
     }
     mock_player_repository_cls.assert_called_once_with(mock_db)
     mock_team_repository_cls.assert_called_once_with(mock_db)
@@ -116,11 +111,6 @@ def test_get_player_use_cases_wires_dependencies(
         cached_team_repository,
         mlb_api_adapter,
         mock_cache,
-    )
-    mock_get_player_stats_use_case_cls.assert_called_once_with(
-        mlb_api_adapter,
-        mock_cache,
-        all_groups_concurrency=player_routes.settings.MLB_PLAYER_STATS_ALL_GROUPS_CONCURRENCY,
     )
 
 
@@ -277,125 +267,6 @@ async def test_get_player_raises_not_found_for_unknown_player():
     # When / Then
     with pytest.raises(DomainExceptions.PlayerNotFoundError):
         await player_routes.get_player(player_id=660271, include=None, use_cases=use_cases)
-
-
-@pytest.mark.asyncio
-async def test_get_player_stats_returns_success_response(sample_player):
-    # Given
-    use_cases = {
-        "get_player": AsyncMock(),
-        "get_player_stats": AsyncMock(),
-    }
-    use_cases["get_player"].execute.return_value = sample_player
-    use_cases["get_player_stats"].execute.return_value = {
-        "player_id": sample_player.mlb_id,
-        "stats": "season",
-        "group": "hitting",
-        "season": 2025,
-        "stats_data": [{"group": {"displayName": "hitting"}}],
-    }
-
-    # When
-    response = await player_routes.get_player_stats(
-        player_id=sample_player.id,
-        stats="season",
-        group="hitting",
-        season=2025,
-        game_type=None,
-        days_back=None,
-        use_cases=use_cases,
-    )
-
-    # Then
-    body = _decode_response(response)
-    assert body["status"] == "success"
-    assert body["data"]["player_id"] == sample_player.id
-    assert body["data"]["stats"] == "season"
-    use_cases["get_player"].execute.assert_awaited_once_with(player_id=sample_player.id)
-    use_cases["get_player_stats"].execute.assert_awaited_once_with(
-        mlb_player_id=sample_player.mlb_id,
-        stats="season",
-        group="hitting",
-        season=2025,
-        game_type=None,
-        days_back=None,
-    )
-
-
-@pytest.mark.asyncio
-async def test_get_player_stats_rejects_non_positive_player_id():
-    # Given / When / Then
-    with pytest.raises(DomainExceptions.InvalidDataError, match="player_id must be a positive integer"):
-        await player_routes.get_player_stats(
-            player_id=0,
-            stats="season",
-            group="hitting",
-            use_cases={"get_player": AsyncMock(), "get_player_stats": AsyncMock()},
-        )
-
-
-@pytest.mark.asyncio
-async def test_get_player_stats_raises_not_found_for_unknown_internal_player():
-    # Given
-    use_cases = {
-        "get_player": AsyncMock(),
-        "get_player_stats": AsyncMock(),
-    }
-    use_cases["get_player"].execute.return_value = None
-
-    # When / Then
-    with pytest.raises(DomainExceptions.PlayerNotFoundError):
-        await player_routes.get_player_stats(
-            player_id=7,
-            stats="season",
-            group="hitting",
-            use_cases=use_cases,
-        )
-
-
-@pytest.mark.asyncio
-async def test_get_player_stats_translates_value_error_to_invalid_data_error(sample_player):
-    # Given
-    use_cases = {
-        "get_player": AsyncMock(),
-        "get_player_stats": AsyncMock(),
-    }
-    use_cases["get_player"].execute.return_value = sample_player
-    use_cases["get_player_stats"].execute.side_effect = ValueError("group must be valid")
-
-    # When / Then
-    with pytest.raises(DomainExceptions.InvalidDataError, match="group must be valid"):
-        await player_routes.get_player_stats(
-            player_id=sample_player.id,
-            stats="season",
-            group="invalid",
-            use_cases=use_cases,
-        )
-
-
-@pytest.mark.asyncio
-async def test_get_player_stats_returns_not_found_response_when_stats_are_missing(sample_player):
-    # Given
-    use_cases = {
-        "get_player": AsyncMock(),
-        "get_player_stats": AsyncMock(),
-    }
-    use_cases["get_player"].execute.return_value = sample_player
-    use_cases["get_player_stats"].execute.return_value = None
-
-    # When
-    response = await player_routes.get_player_stats(
-        player_id=sample_player.id,
-        stats="season",
-        group="hitting",
-        use_cases=use_cases,
-    )
-
-    # Then
-    body = _decode_response(response)
-    assert body["status"] == "error"
-    assert body["message"] == "Resource not found"
-    assert body["errors"] == [f"Player stats with ID {sample_player.id} not found"]
 
 
 @pytest.mark.asyncio
