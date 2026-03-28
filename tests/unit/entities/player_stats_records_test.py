@@ -155,3 +155,22 @@ def test_player_stats_history_record_create_keeps_custom_history_entry_key():
     # Then
     assert record.external_reference == "12345"
     assert record.history_entry_key == "gameLog|12345|-|-|abcd1234"
+
+
+def test_player_stats_history_record_create_falls_back_to_external_reference_when_custom_key_is_blank():
+    # Given / When
+    record = PlayerStatsHistoryRecord.create(
+        player_id=7,
+        team_id=11,
+        season=2025,
+        game_type="R",
+        stat_group="hitting",
+        stat_type="gameLog",
+        external_reference=" 12345 ",
+        history_entry_key="   ",
+        payload={"hits": 2},
+    )
+
+    # Then
+    assert record.external_reference == "12345"
+    assert record.history_entry_key == "12345"

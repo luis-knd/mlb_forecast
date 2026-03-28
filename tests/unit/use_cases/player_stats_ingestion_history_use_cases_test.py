@@ -287,3 +287,44 @@ async def test_ingest_group_history_deduplicates_exact_duplicate_records_before_
     assert replaced == 1
     replace_call = mock_player_stats_repository.replace_history_records.await_args_list[0]
     assert len(replace_call.kwargs["records"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_ingest_group_history_keeps_distinct_rows_with_same_game_pk(
+    mock_player_repository,
+    mock_team_repository,
+    mock_player_stats_repository,
+    mock_cache,
+):
+    # Given
+    first_payload = {
+        "team": {"id": 119},
+        "date": "2025-03-20",
+        "game": {"gamePk": 822839},
+        "stat": {"gamesStarted": 1, "putOuts": 3},
+    }
+    second_payload = {
+        "team": {"id": 119},
+        "date": "2025-03-20",
+        "game": {"gamePk": 822839},
+        "stat": {"gamesStarted": 0, "putOuts": 0},
+    }
+    mock_mlb_api = AsyncMock()
+    mock_mlb_api.get_player_stats.side_effect = [stats_response(first_payload, second_payload), None]
+    use_case = build_history_use_case(
+        mock_player_repository,
+        mock_team_repository,
+        mock_player_stats_repository,
+        mock_cache,
+        mock_mlb_api,
+    )
+
+    # When
+    replaced = await use_case._ingest_group_history(build_player(), 2025, "R", "fielding", None, True)
+
+    # Then
+    assert replaced == 2
+    replace_call = mock_player_stats_repository.replace_history_records.await_args_list[0]
+    assert len(replace_call.kwargs["records"]) == 2
+    assert [record.external_reference for record in replace_call.kwargs["records"]] == ["822839", "822839"]
+    assert replace_call.kwargs["records"][0].history_entry_key != replace_call.kwargs["records"][1].history_entry_key

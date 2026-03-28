@@ -126,7 +126,11 @@ class PlayerStatsHistoryRecord:
         """Create a new persisted player history record."""
         now = datetime.now()
         normalized_external_reference = str(external_reference).strip()
-        normalized_history_entry_key = str(history_entry_key or normalized_external_reference).strip()
+        normalized_history_entry_key = (
+            str(history_entry_key).strip() if history_entry_key is not None else normalized_external_reference
+        )
+        if not normalized_history_entry_key:
+            normalized_history_entry_key = normalized_external_reference
         return cls(
             id=None,
             player_id=player_id,

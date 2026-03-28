@@ -119,6 +119,42 @@ def test_build_history_entry_key_distinguishes_same_game_log_by_payload():
     assert first_entry_key != second_entry_key
 
 
+def test_build_history_entry_key_distinguishes_same_payload_by_context():
+    # Given
+    split_payload = {"stat": {"hits": 2}}
+
+    # When
+    home_entry_key = build_history_entry_key("statSplits", "abc", split_payload, "home", "Y")
+    away_entry_key = build_history_entry_key("statSplits", "abc", split_payload, "away", "N")
+
+    # Then
+    assert home_entry_key != away_entry_key
+
+
+def test_build_history_record_uses_hashed_reference_for_stat_splits():
+    # Given
+    split_payload = {
+        "split": {"code": "away", "value": "N", "description": "Away"},
+        "stat": {"hits": 2},
+    }
+
+    # When
+    history_record = build_history_record(
+        player_id=7,
+        team_id=11,
+        season=2025,
+        game_type="R",
+        stat_group="hitting",
+        stat_type="statSplits",
+        split_payload=split_payload,
+        index=3,
+    )
+
+    # Then
+    assert history_record.external_reference.startswith("statSplits-3-")
+    assert history_record.history_entry_key.startswith(f"statSplits|{history_record.external_reference}|away|N|")
+
+
 def test_deduplicate_history_records_keeps_first_exact_duplicate():
     # Given
     first_record = PlayerStatsHistoryRecord.create(
@@ -149,6 +185,38 @@ def test_deduplicate_history_records_keeps_first_exact_duplicate():
 
     # Then
     assert deduplicated_records == [first_record]
+
+
+def test_deduplicate_history_records_keeps_distinct_rows_with_same_external_reference():
+    # Given
+    first_record = PlayerStatsHistoryRecord.create(
+        player_id=7,
+        team_id=1,
+        season=2025,
+        game_type="R",
+        stat_group="fielding",
+        stat_type="gameLog",
+        external_reference="822839",
+        history_entry_key="gameLog|822839|-|-|firstpayloadhash",
+        payload={"game": {"gamePk": 822839}, "stat": {"putOuts": 3}},
+    )
+    second_record = PlayerStatsHistoryRecord.create(
+        player_id=7,
+        team_id=1,
+        season=2025,
+        game_type="R",
+        stat_group="fielding",
+        stat_type="gameLog",
+        external_reference="822839",
+        history_entry_key="gameLog|822839|-|-|secondpayloadhas",
+        payload={"game": {"gamePk": 822839}, "stat": {"putOuts": 0}},
+    )
+
+    # When
+    deduplicated_records = deduplicate_history_records([first_record, second_record])
+
+    # Then
+    assert deduplicated_records == [first_record, second_record]
 
 
 def test_limit_recent_history_filters_records_using_days_back_and_timezone_awareness():
