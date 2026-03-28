@@ -1,806 +1,306 @@
-# Backend de Pronósticos MLB
+# MLB Forecast Backend
 
-Sistema completo de backend para pronósticos de partidos de MLB con arquitectura escalable, machine learning y automatización completa.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![OpenAPI 3.1](https://img.shields.io/badge/OpenAPI-3.1-6BA539?logo=openapiinitiative&logoColor=white)](https://www.openapis.org/)
+[![PostgreSQL 15](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Redis 7](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)](https://redis.io/)
+[![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 
-## 🏗️ Stack Tecnológico
+Backend hexagonal para pronósticos MLB e ingestión de estadísticas. El proyecto expone una API FastAPI, persiste datos
+en PostgreSQL, usa Redis como caché e incluye adaptadores relacionados con ML y jobs programados. El contrato OpenAPI
+en `openapi/openapi.yml` es la fuente de verdad para los endpoints públicos.
 
-- **Lenguaje**: Python 3.11+
-- **Framework Web**: FastAPI (alto rendimiento, async, documentación automática)
-- **Base de Datos**: PostgreSQL (robusta para datos relacionales complejos)
-- **Caché**: Redis (rápido, persistente, estructuras de datos flexibles)
-- **ORM**: SQLAlchemy + Alembic (migraciones)
-- **ML**: scikit-learn + pandas + numpy (modelos estadísticos)
-- **Validación**: Pydantic
-- **Containerización**: Docker + docker-compose
-- **HTTP Client**: httpx para llamadas async a APIs
-- **Scheduler**: APScheduler para tareas periódicas
-- **Logging**: structlog para logging estructurado
+## Indice
 
-## 📁 Arquitectura del Proyecto
+- [Que contiene este repositorio](#que-contiene-este-repositorio)
+- [Mapa del repositorio](#mapa-del-repositorio)
+- [Prerrequisitos](#prerrequisitos)
+- [Arranque rapido con Docker](#arranque-rapido-con-docker)
+- [Desarrollo local](#desarrollo-local)
+- [Uso rapido](#uso-rapido)
+- [Configuración](#configuración)
+- [Flujos de trabajo habituales](#flujos-de-trabajo-habituales)
+- [Contrato OpenAPI y código generado](#contrato-openapi-y-código-generado)
+- [Base de datos y migraciones](#base-de-datos-y-migraciones)
+- [Resumen de arquitectura](#resumen-de-arquitectura)
+- [Notas importantes](#notas-importantes)
+- [Tests y quality gates](#tests-y-quality-gates)
+- [Contribución](#contribución)
+- [Licencia](#licencia)
+- [Referencias del proyecto](#referencias-del-proyecto)
 
-El proyecto utiliza una **Arquitectura Hexagonal** (también conocida como Ports & Adapters) que separa claramente el dominio de la aplicación de los detalles técnicos.
+## Que contiene este repositorio
 
-```
-mlb_forecast_backend/
-├── src/                           # Nueva arquitectura hexagonal
-│   ├── domain/                    # Entidades y reglas de negocio
-│   │   └── entities/              # Entidades del dominio
-│   │       ├── game.py            # Entidad de juego
-│   │       ├── player.py          # Entidad de jugador
-│   │       ├── prediction.py      # Entidad de predicción
-│   │       ├── team.py            # Entidad de equipo
-│   │       └── team_stats.py      # Entidad de estadísticas de equipo
-│   ├── application/               # Casos de uso y puertos
-│   │   ├── ports/                 # Interfaces para adaptadores
-│   │   │   ├── cache.py           # Puerto para caché
-│   │   │   ├── game_repository.py # Puerto para repositorio de juegos
-│   │   │   ├── ml_model.py        # Puerto para modelo ML
-│   │   │   ├── mlb_api.py         # Puerto para API MLB
-│   │   │   ├── player_repository.py # Puerto para repositorio de jugadores
-│   │   │   ├── prediction_repository.py # Puerto para repositorio de predicciones
-│   │   │   ├── team_repository.py # Puerto para repositorio de equipos
-│   │   │   └── team_stats_repository.py # Puerto para repositorio de estadísticas
-│   │   └── use_cases/             # Casos de uso de la aplicación
-│   │       ├── game_use_cases.py  # Casos de uso para juegos
-│   │       ├── player_use_cases.py # Casos de uso para jugadores
-│   │       ├── prediction_use_cases.py # Casos de uso para predicciones
-│   │       ├── team_stats_use_cases.py # Casos de uso para estadísticas
-│   │       └── team_use_cases.py  # Casos de uso para equipos
-│   ├── infrastructure/            # Adaptadores para servicios externos
-│   │   ├── cache/                 # Adaptador para Redis
-│   │   │   └── redis_adapter.py   # Implementación de caché con Redis
-│   │   ├── config/                # Configuración
-│   │   │   └── settings.py        # Configuración con Pydantic
-│   │   ├── db/                    # Base de datos y repositorios
-│   │   │   ├── database.py        # Configuración SQLAlchemy
-│   │   │   ├── models.py          # Modelos de datos
-│   │   │   └── repositories/      # Implementaciones de repositorios
-│   │   ├── ml/                    # Adaptador para modelos ML
-│   │   │   └── model_adapter.py   # Implementación de modelo ML
-│   │   └── mlb_api/               # Adaptador para API MLB
-│   │       └── adapter.py         # Implementación de cliente API MLB
-│   └── interface/                 # Interfaces de usuario
-│       └── rest/                  # API REST con FastAPI
-│           ├── main.py            # Aplicación FastAPI principal
-│           └── routes.py          # Rutas de la API
-├── app/                           # Código legacy (deprecado)
-│   ├── api/                       # Endpoints REST (legacy)
-│   ├── core/                      # Configuración central (legacy)
-│   ├── db/                        # Base de datos (legacy)
-│   ├── services/                  # Servicios de negocio (legacy)
-│   ├── ml/                        # Machine Learning (legacy)
-│   ├── cache/                     # Sistema de caché (legacy)
-│   └── main.py                    # Aplicación FastAPI principal (legacy)
-├── alembic/                       # Sistema de migraciones
-├── scripts/                       # Scripts de utilidad
-├── tests/                         # Tests automatizados
-├── docker-compose.yml             # Orquestación de servicios
-├── Dockerfile                     # Imagen de la aplicación
-├── requirements.txt               # Dependencias Python
-├── alembic.ini                    # Configuración de migraciones
-└── .env.example                   # Variables de entorno ejemplo
+- Aplicación FastAPI en `src/interface/rest` con dominios de equipos, juegos, jugadores, predicciones, endpoints de
+  sistema e ingestión de datos.
+- Núcleo hexagonal en `src/domain` y `src/application`.
+- Adaptadores de infraestructura para PostgreSQL, Redis, MLB StatsAPI, carga de modelos ML y jobs programados en
+  `src/infrastructure`.
+- Flujo API-first basado en `openapi/openapi.yml` y modelos generados en `src/interface/rest/generated`.
+- Documentación de apoyo en `docs/`, incluidas referencias de MLB StatsAPI y quality gates.
+
+Si solo necesitas la ruta más corta para levantar el entorno, ve directamente a
+[Arranque rapido con Docker](#arranque-rapido-con-docker).
+
+## Mapa del repositorio
+
+```text
+.
+├── src/
+│   ├── domain/                    # Entidades y value objects
+│   ├── application/               # Puertos, DTOs y casos de uso
+│   ├── infrastructure/            # Adaptadores de DB, caché, MLB API, ML y jobs
+│   └── interface/
+│       ├── rest/                  # Entry point FastAPI, rutas y manejo de respuestas
+│       └── scheduler/             # Entry point del scheduler
+├── openapi/openapi.yml            # Contrato público de la API
+├── docs/                          # Documentación operativa, notas API y planes técnicos
+├── scripts/                       # Setup, migraciones y utilidades de calidad
+├── tests/                         # Tests unitarios, de integración y de base de datos
+├── models/                        # Artefactos de modelo cargados por el adaptador ML
+├── docker-compose.yml             # App, scheduler, postgres y redis
+├── Makefile                       # Flujos de trabajo comunes de desarrollo
+└── start.py                       # Script guiado de setup y ayuda OpenAPI
 ```
 
-### 🏗️ Principios de la Arquitectura Hexagonal
+## Prerrequisitos
 
-1. **Independencia del Dominio**: El código de dominio (entidades y lógica de negocio) no depende de frameworks o infraestructura.
-2. **Puertos e Interfaces**: Definimos interfaces (puertos) para comunicarnos con el exterior.
-3. **Adaptadores**: Implementaciones concretas de los puertos para tecnologías específicas.
-4. **Dependencias hacia adentro**: Las dependencias siempre apuntan hacia el dominio, nunca al revés.
+- Docker y Docker Compose
+- Python `3.11` si quieres ejecutar la app en local fuera de contenedores
+- Git
 
-Esta arquitectura facilita:
-
-- **Testabilidad**: Podemos probar la lógica de negocio sin dependencias externas
-- **Mantenibilidad**: Cambiar una tecnología (como la base de datos) no afecta al dominio
-- **Evolución**: Podemos añadir nuevas funcionalidades sin modificar el código existente
-
-## 🗄️ Migraciones de Base de Datos
-
-Este proyecto utiliza **Alembic** para gestionar las migraciones de base de datos de manera automática y controlada.
-
-### 🚀 Migraciones Automáticas
-
-Las migraciones se ejecutan **automáticamente** al iniciar el contenedor gracias al script `entrypoint.sh`:
+Alias recomendado para flujos basados en contenedores:
 
 ```bash
-# Al ejecutar docker-compose up, las migraciones se aplican automáticamente
-docker-compose up -d
+export APP_CTN=${APP_CTN:-mlb_forecast_backend-app-1}
 ```
 
-> ✅ **No necesitas ejecutar migraciones manualmente** - se aplican automáticamente al inicio
+## Arranque rapido con Docker
 
-### 📋 Comandos de Migración Manual
+Esta es la ruta recomendada para el desarrollo diario porque replica mejor el runtime del proyecto.
 
-Si necesitas ejecutar migraciones manualmente o crear nuevas:
+1. Clona el repositorio:
+   ```bash
+   git clone https://github.com/luis-knd/mlb_forecast.git mlb_forecast_backend
+   cd mlb_forecast_backend
+   ```
 
-#### 🔄 Aplicar Migraciones
+2. Crea tu archivo local de entorno:
+   ```bash
+   cp .env.example .env
+   ```
+
+3. Construye y levanta el stack completo:
+   ```bash
+   docker compose up --build -d
+   export APP_CTN=${APP_CTN:-mlb_forecast_backend-app-1}
+   docker compose ps
+   ```
+
+4. Verifica la aplicación:
+   - [API docs](http://localhost:8000/docs)
+   - [ReDoc](http://localhost:8000/redoc)
+   - [Healthcheck](http://localhost:8000/api/v1/health)
+
+5. Sigue logs cuando lo necesites:
+   ```bash
+   docker compose logs -f app
+   docker compose logs -f scheduler
+   ```
+
+6. Detén el stack:
+   ```bash
+   docker compose down
+   ```
+
+**Notas**:
+- El contenedor `app` ejecuta `alembic upgrade head` al arrancar mediante `scripts/entrypoint.sh`.
+- `python start.py` sigue disponible si prefieres un helper interactivo para setup, validación y generación OpenAPI.
+
+## Desarrollo local
+Usa este flujo si quieres ejecutar FastAPI en el host manteniendo PostgreSQL y Redis en Docker.
 
 ```bash
-# Aplicar todas las migraciones pendientes
-docker exec -it mlb_forecast_backend-app-1 alembic upgrade head
-
-# Aplicar migración específica
-docker exec -it mlb_forecast_backend-app-1 alembic upgrade +1
-
-# Ver migración actual
-docker exec -it mlb_forecast_backend-app-1 alembic current
-
-# Ver historial de migraciones
-docker exec -it mlb_forecast_backend-app-1 alembic history --verbose
+make setup
+make env
+make run-services
+make run
 ```
 
-#### ⬇️ Revertir Migraciones
+Comandos locales útiles:
+
+- `make run-services`: levanta solo `postgres` y `redis`
+- `make run`: ejecuta `uvicorn src.interface.rest.main:app --reload`
+- `make test`: ejecuta la suite local de pytest
+- `make test-coverage`: genera cobertura en `htmlcov/`
+
+## Uso rapido
+
+Una vez levantado el proyecto, estas llamadas son un buen smoke test público del backend:
 
 ```bash
-# Revertir última migración
-docker exec -it mlb_forecast_backend-app-1 alembic downgrade -1
-
-# Revertir a migración específica
-docker exec -it mlb_forecast_backend-app-1 alembic downgrade <revision_id>
-
-# Revertir todas las migraciones (⚠️ CUIDADO: Elimina todas las tablas)
-docker exec -it mlb_forecast_backend-app-1 alembic downgrade base
+curl http://localhost:8000/api/v1/health
+curl http://localhost:8000/
 ```
 
-#### ➕ Crear Nueva Migración
+Si quieres explorar el contrato y probar endpoints desde navegador:
+
+- Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
+- ReDoc: [http://localhost:8000/redoc](http://localhost:8000/redoc)
+
+## Configuración
+
+La lista completa de variables de entorno vive en `.env.example`. Estas son las que tocarás con más frecuencia:
+
+| Variable                                                           | Propósito                                                     |
+|--------------------------------------------------------------------|---------------------------------------------------------------|
+| `DATABASE_URL`                                                     | Cadena de conexión SQLAlchemy usada por la app                |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`                | Valores de bootstrap para PostgreSQL en Docker                |
+| `REDIS_URL`                                                        | Cadena de conexión Redis                                      |
+| `MLB_API_BASE_URL`, `MLB_API_VERSION`                              | Configuración base de MLB StatsAPI                            |
+| `MLB_API_TIMEOUT`, `MLB_API_MAX_RETRIES`, `MLB_API_BACKOFF_FACTOR` | Controles de resiliencia frente a la API externa              |
+| `MLB_PLAYER_STATS_ALL_GROUPS_CONCURRENCY`                          | Límite de concurrencia para ingestión fan-out de player stats |
+| `CACHE_DEFAULT_TTL`, `CACHE_GAMES_TTL`, `CACHE_STATS_TTL`          | TTLs de la caché Redis                                        |
+| `LOG_LEVEL`, `ENVIRONMENT`, `DEBUG`                                | Comportamiento de runtime y nivel de logging                  |
+
+## Flujos de trabajo habituales
+
+| Objetivo                                   | Comando                                                                     |
+|--------------------------------------------|-----------------------------------------------------------------------------|
+| Levantar todo en Docker                    | `docker compose up --build -d`                                              |
+| Ejecutar la app Dockerizada desde Make     | `make run-docker`                                                           |
+| Ver el estado de contenedores              | `docker compose ps`                                                         |
+| Seguir logs de la app                      | `docker compose logs -f app`                                                |
+| Ejecutar la suite local completa           | `make test`                                                                 |
+| Ejecutar tests dentro del contenedor `app` | `docker exec -i "$APP_CTN" pytest -q`                                       |
+| Ejecutar solo unit tests                   | `docker exec -i "$APP_CTN" pytest -q tests/unit`                            |
+| Ejecutar solo integration tests            | `docker exec -i "$APP_CTN" pytest -q tests/integration`                     |
+| Ejecutar mutación acotada antes de push    | `make test-mutation-scoped ARGS="--base-ref origin/develop --min-score 80"` |
+| Ejecutar hooks locales                     | `pre-commit run --all-files`                                                |
+
+## Contrato OpenAPI y código generado
+`openapi/openapi.yml` es el primer archivo que debes revisar cuando añades o cambias comportamiento público de la API.
+
+**Opciones de validación**:
+```bash
+make openapi-validate
+docker exec -i "$APP_CTN" python -c "import start; start.validate_openapi()"
+```
+
+**Opciones de generación**:
+```bash
+make openapi-generate
+docker exec -i "$APP_CTN" python -c "import start; start.generate_from_openapi()"
+```
+
+**Detalles importantes**:
+- Los modelos generados viven en `src/interface/rest/generated/models/`.
+- `start.generate_from_openapi()` omite por defecto la generación de routers y actualiza solo modelos generados.
+- Si necesitas regenerar routers de forma intencional, define `CODEGEN_SKIP_ROUTERS=0` antes de lanzar la generación.
+- Parte del código REST generado queda fuera de algunos quality gates y no debería editarse a mano salvo que el flujo lo
+  requiera explícitamente.
+
+## Base de datos y migraciones
+El flujo Docker normal aplica migraciones automáticamente al arrancar el contenedor. Usa comandos Alembic manuales solo
+cuando estés cambiando persistencia o depurando el estado de migraciones.
 
 ```bash
-# Crear migración con cambios detectados automáticamente
-docker exec -it mlb_forecast_backend-app-1 alembic revision --autogenerate -m "Descripción del cambio"
+export APP_CTN=${APP_CTN:-mlb_forecast_backend-app-1}
 
-# Crear migración vacía (para cambios manuales)
-docker exec -it mlb_forecast_backend-app-1 alembic revision -m "Descripción del cambio"
+docker exec -i "$APP_CTN" alembic current
+docker exec -i "$APP_CTN" alembic history --verbose
+docker exec -i "$APP_CTN" alembic revision --autogenerate -m "Describe change"
+docker exec -i "$APP_CTN" alembic upgrade head
+docker exec -i "$APP_CTN" alembic downgrade -1
 ```
 
-#### 📊 Estado de la Base de Datos
+Si cambias modelos de base de datos, mantén alineadas estas piezas:
+
+- Modelos SQLAlchemy y repositorios en `src/infrastructure/db`
+- Migración Alembic en `alembic/versions`
+- Schemas OpenAPI si el cambio de persistencia afecta a DTOs públicos
+
+## Resumen de arquitectura
+
+Este repositorio sigue una estructura hexagonal con dirección de dependencias hacia dentro.
+
+- `src/domain`: entidades de negocio y value objects sin dependencias de framework.
+- `src/application`: puertos y casos de uso que orquestan el comportamiento del dominio.
+- `src/infrastructure`: adaptadores concretos para persistencia, Redis, MLB StatsAPI, ML y jobs del scheduler.
+- `src/interface/rest`: rutas FastAPI, adaptadores request/response y manejo centralizado de excepciones.
+- `src/interface/scheduler`: entry point de ejecución programada separada de la capa HTTP.
+
+La superficie REST actual gira alrededor de:
+- equipos y estadísticas de temporada
+- juegos
+- jugadores y player stats
+- predicciones
+- endpoints de ingestión
+- endpoints de sistema para health, cache e información de entorno
+
+Para el detalle exacto de la superficie pública, prioriza siempre el contrato y la documentación servida por la
+aplicación sobre el resumen del README.
+
+## Notas importantes
+
+- El contrato OpenAPI tiene dos representaciones que deben permanecer alineadas:
+  - contrato estático en `openapi/openapi.yml`
+  - OpenAPI servido por FastAPI desde `src/interface/rest/main.py`
+- La clasificación visual de Swagger depende de los `tags` definidos por operación. No añadas `tags=` en
+  `router.include_router(...)` porque terminarás contaminando endpoints de lectura con secciones incorrectas.
+- `start.generate_from_openapi()` regenera modelos, no debe usarse como sustituto de revisar manualmente el contrato.
+- El contenedor `app` aplica migraciones automáticamente al arrancar. Si una migración nueva rompe el arranque, el
+  primer sitio donde mirar es `docker compose logs -f app`.
+
+## Tests y quality gates
+Verificación mínima antes de hacer push:
 
 ```bash
-# Verificar estado actual
-docker exec -it mlb_forecast_backend-app-1 alembic current
-
-# Mostrar diferencias pendientes
-docker exec -it mlb_forecast_backend-app-1 alembic show <revision_id>
-
-# Verificar si hay migraciones pendientes
-docker exec -it mlb_forecast_backend-app-1 alembic check
-```
-
-## 🐳 Comandos Docker Útiles
-
-### 📦 Gestión de Contenedores
-
-```bash
-# 🚀 Iniciar todos los servicios
-docker-compose up -d
-
-# 🛑 Detener todos los servicios
-docker-compose down
-
-# 🔄 Reiniciar servicios
-docker-compose restart
-
-# 🔄 Reiniciar servicio específico
-docker-compose restart app
-docker-compose restart postgres
-docker-compose restart redis
-
-# 📊 Ver estado de servicios
-docker-compose ps
-
-# 🔍 Ver logs en tiempo real
-docker-compose logs -f app
-
-# 📋 Ver logs de servicio específico
-docker-compose logs -f postgres
-docker-compose logs -f redis
-docker-compose logs -f scheduler
-```
-
-### 🔧 Acceso a Contenedores
-
-```bash
-# 💻 Acceder al shell del contenedor principal
-docker exec -it mlb_forecast_backend-app-1 bash
-
-# 🗄️ Acceder a PostgreSQL
-docker exec -it mlb_forecast_backend-postgres-1 psql -U mlb_user -d mlb_forecast
-
-# 🔴 Acceder a Redis CLI
-docker exec -it mlb_forecast_backend-redis-1 redis-cli
-
-# 🐍 Ejecutar Python interactivo en el contenedor
-docker exec -it mlb_forecast_backend-app-1 python
-
-# 📦 Instalar paquetes adicionales (temporal)
-docker exec -it mlb_forecast_backend-app-1 pip install nombre-paquete
-```
-
-### 🛠️ Comandos de Desarrollo
-
-```bash
-# 🔨 Rebuild completo (cuando cambias Dockerfile)
-docker-compose build --no-cache
-docker-compose up -d
-
-# 🔄 Rebuild solo la app
-docker-compose build app
-docker-compose up -d app
-
-# 📁 Sincronizar volúmenes (si hay problemas)
-docker-compose down -v
-docker-compose up -d
-
-# 🧹 Limpiar contenedores y volúmenes
-docker-compose down -v --remove-orphans
-docker system prune -a
-```
-
-### 📊 Monitoreo y Debug
-
-```bash
-# 📈 Ver uso de recursos
-docker stats mlb_forecast_backend-app-1
-
-# 🔍 Inspeccionar contenedor
-docker inspect mlb_forecast_backend-app-1
-
-# 📋 Ver procesos dentro del contenedor
-docker exec -it mlb_forecast_backend-app-1 ps aux
-
-# 💾 Ver espacio en disco
-docker exec -it mlb_forecast_backend-app-1 df -h
-
-# 🌐 Verificar conectividad de red
-docker exec -it mlb_forecast_backend-app-1 ping postgres
-docker exec -it mlb_forecast_backend-app-1 ping redis
-```
-
-### 🗄️ Gestión de Base de Datos
-
-```bash
-# 📊 Ver tablas existentes
-docker exec -it mlb_forecast_backend-postgres-1 psql -U mlb_user -d mlb_forecast -c "\dt"
-
-# 📋 Describir estructura de tabla
-docker exec -it mlb_forecast_backend-postgres-1 psql -U mlb_user -d mlb_forecast -c "\d teams"
-
-# 🔍 Ejecutar consulta SQL
-docker exec -it mlb_forecast_backend-postgres-1 psql -U mlb_user -d mlb_forecast -c "SELECT COUNT(*) FROM teams;"
-
-# 💾 Crear backup de la base de datos
-docker exec -it mlb_forecast_backend-postgres-1 pg_dump -U mlb_user -d mlb_forecast > backup.sql
-
-# 📥 Restaurar backup
-docker exec -i mlb_forecast_backend-postgres-1 psql -U mlb_user -d mlb_forecast < backup.sql
-```
-
-### 🔴 Gestión de Redis
-
-```bash
-# 📊 Ver información de Redis
-docker exec -it mlb_forecast_backend-redis-1 redis-cli info
-
-# 🔑 Ver todas las claves
-docker exec -it mlb_forecast_backend-redis-1 redis-cli keys "*"
-
-# 🗑️ Limpiar caché completo
-docker exec -it mlb_forecast_backend-redis-1 redis-cli flushall
-
-# 📋 Ver estadísticas de caché
-docker exec -it mlb_forecast_backend-redis-1 redis-cli info stats
-
-# 💾 Ver memoria utilizada
-docker exec -it mlb_forecast_backend-redis-1 redis-cli info memory
-```
-
-## 🚨 Solución de Problemas Comunes
-
-### ❌ Error de Migración
-
-```bash
-# Si las migraciones fallan, verificar estado
-docker exec -it mlb_forecast_backend-app-1 alembic current
-
-# Ver logs detallados
-docker-compose logs app | grep alembic
-
-# Forzar migración específica
-docker exec -it mlb_forecast_backend-app-1 alembic stamp head
-```
-
-### 🔄 Resetear Base de Datos Completa
-
-```bash
-# ⚠️ CUIDADO: Esto elimina TODOS los datos
-docker-compose down -v
-docker-compose up -d postgres redis
-sleep 10
-docker-compose up -d app
-```
-
-### 🐛 Debug de Conexiones
-
-```bash
-# Verificar conectividad a PostgreSQL
-docker exec -it mlb_forecast_backend-app-1 python -c "
-import psycopg2
-try:
-    conn = psycopg2.connect('postgresql://mlb_user:mlb_password@postgres:5432/mlb_forecast')
-    print('✅ PostgreSQL conectado')
-    conn.close()
-except Exception as e:
-    print(f'❌ Error PostgreSQL: {e}')
-"
-
-# Verificar conectividad a Redis
-docker exec -it mlb_forecast_backend-app-1 python -c "
-import redis
-try:
-    r = redis.Redis(host='redis', port=6379, db=0)
-    r.ping()
-    print('✅ Redis conectado')
-except Exception as e:
-    print(f'❌ Error Redis: {e}')
-"
-```
-
-## 🚀 Instalación y Configuración
-
-### Prerrequisitos
-
-- **Python 3.10+** (instalación local opcional)
-- **Docker** y **Docker Compose**
-- **Git** (para clonar el repositorio)
-
-### 🎯 Inicio Rápido con Instalador y Docker Compose
-
-Se recomienda usar Docker para aislar dependencias y evitar instalar requisitos locales:
-
-### Clonar repositorio e iniciar setup
-
-```bash
-git clone https://github.com/luis-knd/mlb_forecast
-cd mlb_forecast_backend
-```
-
-**Ejecutar script de inicio automático**
-
-```bash
-python start.py
-```
-
-El script te guiará a través de las opciones disponibles:
-
-<details open>
-<summary><strong>Opción 1 → 🐳 Solo Docker (Recomendado)</strong>:</summary>
-   Esta opción:
-
-- Instala la python:3.11-slim.
-- Instala las librerías necesarias en el contenedor.
-- Crea automáticamente dento del contenedor un entorno virtual.
-- Instala los requerimientos en el entorno virtual del contenedor.
-- Ejecuta la aplicación.
-
-La aplicación estará disponible en [localhost:8000](http://localhost:8000)
-
-</details>
-
-<details open>
-<summary><strong>Opción 2 → 🚀 Setup completo con entorno virtual local</strong>:</summary>
-
-Esta opción:
-
-La aplicación estará disponible en [localhost:8000](http://localhost:8000)
-
-</details>
-
-<details open>
-<summary><strong>Opción 3 → 🛠️ Setup Manual paso a paso</strong>:</summary>
-
-Esta opción:
-
-</details>
-
-<details open>
-<summary><strong>Opción 4 →  ℹ️ Mostrar información del proyecto</strong>:</summary>
-
-Esta opción:
-No ejecuta nada, solo muestra la información del proyecto.
-
-</details>
-
-<details open>
-<summary><strong>Opción 5 → 🚫 Salir</strong>:</summary>
-   Salir del script.
-</details>
-
-## 📊 Características Principales
-
-### ⚾ Ingestión Automática de Datos
-
-- **APIs Oficiales MLB**: Integración completa con statsapi.mlb.com
-- **Datos en Tiempo Real**: Resultados, estadísticas y calendarios
-- **Procesamiento Inteligente**: Validación y limpieza automática
-- **Recuperación de Errores**: Sistema robusto ante fallos de API
-
-### 🗄️ Almacenamiento Optimizado
-
-- **Esquema Normalizado**: Base de datos PostgreSQL optimizada
-- **Índices Estratégicos**: Consultas rápidas para análisis
-- **Datos Históricos**: Almacenamiento eficiente de múltiples temporadas
-- **Integridad Referencial**: Relaciones consistentes entre entidades
-
-### ⚡ Sistema de Caché Inteligente
-
-- **Caché Multicapa**: Redis con diferentes TTL por tipo de dato
-- **Invalidación Inteligente**: Limpieza automática de datos obsoletos
-- **Precalentamiento**: Caché de datos frecuentemente accedidos
-- **Estadísticas de Uso**: Monitoreo de hit rates y rendimiento
-
-### 🤖 Machine Learning Avanzado
-
-- **Predicciones Múltiples**: Ganador, runs totales, métricas personalizadas
-- **Entrenamiento Continuo**: Actualización automática con nuevos datos
-- **Evaluación de Modelos**: Métricas de rendimiento y comparación
-- **Características Avanzadas**: Ingeniería de features específicas para MLB
-
-### 🔄 Automatización Completa
-
-- **Scheduler Robusto**: Tareas programadas con APScheduler
-- **Ingestión Periódica**: Datos actualizados automáticamente
-- **Reentrenamiento ML**: Modelos siempre actualizados
-- **Mantenimiento**: Limpieza automática de caché y datos
-
-### 🌐 APIs REST Escalables
-
-- **FastAPI**: Documentación automática y alta performance
-- **Validación Automática**: Pydantic para request/response
-- **Manejo de Errores**: Respuestas consistentes y logging
-- **Rate Limiting**: Protección contra uso excesivo
-
-## 📋 Endpoints Principales
-
-### Equipos y Estadísticas
-
-```http
-GET /api/v1/teams                           # Lista de equipos
-GET /api/v1/teams/{team_id}                 # Equipo específico
-GET /api/v1/teams/{team_id}/stats/{season}  # Estadísticas por temporada
-```
-
-### Juegos
-
-```http
-GET /api/v1/games                           # Lista de juegos con filtros
-GET /api/v1/games/{game_id}                 # Juego específico
-```
-
-### Predicciones
-
-```http
-POST /api/v1/predictions                    # Generar predicción
-GET /api/v1/predictions/{game_id}           # Predicciones existentes
-GET /api/v1/predictions/upcoming            # Predicciones próximas
-```
-
-### Ingestión de Datos
-
-```http
-POST /api/v1/data/ingest/teams              # Ingestar equipos
-POST /api/v1/data/ingest/games              # Ingestar juegos
-POST /api/v1/data/ingest/full               # Ingestión completa
-```
-
-### Sistema y ML
-
-```http
-POST /api/v1/ml/retrain                     # Reentrenar modelo
-GET /api/v1/cache/stats                     # Estadísticas de caché
-DELETE /api/v1/cache/clear                  # Limpiar caché
-GET /api/v1/health                          # Estado del sistema
-```
-
-## ⚡ Comandos Útiles
-
-### Comandos con Makefile
-
-```bash
-# 🏗️ Setup y desarrollo
-make setup              # Configuración inicial completa
-make dev                # Setup + ejecutar aplicación
-make run                # Ejecutar solo la aplicación
-make run-docker         # Ejecutar con Docker completo (--no-cache)
-
-# 🧪 Testing y calidad
-make test               # Ejecutar pruebas
-make test-coverage      # Pruebas con coverage
-make test-mutation      # Pruebas de mutación (uso ocasional)
-make lint               # Verificar código con linters
-make format             # Formatear código
-
-# 🗄️ Base de datos
-make migration-create MSG="descripción"  # Nueva migración
-make migration-up       # Aplicar migraciones
-make migration-down     # Revertir migración
-
-# 🐳 Docker
-make run-services       # Solo PostgreSQL y Redis
-make stop               # Detener servicios
-make logs               # Ver logs
-
-# 🛠️ Utilidades
-make health             # Verificar estado de la app
-make clean              # Limpiar archivos temporales
-make info               # Información del proyecto
-make help               # Ver todos los comandos
-```
-
-### Comandos Manuales (Sin Makefile)
-
-```bash
-# Crear el entorno virtual
-python3 -m venv venv
-
-# Activar entorno virtual
-source venv/bin/activate  # Linux/macOS
-venv\Scripts\activate     # Windows
-
-# Ejecutar aplicación
-uvicorn src.interface.rest.main:app --reload --host 0.0.0.0 --port 8000
-
-# Migraciones
-python scripts/migrate.py upgrade
-python scripts/migrate.py create "nueva migración"
-
-# Pruebas
-python -m pytest tests/ -v
-
-# Pruebas con coverage
-python -m pytest tests/ --cov=app
-
-# Ingestión de datos
-curl -X POST http://localhost:8000/api/v1/data/ingest/full
-
-# Reentrenamiento ML
-curl -X POST http://localhost:8000/api/v1/ml/retrain
-```
-
-## 🔧 Configuración Avanzada
-
-### Scheduler de Tareas
-
-```bash
-# Ejecutar jobs independiente
-python -m src.interface.scheduler.main
-
-# El jobs ha sido migrado a la nueva arquitectura hexagonal.
-# Utiliza los mismos componentes que la aplicación principal.
-
-# Tareas programadas:
-# - Ingestión diaria de juegos (cada hora)
-# - Estadísticas de equipos (diario 6 AM)
-# - Reentrenamiento ML (diario 3 AM)
-# - Mantenimiento de caché (cada 4 horas)
-# - Predicciones próximas (cada 30 min)
-```
-
-## 🎯 Ejemplos de Uso
-
-### Generar Predicción
-
-```python
-import httpx
-
-# Generar predicción para un juego
-response = httpx.post("http://localhost:8000/api/v1/predictions", json={
-    "game_id": 123,
-    "prediction_types": ["outcome", "total_runs"]
-})
-
-prediction = response.json()
-print(f"Probabilidad local: {prediction['predictions']['outcome']['home_win_probability']}")
-```
-
-### Consultar Juegos del Día
-
-```python
-from datetime import datetime
-
-# Obtener juegos de hoy
-today = datetime.now().strftime("%Y-%m-%d")
-response = httpx.get(f"http://localhost:8000/api/v1/games?date={today}")
-
-games = response.json()
-for game in games:
-    print(f"Juego: {game['home_team_id']} vs {game['away_team_id']}")
-```
-
-### Ingestión Programática
-
-```python
-# Ejecutar ingestión completa
-response = httpx.post("http://localhost:8000/api/v1/data/ingest/full?season=2024")
-
-result = response.json()
-print(f"Ingestión iniciada: {result['message']}")
-```
-
-## 🧪 Testing
-
-```bash
-# Ejecutar tests básicos
-python -m pytest tests/ -v
-
-# Tests específicos
-python tests/basic_test.py
-
-# Coverage
-pip install pytest-cov
-pytest --cov=app tests/
-```
-
-### Test en docker
-
-Ejecutar todos los tests
-
-```bash
-docker exec -it mlb_forecast_backend-app-1 python -m pytest -v -W always
-```
-
-Ejecutar test de un archivo
-
-```bash
-docker exec -it mlb_forecast_backend-app-1 python -m pytest tests/integration/team_routes_test.py -v
-```
-
-Ejecutar test puntual
-
-```bash
-docker exec -it mlb_forecast_backend-app-1 python -m pytest tests/test_basic.py::TestBasicEndpoints::test_health_endpoint -v -W always
-```
-
-### 🧬 Pruebas de Mutación (mutmut)
-
-Las pruebas de mutación evalúan la calidad de los tests unitarios introduciendo pequeños cambios (mutaciones) en el código y verificando si los tests fallan (matan al mutante).
-
-> [!IMPORTANT]
-> Se recomienda ejecutar estas pruebas **dentro de Docker** para evitar incompatibilidades con versiones locales de Python (especialmente Python 3.14).
-
-**Ejecución completa:**
-```bash
-make test-mutation
-```
-
-**Ejecución en módulos específicos (Recomendado):**
-```bash
-make test-mutation ARGS="--paths-to-mutate=src/domain"
-```
-
-**Ejecución acotada a los archivos `src/` cambiados respecto a la rama base (alineado con CI):**
-```bash
+pre-commit run --all-files
+docker exec -i "$APP_CTN" pytest -q tests/unit
+docker exec -i "$APP_CTN" pytest -q tests/integration
 make test-mutation-scoped ARGS="--base-ref origin/develop --min-score 90"
 ```
 
-Este flujo:
-- limpia `mutants/` y `.mutmut-cache` para evitar artefactos locales obsoletos,
-- aplica el parche de `mutmut` requerido para el layout `src/`,
-- limita la mutación a los archivos `src/` modificados en tu rama,
-- exporta el mismo score que consume el workflow de GitHub Actions.
+**Referencias adicionales de calidad**:
 
-**Ver resultados:**
-Los resultados se guardan en el archivo `.mutmut-cache`. Puedes generar un informe HTML ejecutando:
-```bash
-docker exec -it mlb_forecast_backend-app-1 mutmut html
-```
-Y luego abrir `html/index.html` en tu navegador.
+- `docs/quality-gates.md`: explica qué corre en local y qué corre en CI
+- `.pre-commit-config.yaml`: lista autoritativa de hooks
+- `pyproject.toml`: configuración de pytest, formato y mutmut
 
-## 📈 Monitoreo y Logs
+**Convenciones del repositorio que conviene recordar**:
 
-### Logs Estructurados
+- el código generado bajo `src/interface/rest/generated` queda fuera de algunos checks
+- los tests deben seguir la convención `*_test.py` que fuerza pre-commit
+- los ejemplos y comandos de este README están alineados con el estado real del repo a fecha `2026-03-28`
 
-```bash
-# Ver logs en tiempo real
-docker-compose logs -f app
+## Contribución
 
-# Logs del jobs
-docker-compose logs -f jobs
+Las contribuciones son bienvenidas. La guía completa para preparar ramas, validar cambios y abrir PRs está en
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
-# Logs específicos de ML
-grep "ML" docker-compose logs
-```
+Resumen rápido:
 
-### Métricas de Rendimiento
+- para cambios grandes o ambiguos, abre antes un issue
+- la rama debe seguir el patrón `feature|bugfix|hotfix|release/MLB-<id>-descripcion`; para contribuciones públicas externas puedes usar `MLB-00`
+- si cambias la API pública, actualiza `openapi/openapi.yml` y valida los tests OpenAPI
+- antes de abrir PR, ejecuta `pre-commit`, unit tests e integration tests
 
-```bash
-# Estado del sistema
-curl http://localhost:8000/api/v1/health
+## Licencia
 
-# Estadísticas de caché
-curl http://localhost:8000/api/v1/cache/stats
+Este proyecto está publicado bajo licencia MIT. Consulta [LICENSE](LICENSE) para el texto completo.
 
-# Info de la aplicación
-curl http://localhost:8000/info
-```
+## Referencias del proyecto
 
-## 🔒 Consideraciones de Producción
-
-### Escalabilidad
-
-- **Horizontal**: Múltiples instancias de la aplicación
-- **Base de Datos**: Connection pooling y read replicas
-- **Caché**: Cluster Redis para alta disponibilidad
-- **Load Balancer**: NGINX o similar para distribución
-
-### Seguridad
-
-- **Variables de Entorno**: Usar secretos seguros en producción
-- **Rate Limiting**: Configurar límites apropiados
-- **CORS**: Especificar dominios exactos
-- **HTTPS**: Terminar SSL en load balancer
-
-### Monitoreo
-
-- **Logging**: Centralizar logs con ELK stack
-- **Métricas**: Prometheus + Grafana
-- **Alertas**: Configurar notificaciones de errores
-- **Health Checks**: Endpoints para monitoreo externo
-
-## 🛠️ Desarrollo y Contribución
-
-### Estructura de Código
-
-- **Principios SOLID**: Cada clase tiene responsabilidad única
-- **Patrón Factory**: Para conexiones y servicios
-- **Strategy Pattern**: Para diferentes tipos de predicción
-- **Open/Closed**: Fácil extensión sin modificación
-
-### Extensiones Futuras
-
-- **Nuevos Deportes**: Arquitectura preparada para otros deportes
-- **ML Avanzado**: Redes neuronales y deep learning
-- **Real-time**: WebSockets para actualizaciones en vivo
-- **APIs Adicionales**: Integración con más fuentes de datos
-
-## 📚 Documentación Adicional
-
-- **API Docs**: http://localhost:8000/docs (Swagger)
-- **Arquitectura**: Ver diagramas en [docs/diagrams/](docs/diagrams/)
-- **Quality Gates**: Estrategia de verificación en [docs/quality-gates.md](docs/quality-gates.md)
-- **ML Models**: Documentación detallada en `/docs/ml/`
-
-## 🆘 Troubleshooting
-
-### Problemas Comunes
-
-1. **Error de conexión a PostgreSQL**
-
-   ```bash
-   # Verificar que el servicio esté ejecutándose
-   docker-compose ps postgres
-
-   # Reiniciar servicio
-   docker-compose restart postgres
-   ```
-
-2. **Redis no conecta**
-
-   ```bash
-   # Verificar conexión
-   docker-compose exec redis redis-cli ping
-   ```
-
-3. **Modelo ML no entrena**
-
-   ```bash
-   # Verificar datos suficientes
-   curl http://localhost:8000/api/v1/games | jq length
-
-   # Forzar reentrenamiento
-   curl -X POST http://localhost:8000/api/v1/ml/retrain
-   ```
-
-4. **API MLB no responde**
-   ```bash
-   # Verificar estado de la API externa
-   curl https://statsapi.mlb.com/api/v1/teams
-   ```
+- Contrato OpenAPI: `openapi/openapi.yml`
+- Entry point FastAPI: `src/interface/rest/main.py`
+- Setup Docker: `docker-compose.yml`
+- Flujos de desarrollo: `Makefile`
+- Plantilla de entorno: `.env.example`
+- Referencias MLB StatsAPI: `docs/mlbExternalStatsApi/`
+- Notas de player stats: `docs/player_stats_api.md`
+- Notas de odds and props: `docs/oddsAndProps.md`
+- Quality gates: `docs/quality-gates.md`
+- Planes y decisiones técnicas: `docs/plans/`

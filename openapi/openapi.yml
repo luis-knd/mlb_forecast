@@ -1,33 +1,57 @@
 openapi: 3.1.0
 info:
   title: MLB Forecast API
-  description: "\n    # MLB Predictions Backend API\n\n    Enterprise-grade MLB game\
-    \ prediction platform delivering real-time analytics and machine learning insights.\n\
-    \n    ## \U0001F680 Core Features\n\n    ### \u26BE **Data Ingestion Pipeline**\n\
-    \    - Real-time game results from official MLB APIs\n    - Historical statistics\
-    \ and performance metrics\n    - Live game schedules and league standings\n  \
-    \  - Automated data validation and cleansing\n\n    ### \U0001F916 **Advanced\
-    \ Machine Learning**\n    - Probabilistic game outcome predictions\n    - Total\
-    \ runs and score forecasting\n    - Player performance analytics\n    - Continuous\
-    \ model training and optimization\n\n    ### \u26A1 **High-Performance Architecture**\n\
-    \    - Multi-layer Redis caching system\n    - Optimized database queries with\
-    \ indexing\n    - Asynchronous processing for scalability\n    - Sub-second API\
-    \ response times\n\n    ### \U0001F4CA **Analytics & Insights**\n    - Team performance\
-    \ trending\n    - Head-to-head historical analysis\n    - Weather impact on game\
-    \ outcomes\n    - Injury reports integration\n\n    ## \U0001F527 Technical Stack\n\
-    \n    - **Framework**: FastAPI with async/await patterns\n    - **Database**:\
-    \ PostgreSQL with optimized schemas\n    - **Cache**: Redis for high-speed data\
-    \ retrieval\n    - **ML**: Scikit-learn with automated retraining\n    - **Architecture**:\
-    \ Hexagonal/Clean architecture principles\n\n    ## \U0001F4C8 API Capabilities\n\
-    \n    - Hexagonal architecture for modularity\n    - RESTful endpoints with OpenAPI\
-    \ documentation\n    - Real-time prediction scoring\n    - Batch prediction processing\n\
-    \    - Model performance monitoring\n    - Comprehensive error handling and logging\n\
-    \n    ## \U0001F4DD API Response Format\n\n    All endpoints return responses\
-    \ in the following standardized format:\n\n    ```json\n    {\n        \"status\"\
-    : \"success|error\",\n        \"code\": 200,\n        \"data\": {},\n        \"\
-    errors\": [],\n        \"message\": \"Optional descriptive message\"\n    }\n\
-    \    ```\n    "
+  description: |
+    # MLB Forecast API
+
+    Backend API for MLB forecasts, persisted stats retrieval, and ingestion workflows backed by PostgreSQL,
+    Redis, and MLB StatsAPI integrations.
+
+    ## Main domains
+
+    - Teams and team season stats
+    - Games and schedules
+    - Players and persisted player stats
+    - Predictions
+    - Data ingestion and ML maintenance
+    - System diagnostics for health, cache, and runtime information
+
+    ## Contract
+
+    - `openapi/openapi.yml` is the design-first contract for public endpoints.
+    - The static contract and the OpenAPI served by FastAPI should stay aligned.
+
+    ## Response envelope
+
+    All JSON endpoints return the standard response envelope:
+
+    ```json
+    {
+        "status": "success|error",
+        "code": 200,
+        "data": {},
+        "errors": [],
+        "message": "Optional descriptive message"
+    }
+    ```
   version: 1.0.0
+tags:
+  - name: Teams
+    description: Team catalogue, lookup endpoints and team-focused operations.
+  - name: Games
+    description: Game schedule, retrieval and game-related ingestion workflows.
+  - name: Players
+    description: Player lookup, hydration and player-focused operations.
+  - name: Stats
+    description: Read-only statistical views served from persisted data.
+  - name: Predictions
+    description: Prediction generation and prediction retrieval endpoints.
+  - name: Data Ingestion
+    description: Write-oriented endpoints that ingest or refresh external MLB data.
+  - name: System
+    description: Operational endpoints for health, cache and runtime diagnostics.
+  - name: ML Model
+    description: Machine learning maintenance operations such as retraining.
 paths:
   /api/v1/teams:
     get:

@@ -77,7 +77,7 @@ def _resolve_stats_category(category: str | None) -> TeamStatsCategory:
         "500": {"model": InternalServerError},
         "503": {"model": ServiceUnavailable},
     },
-    tags=["Teams", "Stats", "Teams", "Stats"],
+    tags=["Teams", "Stats"],
 )
 async def get_team_stats(
     team_id: int = Path(..., description="The ID of the team to get stats for"),
