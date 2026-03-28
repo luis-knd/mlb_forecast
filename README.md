@@ -676,6 +676,17 @@ make test-mutation
 make test-mutation ARGS="--paths-to-mutate=src/domain"
 ```
 
+**Ejecución acotada a los archivos `src/` cambiados respecto a la rama base (alineado con CI):**
+```bash
+make test-mutation-scoped ARGS="--base-ref origin/develop --min-score 90"
+```
+
+Este flujo:
+- limpia `mutants/` y `.mutmut-cache` para evitar artefactos locales obsoletos,
+- aplica el parche de `mutmut` requerido para el layout `src/`,
+- limita la mutación a los archivos `src/` modificados en tu rama,
+- exporta el mismo score que consume el workflow de GitHub Actions.
+
 **Ver resultados:**
 Los resultados se guardan en el archivo `.mutmut-cache`. Puedes generar un informe HTML ejecutando:
 ```bash

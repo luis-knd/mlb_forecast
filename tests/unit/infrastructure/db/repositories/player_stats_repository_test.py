@@ -109,3 +109,60 @@ async def test_replace_history_records_replaces_and_filters_history_entries(db_s
     assert persisted_records[0].payload["hits"] == 2
     assert len(listed_records) == 1
     assert listed_records[0].external_reference == "2"
+
+
+@pytest.mark.asyncio
+async def test_replace_history_records_persists_same_external_reference_with_distinct_history_entry_keys(db_session):
+    # Given
+    repository = PlayerStatsRepository(db_session)
+    team, player = await _seed_team_and_player(db_session)
+    first_record = PlayerStatsHistoryRecord.create(
+        player_id=player.id,
+        team_id=team.id,
+        season=2025,
+        game_type="R",
+        stat_group="fielding",
+        stat_type="gameLog",
+        external_reference="822839",
+        history_entry_key="gameLog|822839|-|-|firstpayloadhash",
+        payload={"gamesStarted": 1, "putOuts": 3},
+        event_date=datetime(2025, 3, 20),
+    )
+    second_record = PlayerStatsHistoryRecord.create(
+        player_id=player.id,
+        team_id=team.id,
+        season=2025,
+        game_type="R",
+        stat_group="fielding",
+        stat_type="gameLog",
+        external_reference="822839",
+        history_entry_key="gameLog|822839|-|-|secondpayloadhas",
+        payload={"gamesStarted": 0, "putOuts": 0},
+        event_date=datetime(2025, 3, 20),
+    )
+
+    # When
+    persisted_records = await repository.replace_history_records(
+        player.id,
+        2025,
+        "R",
+        "fielding",
+        "gameLog",
+        [first_record, second_record],
+    )
+    listed_records = await repository.list_history_records(
+        player_id=player.id,
+        stat_type="gameLog",
+        season=2025,
+        game_type="R",
+        stat_group="fielding",
+    )
+
+    # Then
+    assert len(persisted_records) == 2
+    assert len(listed_records) == 2
+    assert [record.external_reference for record in listed_records] == ["822839", "822839"]
+    assert {record.history_entry_key for record in listed_records} == {
+        "gameLog|822839|-|-|firstpayloadhash",
+        "gameLog|822839|-|-|secondpayloadhas",
+    }

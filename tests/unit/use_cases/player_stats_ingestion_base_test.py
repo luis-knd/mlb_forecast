@@ -6,6 +6,8 @@ import pytest
 from application.use_cases.player_stats_ingestion_use_cases import (
     _group_splits_by_team,
     _should_refresh_existing_records,
+    _validate_season,
+    _validate_target_selector,
 )
 from tests.unit.use_cases.player_stats_test_support_test import (
     build_history_use_case,
@@ -68,6 +70,38 @@ async def test_ingestion_use_cases_validate_inputs(
     # When / Then
     with pytest.raises(ValueError, match=message):
         await use_case.execute(**execute_kwargs)
+
+
+@pytest.mark.parametrize(
+    ("player_id", "team_id"),
+    [
+        (7, None),
+        (None, 5),
+    ],
+    ids=["player-target", "team-target"],
+)
+def test_validate_target_selector_accepts_exactly_one_target(player_id, team_id):
+    # Given / When / Then
+    assert _validate_target_selector(player_id=player_id, team_id=team_id) is None
+
+
+@pytest.mark.parametrize(
+    ("player_id", "team_id"),
+    [
+        (None, None),
+        (7, 5),
+    ],
+    ids=["missing-both-targets", "selecting-both-targets"],
+)
+def test_validate_target_selector_rejects_invalid_target_combinations(player_id, team_id):
+    # Given / When / Then
+    with pytest.raises(ValueError, match=r"^Exactly one of playerId or teamId must be provided$"):
+        _validate_target_selector(player_id=player_id, team_id=team_id)
+
+
+def test_validate_season_accepts_mlb_foundation_year_boundary():
+    # Given / When / Then
+    assert _validate_season(1876) is None
 
 
 @pytest.mark.asyncio

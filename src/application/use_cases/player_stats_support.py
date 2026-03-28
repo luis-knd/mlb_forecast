@@ -281,6 +281,18 @@ def build_external_reference(stat_type: str, split_payload: dict[str, Any], inde
     return f"{stat_type}-{index}-{digest[:16]}"
 
 
+def build_history_entry_key(
+    stat_type: str,
+    external_reference: str,
+    split_payload: dict[str, Any],
+    context_key: str | None,
+    context_value: str | None,
+) -> str:
+    canonical_payload = json.dumps(split_payload, sort_keys=True, separators=(",", ":"), default=str)
+    payload_digest = hashlib.sha1(canonical_payload.encode("utf-8")).hexdigest()[:16]
+    return "|".join((stat_type, external_reference, context_key or "-", context_value or "-", payload_digest))
+
+
 def build_history_context(split_payload: dict[str, Any]) -> tuple[str | None, str | None, str | None]:
     split_context = split_payload.get("split")
     if not isinstance(split_context, dict):
@@ -325,6 +337,7 @@ def build_history_record(
 ) -> PlayerStatsHistoryRecord:
     context_key, context_value, context_label = build_history_context(split_payload)
     event_date = parse_datetime_candidate(split_payload.get("date"))
+    external_reference = build_external_reference(stat_type, split_payload, index)
     return PlayerStatsHistoryRecord.create(
         player_id=player_id,
         team_id=team_id,
@@ -332,7 +345,14 @@ def build_history_record(
         game_type=game_type,
         stat_group=stat_group,
         stat_type=stat_type,
-        external_reference=build_external_reference(stat_type, split_payload, index),
+        external_reference=external_reference,
+        history_entry_key=build_history_entry_key(
+            stat_type=stat_type,
+            external_reference=external_reference,
+            split_payload=split_payload,
+            context_key=context_key,
+            context_value=context_value,
+        ),
         payload=split_payload,
         event_date=event_date,
         context_key=context_key,
@@ -439,6 +459,19 @@ def limit_recent_history(
         if (threshold - event_date).days <= days_back:
             limited_records.append(record)
     return limited_records
+
+
+def deduplicate_history_records(records: list[PlayerStatsHistoryRecord]) -> list[PlayerStatsHistoryRecord]:
+    deduplicated_records: list[PlayerStatsHistoryRecord] = []
+    seen_entry_keys: set[str] = set()
+
+    for record in records:
+        if record.history_entry_key in seen_entry_keys:
+            continue
+        seen_entry_keys.add(record.history_entry_key)
+        deduplicated_records.append(record)
+
+    return deduplicated_records
 
 
 def _to_optional_string(value: Any) -> str | None:
