@@ -19,6 +19,7 @@ from application.use_cases.player_stats_support import (
     aggregate_metrics,
     build_group_record,
     build_history_record,
+    deduplicate_history_records,
     iter_response_splits,
     merge_metrics,
     normalize_aggregate_metrics,
@@ -381,6 +382,7 @@ class IngestPlayerStatsHistoryUseCase(_PlayerStatsIngestionBase):
                 stat_type=stat_type,
                 stats_response=stats_response,
             )
+            records = deduplicate_history_records(records)
             persisted_records = await self.player_stats_repository.replace_history_records(
                 player_id=player.id,
                 season=season,

@@ -254,3 +254,36 @@ async def test_ingest_player_history_force_refresh_reloads_closed_season_records
     assert mock_mlb_api.get_player_stats.await_count == 2
     assert mock_player_stats_repository.replace_history_records.await_count == 2
     mock_cache.clear.assert_awaited_once_with(pattern="player_stats:persisted:player=7:*")
+
+
+@pytest.mark.asyncio
+async def test_ingest_group_history_deduplicates_exact_duplicate_records_before_persisting(
+    mock_player_repository,
+    mock_team_repository,
+    mock_player_stats_repository,
+    mock_cache,
+):
+    # Given
+    duplicate_payload = {
+        "team": {"id": 119},
+        "date": "2025-03-20",
+        "game": {"gamePk": 822839},
+        "stat": {"gamesStarted": 1, "putOuts": 3},
+    }
+    mock_mlb_api = AsyncMock()
+    mock_mlb_api.get_player_stats.side_effect = [stats_response(duplicate_payload, duplicate_payload), None]
+    use_case = build_history_use_case(
+        mock_player_repository,
+        mock_team_repository,
+        mock_player_stats_repository,
+        mock_cache,
+        mock_mlb_api,
+    )
+
+    # When
+    replaced = await use_case._ingest_group_history(build_player(), 2025, "R", "fielding", None, True)
+
+    # Then
+    assert replaced == 1
+    replace_call = mock_player_stats_repository.replace_history_records.await_args_list[0]
+    assert len(replace_call.kwargs["records"]) == 1

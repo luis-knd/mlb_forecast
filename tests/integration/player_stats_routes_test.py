@@ -145,6 +145,7 @@ def populated_player_stats_db(test_db_session):
             game_type="R",
             stat_group="hitting",
             external_reference="123",
+            history_entry_key="gameLog|123|-|-|fixture",
             event_date=datetime(2025, 3, 20),
             payload={"hits": 2},
             source="statsapi",

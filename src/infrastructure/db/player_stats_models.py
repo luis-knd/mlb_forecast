@@ -225,6 +225,7 @@ class _PlayerStatsHistoryMixin:
     game_type = Column(String(5), nullable=False, default="R")
     stat_group = Column(String(20), nullable=False)
     external_reference = Column(String(128), nullable=False)
+    history_entry_key = Column(String(255), nullable=False)
     event_date = Column(DateTime(timezone=True), nullable=True)
     payload = Column(JSON, nullable=False)
     context_key = Column(String(64), nullable=True)
@@ -249,7 +250,7 @@ class PlayerGameLogModel(_PlayerStatsHistoryMixin, Base):
             "season",
             "game_type",
             "stat_group",
-            "external_reference",
+            "history_entry_key",
             name="uq_player_game_logs_context",
         ),
         Index("idx_player_game_logs_player_season", "player_id", "season"),
@@ -271,7 +272,7 @@ class PlayerStatSplitModel(_PlayerStatsHistoryMixin, Base):
             "season",
             "game_type",
             "stat_group",
-            "external_reference",
+            "history_entry_key",
             name="uq_player_stat_splits_context",
         ),
         Index("idx_player_stat_splits_player_season", "player_id", "season"),

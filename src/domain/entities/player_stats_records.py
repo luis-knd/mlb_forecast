@@ -94,6 +94,7 @@ class PlayerStatsHistoryRecord:
     stat_group: str
     stat_type: str
     external_reference: str
+    history_entry_key: str
     event_date: datetime | None
     payload: dict[str, Any]
     context_key: str | None = None
@@ -115,6 +116,7 @@ class PlayerStatsHistoryRecord:
         stat_type: str,
         external_reference: str,
         payload: dict[str, Any],
+        history_entry_key: str | None = None,
         event_date: datetime | None = None,
         context_key: str | None = None,
         context_value: str | None = None,
@@ -123,6 +125,8 @@ class PlayerStatsHistoryRecord:
     ) -> "PlayerStatsHistoryRecord":
         """Create a new persisted player history record."""
         now = datetime.now()
+        normalized_external_reference = str(external_reference).strip()
+        normalized_history_entry_key = str(history_entry_key or normalized_external_reference).strip()
         return cls(
             id=None,
             player_id=player_id,
@@ -131,7 +135,8 @@ class PlayerStatsHistoryRecord:
             game_type=game_type.strip().upper(),
             stat_group=_normalize_stat_group(stat_group),
             stat_type=_normalize_history_type(stat_type),
-            external_reference=external_reference,
+            external_reference=normalized_external_reference,
+            history_entry_key=normalized_history_entry_key,
             event_date=event_date,
             payload=dict(payload),
             context_key=context_key,

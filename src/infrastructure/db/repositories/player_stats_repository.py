@@ -56,6 +56,7 @@ HISTORY_METADATA_FIELDS = {
     "game_type",
     "stat_group",
     "external_reference",
+    "history_entry_key",
     "event_date",
     "payload",
     "context_key",
@@ -73,6 +74,13 @@ class PlayerStatsRepository(PlayerStatsRepositoryPort):
 
     def __init__(self, session: Session):
         self.session = session
+
+    def _commit_or_rollback(self) -> None:
+        try:
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise
 
     async def upsert_group_record(self, record: PlayerStatsGroupRecord) -> PlayerStatsGroupRecord:
         model_class = GROUP_MODEL_MAP[record.stat_group]
@@ -96,7 +104,7 @@ class PlayerStatsRepository(PlayerStatsRepositoryPort):
             self.session.add(model)
 
         self._apply_group_record(model, record)
-        self.session.commit()
+        self._commit_or_rollback()
         self.session.refresh(model)
         return self._to_group_record(model, record.stat_group)
 
@@ -131,7 +139,7 @@ class PlayerStatsRepository(PlayerStatsRepositoryPort):
             self.session.add(model)
             persisted_models.append(model)
 
-        self.session.commit()
+        self._commit_or_rollback()
         for model in persisted_models:
             self.session.refresh(model)
         return [self._to_group_record(model, stat_group) for model in persisted_models]
@@ -192,6 +200,7 @@ class PlayerStatsRepository(PlayerStatsRepositoryPort):
                 game_type=record.game_type,
                 stat_group=record.stat_group,
                 external_reference=record.external_reference,
+                history_entry_key=record.history_entry_key,
                 event_date=record.event_date,
                 payload=record.payload,
                 context_key=record.context_key,
@@ -203,7 +212,7 @@ class PlayerStatsRepository(PlayerStatsRepositoryPort):
             self.session.add(model)
             persisted_models.append(model)
 
-        self.session.commit()
+        self._commit_or_rollback()
         for model in persisted_models:
             self.session.refresh(model)
         return [self._to_history_record(model, stat_type) for model in persisted_models]
@@ -269,6 +278,7 @@ class PlayerStatsRepository(PlayerStatsRepositoryPort):
             stat_group=model.stat_group,
             stat_type=stat_type,
             external_reference=model.external_reference,
+            history_entry_key=model.history_entry_key,
             event_date=model.event_date,
             payload=model.payload,
             context_key=model.context_key,

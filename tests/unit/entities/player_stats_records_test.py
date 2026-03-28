@@ -71,6 +71,8 @@ def test_player_stats_history_record_create_normalizes_values_and_builds_cache_k
     assert record.game_type == "R"
     assert record.stat_group == "pitching"
     assert record.stat_type == "gameLog"
+    assert record.external_reference == "123"
+    assert record.history_entry_key == "123"
     assert record.event_date == event_date
     assert record.payload == {"outs": 9}
     assert record.context_key == "home"
@@ -131,4 +133,25 @@ def test_player_stats_records_create_copy_mutable_inputs_and_trim_values():
     assert history_record.game_type == "P"
     assert history_record.stat_group == "hitting"
     assert history_record.stat_type == "gameLog"
+    assert history_record.external_reference == "abc"
+    assert history_record.history_entry_key == "abc"
     assert history_record.payload == {"outs": 6}
+
+
+def test_player_stats_history_record_create_keeps_custom_history_entry_key():
+    # Given / When
+    record = PlayerStatsHistoryRecord.create(
+        player_id=7,
+        team_id=11,
+        season=2025,
+        game_type="R",
+        stat_group="hitting",
+        stat_type="gameLog",
+        external_reference="12345",
+        history_entry_key="gameLog|12345|-|-|abcd1234",
+        payload={"hits": 2},
+    )
+
+    # Then
+    assert record.external_reference == "12345"
+    assert record.history_entry_key == "gameLog|12345|-|-|abcd1234"
