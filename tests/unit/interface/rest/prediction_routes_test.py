@@ -1,6 +1,5 @@
 import json
 from datetime import datetime
-from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
@@ -13,20 +12,18 @@ def _body(response):
     return json.loads(response.body)
 
 
-def _prediction_entity(game_id: int) -> SimpleNamespace:
-    return SimpleNamespace(
-        id=5,
-        game_id=game_id,
-        prediction_type="winner",
-        home_win_probability=0.62,
-        away_win_probability=0.38,
-        predicted_home_score=5,
-        predicted_away_score=3,
-        confidence_score=0.8,
-        model_version="test-v1",
-        created_at=datetime(2026, 3, 18, 10, 0, 0),
-        updated_at=datetime(2026, 3, 18, 10, 0, 0),
-    )
+def _prediction_payload(game_id: int) -> dict:
+    return {
+        "id": 5,
+        "game_id": game_id,
+        "ml_model_version": "test-v1",
+        "home_win_probability": 0.62,
+        "away_win_probability": 0.38,
+        "predicted_home_score": 5,
+        "predicted_away_score": 3,
+        "confidence_score": 0.8,
+        "created_at": datetime(2026, 3, 18, 10, 0, 0),
+    }
 
 
 @pytest.mark.asyncio
@@ -77,7 +74,7 @@ async def test_generate_prediction_wraps_model_errors_as_external_service_error(
 async def test_generate_prediction_returns_created_payload_with_processing_metadata():
     # Given
     use_cases = {"generate_prediction": AsyncMock()}
-    use_cases["generate_prediction"].execute.return_value = _prediction_entity(game_id=33)
+    use_cases["generate_prediction"].execute.return_value = _prediction_payload(game_id=33)
 
     # When
     response = await generate_prediction(game_id=33, prediction_type="winner", use_cases=use_cases)

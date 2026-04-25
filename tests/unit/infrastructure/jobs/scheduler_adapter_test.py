@@ -1,4 +1,5 @@
 from datetime import datetime
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -71,7 +72,7 @@ async def test_get_job_returns_none_when_missing():
 async def test_get_job_returns_serialized_job_details():
     # Given
     adapter = _build_adapter_with_mocked_scheduler()
-    adapter.scheduler.get_job.return_value = MagicMock(
+    adapter.scheduler.get_job.return_value = SimpleNamespace(
         id="job-1",
         name="job one",
         next_run_time=datetime(2026, 3, 18, 12, 0, 0),

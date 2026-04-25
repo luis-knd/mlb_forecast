@@ -70,6 +70,7 @@ def test_create_game_features_impl_builds_expected_diffs_and_time_features():
         home_team_id=10,
         away_team_id=20,
         game_date=datetime(2026, 3, 21, 19, 0, 0),
+        status="scheduled",
     )
 
     # When
