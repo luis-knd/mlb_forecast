@@ -87,7 +87,9 @@ def test_list_and_top_team_stats_delegate_to_repository():
 
     # When
     by_season = asyncio.run(ListTeamStatsBySeason(repository).execute(season=2026))
-    top = asyncio.run(ListTopTeamsByStatUseCase(repository).execute(season=2026, stat_name="wins", limit=5, descending=False))
+    top = asyncio.run(
+        ListTopTeamsByStatUseCase(repository).execute(season=2026, stat_name="wins", limit=5, descending=False)
+    )
 
     # Then
     assert by_season == ["season-stats"]
@@ -99,7 +101,9 @@ def test_list_and_top_team_stats_delegate_to_repository():
 def test_ingest_team_stats_skips_missing_api_data_and_teams_without_id():
     # Given
     team_stats_repository = AsyncMock(save=AsyncMock(side_effect=lambda stats: stats))
-    team_repository = AsyncMock(list_all=AsyncMock(return_value=[_team(team_id=1, mlb_id=119), _team(team_id=None, mlb_id=121)]))
+    team_repository = AsyncMock(
+        list_all=AsyncMock(return_value=[_team(team_id=1, mlb_id=119), _team(team_id=None, mlb_id=121)])
+    )
 
     mlb_api = AsyncMock()
     mlb_api.get_team_stats.side_effect = [

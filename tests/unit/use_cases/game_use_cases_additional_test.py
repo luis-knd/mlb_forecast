@@ -1,10 +1,14 @@
 import asyncio
 from datetime import date, datetime
-from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 from application.dto.mlb_api_response import MLBGameDTO
-from application.use_cases.game_use_cases import GetGameUseCase, IngestGamesUseCase, ListGamesUseCase, ListUpcomingGamesUseCase
+from application.use_cases.game_use_cases import (
+    GetGameUseCase,
+    IngestGamesUseCase,
+    ListGamesUseCase,
+    ListUpcomingGamesUseCase,
+)
 from domain.entities.game import Game
 from domain.entities.team import Team
 
@@ -158,7 +162,10 @@ def test_ingest_games_execute_with_specific_date_and_with_days_back_clears_cache
     cache = AsyncMock(clear=AsyncMock())
     use_case = IngestGamesUseCase(game_repository, team_repository, mlb_api, cache)
 
-    team_repository.get_by_mlb_id.side_effect = lambda mlb_id: {119: _team(team_id=1, mlb_id=119), 121: _team(team_id=2, mlb_id=121)}.get(mlb_id)
+    team_repository.get_by_mlb_id.side_effect = lambda mlb_id: {
+        119: _team(team_id=1, mlb_id=119),
+        121: _team(team_id=2, mlb_id=121),
+    }.get(mlb_id)
     mlb_api.get_games_by_date.return_value = [
         _dto(game_id=100, home_id=119, away_id=121, game_date=datetime(2026, 4, 10, 18, 0), winning_id=119)
     ]
