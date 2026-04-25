@@ -54,6 +54,17 @@ def test_iter_team_stat_splits_yields_only_known_mlb_teams():
     assert splits == [(1, {"wins": 10})]
 
 
+def test_iter_team_stat_splits_handles_missing_stat_payload_with_empty_dict():
+    # Given
+    stats_data = {"stats": [{"splits": [{"team": {"id": 119}}]}]}
+
+    # When
+    splits = list(_iter_team_stat_splits(stats_data, team_mapping={119: 77}))
+
+    # Then
+    assert splits == [(77, {})]
+
+
 def test_hitting_execute_returns_empty_when_api_returns_no_payload():
     # Given
     use_case = IngestTeamHittingStatsUseCase(
@@ -151,6 +162,21 @@ def test_pitching_execute_skips_rows_with_zero_games_played():
     repository.save.assert_awaited_once()
 
 
+def test_pitching_execute_returns_empty_when_api_returns_no_payload():
+    # Given
+    use_case = IngestTeamPitchingStatsUseCase(
+        pitching_stats_repository=AsyncMock(),
+        team_repository=AsyncMock(list_all=AsyncMock(return_value=[_team(1, 119)])),
+        mlb_api=AsyncMock(get_team_stats=AsyncMock(return_value=None)),
+    )
+
+    # When
+    result = asyncio.run(use_case.execute(season=2026))
+
+    # Then
+    assert result == []
+
+
 def test_pitching_build_stats_maps_int_and_float_fields():
     # Given
     use_case = IngestTeamPitchingStatsUseCase(AsyncMock(), AsyncMock(), AsyncMock())
@@ -169,6 +195,17 @@ def test_pitching_build_stats_maps_int_and_float_fields():
     assert stats.runs_allowed == 40
     assert stats.earned_run_average == pytest.approx(2.98)
     assert stats.whip == pytest.approx(1.03)
+
+
+def test_pitching_safe_converters_return_zero_for_invalid_values():
+    # Given
+    use_case = IngestTeamPitchingStatsUseCase(AsyncMock(), AsyncMock(), AsyncMock())
+
+    # When / Then
+    assert use_case._safe_int_conversion("bad") == 0
+    assert use_case._safe_int_conversion("") == 0
+    assert use_case._safe_float_conversion("bad") == 0.0
+    assert use_case._safe_float_conversion(None) == 0.0
 
 
 def test_fielding_execute_saves_valid_row():
@@ -197,6 +234,27 @@ def test_fielding_execute_saves_valid_row():
     assert result[0].games_played == 20
     assert result[0].errors == 4
     assert result[0].fielding_percentage == pytest.approx(0.989)
+
+
+def test_fielding_execute_skips_rows_when_games_played_is_zero():
+    # Given
+    repository = AsyncMock()
+    use_case = IngestTeamFieldingStatsUseCase(
+        fielding_stats_repository=repository,
+        team_repository=AsyncMock(list_all=AsyncMock(return_value=[_team(9, 119)])),
+        mlb_api=AsyncMock(
+            get_team_stats=AsyncMock(
+                return_value=_stats_payload(mlb_team_id=119, stat={"gamesPlayed": "0", "fielding": "0.989"})
+            )
+        ),
+    )
+
+    # When
+    result = asyncio.run(use_case.execute(season=2026))
+
+    # Then
+    assert result == []
+    repository.save.assert_not_awaited()
 
 
 def test_catching_execute_saves_valid_row():
@@ -233,6 +291,36 @@ def test_catching_execute_saves_valid_row():
     assert result[0].strikeout_walk_ratio == pytest.approx(1.5)
 
 
+def test_catching_execute_skips_rows_when_games_played_is_zero():
+    # Given
+    repository = AsyncMock()
+    use_case = IngestTeamCatchingStatsUseCase(
+        catching_stats_repository=repository,
+        team_repository=AsyncMock(list_all=AsyncMock(return_value=[_team(3, 119)])),
+        mlb_api=AsyncMock(
+            get_team_stats=AsyncMock(return_value=_stats_payload(mlb_team_id=119, stat={"gamesPlayed": "0"}))
+        ),
+    )
+
+    # When
+    result = asyncio.run(use_case.execute(season=2026))
+
+    # Then
+    assert result == []
+    repository.save.assert_not_awaited()
+
+
+def test_catching_safe_converters_return_zero_for_invalid_values():
+    # Given
+    use_case = IngestTeamCatchingStatsUseCase(AsyncMock(), AsyncMock(), AsyncMock())
+
+    # When / Then
+    assert use_case._safe_int_conversion("bad") == 0
+    assert use_case._safe_int_conversion("") == 0
+    assert use_case._safe_float_conversion("bad") == 0.0
+    assert use_case._safe_float_conversion(None) == 0.0
+
+
 def test_ingest_all_team_stats_aggregates_all_child_results():
     # Given
     hitting_use_case = AsyncMock(execute=AsyncMock(return_value=["h1"]))
@@ -257,3 +345,27 @@ def test_ingest_all_team_stats_aggregates_all_child_results():
         "fielding_stats": ["f1"],
         "catching_stats": ["c1"],
     }
+
+
+def test_ingest_all_team_stats_calls_each_child_with_same_season():
+    # Given
+    hitting_use_case = AsyncMock(execute=AsyncMock(return_value=[]))
+    pitching_use_case = AsyncMock(execute=AsyncMock(return_value=[]))
+    fielding_use_case = AsyncMock(execute=AsyncMock(return_value=[]))
+    catching_use_case = AsyncMock(execute=AsyncMock(return_value=[]))
+
+    use_case = IngestAllTeamStatsUseCase(
+        hitting_stats_use_case=hitting_use_case,
+        pitching_stats_use_case=pitching_use_case,
+        fielding_stats_use_case=fielding_use_case,
+        catching_stats_use_case=catching_use_case,
+    )
+
+    # When
+    asyncio.run(use_case.execute(season=2027))
+
+    # Then
+    hitting_use_case.execute.assert_awaited_once_with(2027)
+    pitching_use_case.execute.assert_awaited_once_with(2027)
+    fielding_use_case.execute.assert_awaited_once_with(2027)
+    catching_use_case.execute.assert_awaited_once_with(2027)
