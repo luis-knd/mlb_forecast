@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from interface.rest.exception_handlers import DomainExceptions
 from interface.rest import prediction_routes as prediction_routes_module
+from interface.rest.exception_handlers import DomainExceptions
 from interface.rest.prediction_routes import generate_prediction, get_game_predictions
 
 

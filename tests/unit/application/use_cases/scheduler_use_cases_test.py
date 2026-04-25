@@ -225,6 +225,7 @@ async def test_generate_upcoming_predictions_impl_skips_prediction_when_team_sta
     prediction_repository.save.assert_not_awaited()
     cache.set.assert_not_awaited()
 
+
 @pytest.fixture
 def scheduler_use_cases_fixture():
     # Given

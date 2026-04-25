@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from interface.rest import data_ingestion_routes as data_ingestion_routes_module
-from interface.rest.exception_handlers import DomainExceptions
 from interface.rest.data_ingestion_routes import get_data_ingestion_use_cases
+from interface.rest.exception_handlers import DomainExceptions
 
 
 def test_get_data_ingestion_use_cases_success():
@@ -92,7 +92,9 @@ async def test_collect_ingestion_results_aggregates_counts_from_all_steps():
         "ingest_teams": AsyncMock(execute=AsyncMock(return_value=["t1"])),
         "ingest_games": AsyncMock(execute=AsyncMock(return_value=["g1", "g2"])),
         "ingest_all_team_stats": AsyncMock(
-            execute=AsyncMock(return_value={"hitting_stats": [1], "pitching_stats": [2], "fielding_stats": [], "catching_stats": [3]})
+            execute=AsyncMock(
+                return_value={"hitting_stats": [1], "pitching_stats": [2], "fielding_stats": [], "catching_stats": [3]}
+            )
         ),
     }
 
@@ -104,7 +106,7 @@ async def test_collect_ingestion_results_aggregates_counts_from_all_steps():
     )
 
     # Then
-    assert total_records == 5
+    assert total_records == 6
     assert errors == []
     assert results["teams"]["count"] == 1
     assert results["games"]["count"] == 2

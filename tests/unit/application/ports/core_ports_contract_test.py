@@ -3,9 +3,13 @@ from datetime import date, datetime
 import pytest
 
 from application.ports.cache import CachePort
+from application.ports.catching_stats_repository import CatchingStatsRepositoryPort
+from application.ports.fielding_stats_repository import FieldingStatsRepositoryPort
 from application.ports.game_repository import GameRepositoryPort
-from application.ports.mlb_api import MLBApiPort
+from application.ports.hitting_stats_repository import HittingStatsRepositoryPort
 from application.ports.ml_model import MLModelPort
+from application.ports.mlb_api import MLBApiPort
+from application.ports.pitching_stats_repository import PitchingStatsRepositoryPort
 from application.ports.player_repository import PlayerRepositoryPort
 from application.ports.prediction_repository import PredictionRepositoryPort
 from application.ports.scheduler import SchedulerPort
@@ -184,3 +188,57 @@ async def test_remaining_core_ports_execute_abstract_default_bodies():
     assert all(result is None for result in team_results)
     assert all(result is None for result in team_stats_results)
     assert all(result is None for result in player_results)
+
+
+@pytest.mark.asyncio
+async def test_team_stats_detail_ports_execute_abstract_default_bodies():
+    # Given
+    port = _DummyPort()
+
+    # When
+    hitting_results = [
+        await HittingStatsRepositoryPort.get_by_id(port, 1),
+        await HittingStatsRepositoryPort.get_by_team_and_season(port, 2, 2026),
+        await HittingStatsRepositoryPort.list_by_team(port, 2),
+        await HittingStatsRepositoryPort.list_by_season(port, 2026),
+        await HittingStatsRepositoryPort.list_top_teams_by_stat(port, 2026, "ops", limit=5),
+        await HittingStatsRepositoryPort.save(port, hitting_stats=None),
+        await HittingStatsRepositoryPort.update_stats(port, 1, {"ops": 0.78}),
+        await HittingStatsRepositoryPort.delete(port, 1),
+    ]
+    pitching_results = [
+        await PitchingStatsRepositoryPort.get_by_id(port, 1),
+        await PitchingStatsRepositoryPort.get_by_team_and_season(port, 2, 2026),
+        await PitchingStatsRepositoryPort.list_by_team(port, 2),
+        await PitchingStatsRepositoryPort.list_by_season(port, 2026),
+        await PitchingStatsRepositoryPort.list_top_teams_by_stat(port, 2026, "earned_run_average", limit=5),
+        await PitchingStatsRepositoryPort.save(port, pitching_stats=None),
+        await PitchingStatsRepositoryPort.update_stats(port, 1, {"earned_run_average": 3.2}),
+        await PitchingStatsRepositoryPort.delete(port, 1),
+    ]
+    fielding_results = [
+        await FieldingStatsRepositoryPort.get_by_id(port, 1),
+        await FieldingStatsRepositoryPort.get_by_team_and_season(port, 2, 2026),
+        await FieldingStatsRepositoryPort.list_by_team(port, 2),
+        await FieldingStatsRepositoryPort.list_by_season(port, 2026),
+        await FieldingStatsRepositoryPort.list_top_teams_by_stat(port, 2026, "fielding_percentage", limit=5),
+        await FieldingStatsRepositoryPort.save(port, fielding_stats=None),
+        await FieldingStatsRepositoryPort.update_stats(port, 1, {"errors": 10}),
+        await FieldingStatsRepositoryPort.delete(port, 1),
+    ]
+    catching_results = [
+        await CatchingStatsRepositoryPort.get_by_id(port, 1),
+        await CatchingStatsRepositoryPort.get_by_team_and_season(port, 2, 2026),
+        await CatchingStatsRepositoryPort.list_by_team(port, 2),
+        await CatchingStatsRepositoryPort.list_by_season(port, 2026),
+        await CatchingStatsRepositoryPort.list_top_teams_by_stat(port, 2026, "caught_stealing", limit=5),
+        await CatchingStatsRepositoryPort.save(port, catching_stats=None),
+        await CatchingStatsRepositoryPort.update_stats(port, 1, {"passed_balls": 2}),
+        await CatchingStatsRepositoryPort.delete(port, 1),
+    ]
+
+    # Then
+    assert all(result is None for result in hitting_results)
+    assert all(result is None for result in pitching_results)
+    assert all(result is None for result in fielding_results)
+    assert all(result is None for result in catching_results)
