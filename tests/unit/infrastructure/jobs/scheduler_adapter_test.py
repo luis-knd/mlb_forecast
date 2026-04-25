@@ -93,3 +93,16 @@ async def test_get_job_returns_serialized_job_details():
         "max_instances": 1,
         "pending": False,
     }
+
+
+@pytest.mark.asyncio
+async def test_remove_job_returns_false_when_scheduler_raises_exception():
+    # Given
+    adapter = _build_adapter_with_mocked_scheduler()
+    adapter.scheduler.remove_job.side_effect = RuntimeError("missing job")
+
+    # When
+    removed = await adapter.remove_job("unknown-job")
+
+    # Then
+    assert removed is False

@@ -85,3 +85,14 @@ async def test_generate_prediction_returns_created_payload_with_processing_metad
     assert payload["status"] == "success"
     assert payload["data"]["prediction"]["game_id"] == 33
     assert payload["data"]["processing_time_seconds"] >= 0
+
+
+@pytest.mark.asyncio
+async def test_generate_prediction_raises_game_not_found_when_use_case_returns_none():
+    # Given
+    use_cases = {"generate_prediction": AsyncMock()}
+    use_cases["generate_prediction"].execute.return_value = None
+
+    # When / Then
+    with pytest.raises(DomainExceptions.GameNotFoundError):
+        await generate_prediction(game_id=404, prediction_type="winner", use_cases=use_cases)

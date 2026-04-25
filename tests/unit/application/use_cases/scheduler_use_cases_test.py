@@ -188,3 +188,36 @@ async def test_generate_upcoming_predictions_impl_returns_error_when_repository_
 
     # Then
     assert result == {"success": False, "error": "db down"}
+
+
+@pytest.mark.asyncio
+async def test_generate_upcoming_predictions_impl_skips_prediction_when_team_stats_are_missing():
+    # Given
+    game_repository = AsyncMock()
+    game_repository.list_upcoming_games.return_value = [
+        _upcoming_game(game_id=22, home_team_id=5, away_team_id=7, game_date=datetime(2026, 3, 20))
+    ]
+
+    prediction_repository = AsyncMock()
+    prediction_repository.list_by_game.return_value = []
+
+    team_stats_repository = AsyncMock()
+    team_stats_repository.get_by_team_and_season.side_effect = [None, {"hitting_stats": {}}]
+
+    ml_model = AsyncMock()
+    cache = AsyncMock()
+
+    # When
+    result = await _generate_upcoming_predictions_impl(
+        game_repository=game_repository,
+        prediction_repository=prediction_repository,
+        team_stats_repository=team_stats_repository,
+        ml_model=ml_model,
+        cache=cache,
+    )
+
+    # Then
+    assert result == {"success": True, "predictions_generated": 0, "total_upcoming_games": 1}
+    ml_model.predict_game_outcome.assert_not_awaited()
+    prediction_repository.save.assert_not_awaited()
+    cache.set.assert_not_awaited()
