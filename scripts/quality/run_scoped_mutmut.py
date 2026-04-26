@@ -152,7 +152,7 @@ def _serialize_toml_value(value: object) -> str:
     if isinstance(value, list):
         serialized_items = ", ".join(_serialize_toml_value(item) for item in value)
         return f"[{serialized_items}]"
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return str(value)
     raise TypeError(f"Unsupported mutmut config value: {value!r}")
 

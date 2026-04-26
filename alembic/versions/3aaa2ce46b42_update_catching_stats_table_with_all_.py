@@ -6,8 +6,11 @@ Create Date: 2025-07-21 18:29:53.951584
 
 """
 
+from contextlib import suppress
+
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.exc import SQLAlchemyError
 
 # revision identifiers, used by Alembic.
 revision = "3aaa2ce46b42"
@@ -18,11 +21,8 @@ depends_on = None
 
 def upgrade() -> None:
     # Remove the non-existent innings_played field if it exists
-    try:
+    with suppress(SQLAlchemyError):
         op.drop_column("catching_stats", "innings_played")
-    except Exception:
-        # Column might not exist, ignore the error
-        pass
 
     # Add all the missing offensive stats fields
     op.add_column(

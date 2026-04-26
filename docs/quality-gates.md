@@ -15,7 +15,7 @@ Local hooks are focused on quick checks:
 - security and safety: `detect-private-key`, `detect-aws-credentials`, `detect-secrets`
 - Python formatting/imports: `black`, `isort`
 - static quick lint: `ruff` (`E,W,F,ERA,UP,BLE,B,C4,SIM`, with `--fix`)
-  - transitional ignores: `E203,B008,B904,BLE001,SIM102,SIM103,SIM105,UP038`
+  - formatter compatibility ignore: `E203`
 - static design smell check: local `pylint` hook with `R6301` (`method-may-be-static`) for DB repositories
 - OpenAPI consistency: `openapi-spec-validator`
 

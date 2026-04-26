@@ -174,6 +174,19 @@ class MLModelException(Exception):
     pass
 
 
+ML_OPERATION_ERRORS = (
+    MLModelException,
+    pickle.PickleError,
+    RuntimeError,
+    ValueError,
+    TypeError,
+    KeyError,
+    AttributeError,
+    EOFError,
+    OSError,
+)
+
+
 class _ModelPersistenceContext(Protocol):
     winner_model: RandomForestClassifier
     runs_model: RandomForestRegressor
@@ -205,7 +218,7 @@ class _ModelPersistenceMixin:
             self.model_version = model_data["model_version"]
             self.is_trained = model_data["is_trained"]
             logger.info(f"Loaded existing model: {self.model_version}")
-        except Exception as e:
+        except ML_OPERATION_ERRORS as e:
             logger.warning(f"Could not load existing model: {e}")
 
 
@@ -254,9 +267,9 @@ class MLModelAdapter(_ModelPersistenceMixin, MLModelPort):
             await self.save_model(os.path.join(self.model_dir, f"model_{self.model_version}.pkl"))
             logger.info(f"Training completed: {metrics}")
             return metrics
-        except Exception as e:
+        except ML_OPERATION_ERRORS as e:
             logger.error(f"Error during training: {e}")
-            raise MLModelException(f"Training error: {e}")
+            raise MLModelException(f"Training error: {e}") from e
 
     async def predict_game_outcome(
         self,
@@ -288,9 +301,9 @@ class MLModelAdapter(_ModelPersistenceMixin, MLModelPort):
                 confidence_score=confidence,
                 feature_importance=self._get_feature_importance(),
             )
-        except Exception as e:
+        except ML_OPERATION_ERRORS as e:
             logger.error(f"Error during prediction: {e}")
-            raise MLModelException(f"Prediction error: {e}")
+            raise MLModelException(f"Prediction error: {e}") from e
 
     async def evaluate_model(self, test_data: list[dict[str, Any]]) -> dict[str, float]:
         """Evaluate the model on test data and return performance metrics."""
@@ -310,9 +323,9 @@ class MLModelAdapter(_ModelPersistenceMixin, MLModelPort):
             metrics["test_samples"] = metrics.pop("training_samples")
             logger.info(f"Model evaluation completed: {metrics}")
             return metrics
-        except Exception as e:
+        except ML_OPERATION_ERRORS as e:
             logger.error(f"Error during model evaluation: {e}")
-            raise MLModelException(f"Evaluation error: {e}")
+            raise MLModelException(f"Evaluation error: {e}") from e
 
     async def get_feature_importance(self) -> dict[str, float]:
         """Get the importance of each feature in the model."""
@@ -334,7 +347,7 @@ class MLModelAdapter(_ModelPersistenceMixin, MLModelPort):
                 pickle.dump(model_data, file_handle)
             logger.info(f"Model saved to {filepath}")
             return True
-        except Exception as e:
+        except ML_OPERATION_ERRORS as e:
             logger.error(f"Error saving model: {e}")
             return False
 
@@ -350,7 +363,7 @@ class MLModelAdapter(_ModelPersistenceMixin, MLModelPort):
             self.is_trained = model_data["is_trained"]
             logger.info(f"Model loaded from {filepath}")
             return True
-        except Exception as e:
+        except ML_OPERATION_ERRORS as e:
             logger.error(f"Error loading model: {e}")
             return False
 
@@ -421,7 +434,7 @@ class MLModelAdapter(_ModelPersistenceMixin, MLModelPort):
         try:
             importance_values = list(self.winner_model.feature_importances_)
             return self._map_feature_importance(importance_values)
-        except Exception as e:
+        except ML_OPERATION_ERRORS as e:
             logger.error(f"Error getting feature importance: {e}")
             return {}
 

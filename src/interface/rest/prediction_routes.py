@@ -3,6 +3,7 @@ REST API routes for prediction operations.
 """
 
 from datetime import datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import JSONResponse
@@ -31,7 +32,7 @@ from interface.rest.response_handler import ResponseHandler
 router = APIRouter()
 
 
-def get_prediction_use_cases(db: Session = Depends(get_db)):
+def get_prediction_use_cases(db: Annotated[Session, Depends(get_db)]):
     """Get prediction use cases with dependencies."""
     prediction_repository = PredictionRepository(db)
     game_repository = GameRepository(db)
@@ -60,9 +61,10 @@ def get_prediction_use_cases(db: Session = Depends(get_db)):
     },
 )
 async def get_game_predictions(
-    game_id: int = Path(..., description="The ID of the game to get predictions for"),
-    prediction_type: str | None = Query(None, description="Filter by prediction type"),
-    use_cases: dict = Depends(get_prediction_use_cases),
+    game_id: Annotated[int, Path(description="The ID of the game to get predictions for")],
+    prediction_type: Annotated[str | None, Query(description="Filter by prediction type")] = None,
+    *,
+    use_cases: Annotated[dict, Depends(get_prediction_use_cases)],
 ) -> JSONResponse:
     """
     Get predictions for a specific game.
@@ -112,9 +114,10 @@ async def get_game_predictions(
     },
 )
 async def generate_prediction(
-    game_id: int = Query(..., description="The ID of the game to create prediction for"),
-    prediction_type: str = Query("winner", description="Type of prediction to generate"),
-    use_cases: dict = Depends(get_prediction_use_cases),
+    game_id: Annotated[int, Query(description="The ID of the game to create prediction for")],
+    prediction_type: Annotated[str, Query(description="Type of prediction to generate")] = "winner",
+    *,
+    use_cases: Annotated[dict, Depends(get_prediction_use_cases)],
 ) -> JSONResponse:
     """
     Generate a new prediction for a game.
@@ -167,5 +170,5 @@ async def generate_prediction(
 
     except Exception as e:
         if "model" in str(e).lower() or "ml" in str(e).lower():
-            raise DomainExceptions.ExternalServiceError("ML Model", str(e))
+            raise DomainExceptions.ExternalServiceError("ML Model", str(e)) from e
         raise

@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -12,6 +12,7 @@ from interface.rest.team_stats_retrieval_routes import (
     _resolve_stats_category,
     _validate_season_range,
     get_team_stats,
+    get_team_stats_use_cases,
 )
 
 
@@ -53,6 +54,9 @@ def test_validate_season_range_rejects_out_of_window(datetime_mock):
     with pytest.raises(DomainExceptions.InvalidDataError, match="Season must be between 1996 and 2026"):
         _validate_season_range(1995)
 
+    with pytest.raises(DomainExceptions.InvalidDataError, match="Season must be between 1996 and 2026"):
+        _validate_season_range(2027)
+
 
 def test_resolve_stats_category_defaults_to_all_for_empty_values():
     # Given / When / Then
@@ -81,6 +85,26 @@ def test_resolve_stats_category_rejects_unknown_values():
     # Given / When / Then
     with pytest.raises(HTTPException, match="category must be one of"):
         _resolve_stats_category("invalid")
+
+
+@patch("interface.rest.team_stats_retrieval_routes.GetTeamStatsUseCase")
+@patch("interface.rest.team_stats_retrieval_routes.TeamStatsRepository")
+def test_get_team_stats_use_cases_wires_dependencies(team_stats_repository_cls, get_team_stats_use_case_cls):
+    # Given
+    db = MagicMock()
+    cache_adapter = AsyncMock()
+    repository = MagicMock()
+    use_case = MagicMock()
+    team_stats_repository_cls.return_value = repository
+    get_team_stats_use_case_cls.return_value = use_case
+
+    # When
+    use_cases = get_team_stats_use_cases(db=db, cache_adapter=cache_adapter)
+
+    # Then
+    assert use_cases == {"get_team_stats": use_case}
+    team_stats_repository_cls.assert_called_once_with(db)
+    get_team_stats_use_case_cls.assert_called_once_with(repository, cache_adapter)
 
 
 @pytest.mark.asyncio
@@ -120,7 +144,11 @@ async def test_get_team_stats_returns_success_response(parse_season_mock, valida
     payload = _decode(response)
     assert payload["status"] == "success"
     assert payload["data"] == {"stats": "dto"}
-    use_case.execute.assert_awaited_once()
+    use_case.execute.assert_awaited_once_with(
+        team_id=7,
+        season=2024,
+        category=TeamStatsCategory.HITTING,
+    )
     validate_range_mock.assert_called_once_with(2024)
 
 

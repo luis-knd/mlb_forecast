@@ -21,6 +21,7 @@ from domain.entities.team import Team
 from domain.entities.team_stats import TeamStats
 
 logger = logging.getLogger(__name__)
+SCHEDULER_TASK_ERRORS = (RuntimeError, ValueError, TypeError, OSError)
 
 
 async def _ingest_games_for_date_impl(
@@ -189,7 +190,7 @@ async def _generate_upcoming_predictions_impl(
                 }
                 await cache.set(f"mlb:prediction:{game.id}:outcome", prediction_dict, ttl=1800)
                 predictions_generated += 1
-            except Exception as exc:
+            except SCHEDULER_TASK_ERRORS as exc:
                 logger.warning(f"Error generating prediction for game {game.id}: {exc}")
         logger.info(f"✅ Predictions generated: {predictions_generated} games")
         return {
@@ -197,7 +198,7 @@ async def _generate_upcoming_predictions_impl(
             "predictions_generated": predictions_generated,
             "total_upcoming_games": len(upcoming_games),
         }
-    except Exception as exc:
+    except SCHEDULER_TASK_ERRORS as exc:
         logger.error(f"❌ Error generating predictions: {exc}")
         return {"success": False, "error": str(exc)}
 
@@ -257,7 +258,7 @@ class SchedulerUseCases:
                 "games_tomorrow": len(games_tomorrow),
             }
 
-        except Exception as e:
+        except SCHEDULER_TASK_ERRORS as e:
             logger.error(f"❌ Error in daily games ingestion: {e}")
             return {"success": False, "error": str(e)}
 
@@ -311,7 +312,7 @@ class SchedulerUseCases:
 
             return {"success": True, "teams_updated": stats_count}
 
-        except Exception as e:
+        except SCHEDULER_TASK_ERRORS as e:
             logger.error(f"❌ Error in team statistics ingestion: {e}")
             return {"success": False, "error": str(e)}
 
@@ -363,7 +364,7 @@ class SchedulerUseCases:
 
             return {"success": True, "model_updated": True, "metrics": metrics}
 
-        except Exception as e:
+        except SCHEDULER_TASK_ERRORS as e:
             logger.error(f"❌ Error in ML model retraining: {e}")
             return {"success": False, "error": str(e)}
 
@@ -398,7 +399,7 @@ class SchedulerUseCases:
                 "hit_rate": stats_after.get("hit_rate", 0),
             }
 
-        except Exception as e:
+        except SCHEDULER_TASK_ERRORS as e:
             logger.error(f"❌ Error in cache maintenance: {e}")
             return {"success": False, "error": str(e)}
 
@@ -455,7 +456,7 @@ class SchedulerUseCases:
 
             return {"success": True, "teams_ingested": teams_count}
 
-        except Exception as e:
+        except SCHEDULER_TASK_ERRORS as e:
             logger.error(f"❌ Error in weekly team ingestion: {e}")
             return {"success": False, "error": str(e)}
 

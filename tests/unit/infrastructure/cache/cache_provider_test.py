@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from infrastructure.cache import cache_provider
+from infrastructure.cache.redis_adapter import CacheException
 
 
 @pytest.fixture(autouse=True)
@@ -53,6 +54,24 @@ async def test_connect_cache_skips_when_already_connected(monkeypatch):
 
     # Then
     adapter.connect.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_connect_cache_handles_cache_exception_with_warning(monkeypatch):
+    # Given
+    adapter = MagicMock(redis_client=None)
+    adapter.connect = AsyncMock(side_effect=CacheException("redis unavailable"))
+    warning_spy = MagicMock()
+    monkeypatch.setattr(cache_provider, "get_cache_adapter", MagicMock(return_value=adapter))
+    monkeypatch.setattr(cache_provider.logger, "warning", warning_spy)
+
+    # When
+    await cache_provider.connect_cache()
+
+    # Then
+    adapter.connect.assert_awaited_once_with()
+    warning_spy.assert_called_once()
+    assert "Skipping Redis connection at startup" in warning_spy.call_args[0][0]
 
 
 @pytest.mark.asyncio

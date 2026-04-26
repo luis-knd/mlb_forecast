@@ -13,6 +13,17 @@ from application.ports.cache import CachePort
 from infrastructure.config.settings import settings
 
 logger = logging.getLogger(__name__)
+CACHE_OPERATION_ERRORS = (
+    redis.RedisError,
+    pickle.PickleError,
+    RuntimeError,
+    ValueError,
+    TypeError,
+    AttributeError,
+    EOFError,
+    UnicodeError,
+    OSError,
+)
 
 
 class CacheException(Exception):
@@ -57,7 +68,7 @@ class _RedisIntrospectionMixin:
                     "hit_rate_percentage": hit_rate_percentage,
                 }
             return {}
-        except Exception as e:
+        except CACHE_OPERATION_ERRORS as e:
             logger.error(f"Error getting cache statistics: {e}")
             return {"error": str(e)}
 
@@ -70,7 +81,7 @@ class _RedisIntrospectionMixin:
             if not self.redis_client:
                 return None
             return int(await self.redis_client.dbsize())
-        except Exception as e:
+        except CACHE_OPERATION_ERRORS as e:
             logger.error(f"Error counting keys in cache: {e}")
             return None
 
@@ -86,14 +97,14 @@ class _RedisIntrospectionMixin:
 
             async for key in self.redis_client.scan_iter(match=pattern, count=min(limit, 1000)):
                 try:
-                    normalized_key = key.decode("utf-8") if isinstance(key, (bytes, bytearray)) else str(key)
-                except Exception:
+                    normalized_key = key.decode("utf-8") if isinstance(key, bytes | bytearray) else str(key)
+                except UnicodeError:
                     normalized_key = str(key)
                 keys.append(normalized_key)
                 if len(keys) >= limit:
                     break
             return keys
-        except Exception as e:
+        except CACHE_OPERATION_ERRORS as e:
             logger.error(f"Error listing keys with pattern {pattern}: {e}")
             return keys
 
@@ -129,9 +140,9 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
             # Use debug to avoid noisy logs on frequent health checks
             logger.debug("Redis connection established successfully")
 
-        except Exception as e:
+        except CACHE_OPERATION_ERRORS as e:
             logger.error(f"Error connecting to Redis: {e}")
-            raise CacheException(f"Redis connection error: {e}")
+            raise CacheException(f"Redis connection error: {e}") from e
 
     async def disconnect(self) -> None:
         """Close connection to Redis."""
@@ -162,7 +173,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
             # Deserialize
             return pickle.loads(value)
 
-        except Exception as e:
+        except CACHE_OPERATION_ERRORS as e:
             logger.error(f"Error retrieving from cache {key}: {e}")
             return default
 
@@ -188,7 +199,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
             logger.debug(f"Value stored in cache: {key} (TTL: {ttl}s)")
             return bool(result)
 
-        except Exception as e:
+        except CACHE_OPERATION_ERRORS as e:
             logger.error(f"Error storing in cache {key}: {e}")
             return False
 
@@ -204,7 +215,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
                 result = 0
             logger.debug(f"Key deleted from cache: {key}")
             return bool(result)
-        except Exception as e:
+        except CACHE_OPERATION_ERRORS as e:
             logger.error(f"Error deleting from cache {key}: {e}")
             return False
 
@@ -226,7 +237,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
             logger.debug(f"Deleted {deleted} keys matching pattern: {pattern}")
             return deleted
 
-        except Exception as e:
+        except CACHE_OPERATION_ERRORS as e:
             logger.error(f"Error deleting pattern {pattern}: {e}")
             return 0
 
@@ -241,7 +252,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
             else:
                 result = 0
             return bool(result)
-        except Exception as e:
+        except CACHE_OPERATION_ERRORS as e:
             logger.error(f"Error checking existence in cache {key}: {e}")
             return False
 
@@ -266,7 +277,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
                     return 1 if result else 0
             return 0
 
-        except Exception as e:
+        except CACHE_OPERATION_ERRORS as e:
             logger.error(f"Error clearing cache with pattern {pattern}: {e}")
             return 0
 
@@ -286,7 +297,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
                 if value is not None:
                     try:
                         result[key] = pickle.loads(value)
-                    except Exception as e:
+                    except CACHE_OPERATION_ERRORS as e:
                         logger.warning(f"Error deserializing {key}: {e}")
                         result[key] = None
                 else:
@@ -294,9 +305,9 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
 
             return result
 
-        except Exception as e:
+        except CACHE_OPERATION_ERRORS as e:
             logger.error(f"Error retrieving multiple elements: {e}")
-            return {key: None for key in keys}
+            return dict.fromkeys(keys)
 
     async def set_many(self, mapping: dict[str, Any], ttl: int | None = None) -> bool:
         """Set multiple values in the cache with an optional time-to-live in seconds."""
@@ -325,7 +336,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
 
             return success
 
-        except Exception as e:
+        except CACHE_OPERATION_ERRORS as e:
             logger.error(f"Error storing multiple elements: {e}")
             return False
 
@@ -341,7 +352,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
                 return deleted
             return 0
 
-        except Exception as e:
+        except CACHE_OPERATION_ERRORS as e:
             logger.error(f"Error deleting multiple keys: {e}")
             return 0
 
@@ -357,7 +368,7 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
                 return result
             return 0
 
-        except Exception as e:
+        except CACHE_OPERATION_ERRORS as e:
             logger.error(f"Error incrementing {key}: {e}")
             return 0
 
@@ -373,6 +384,6 @@ class RedisAdapter(_RedisIntrospectionMixin, CachePort):
                 return result
             return 0
 
-        except Exception as e:
+        except CACHE_OPERATION_ERRORS as e:
             logger.error(f"Error decrementing {key}: {e}")
             return 0

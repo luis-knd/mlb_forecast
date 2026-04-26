@@ -9,9 +9,11 @@ from datetime import datetime
 from typing import Any, Protocol, cast
 
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from application.ports.cache import CachePort
+from infrastructure.cache.redis_adapter import CacheException
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +46,17 @@ class SystemException(Exception):
     """Custom exception for system operations."""
 
 
+SYSTEM_OPERATION_ERRORS = (
+    SystemException,
+    CacheException,
+    SQLAlchemyError,
+    RuntimeError,
+    ValueError,
+    TypeError,
+    OSError,
+)
+
+
 class GetCacheStatsUseCase:
     """Use cases for retrieving cache statistics."""
 
@@ -66,9 +79,9 @@ class GetCacheStatsUseCase:
                 await self._append_keys_stats(introspection, stats, pattern, limit)
             logger.info("Cache statistics retrieved successfully")
             return stats
-        except Exception as error:
+        except SYSTEM_OPERATION_ERRORS as error:
             logger.error(f"Error getting cache statistics: {error}")
-            raise SystemException(f"Failed to get cache statistics: {error}")
+            raise SystemException(f"Failed to get cache statistics: {error}") from error
 
     def _get_introspection_port(self) -> CacheIntrospectionPort:
         candidate: Any = self.cache_adapter
@@ -112,7 +125,7 @@ class GetCacheStatsUseCase:
     async def _safe_total_keys(cache_introspection: CacheIntrospectionPort) -> int | None:
         try:
             return await cache_introspection.count_keys()
-        except Exception:
+        except SYSTEM_OPERATION_ERRORS:
             return None
 
     async def _append_keys_stats(
@@ -157,9 +170,9 @@ class ClearCacheUseCase:
                 "pattern": pattern,
                 "timestamp": datetime.now().isoformat(),
             }
-        except Exception as error:
+        except SYSTEM_OPERATION_ERRORS as error:
             logger.error(f"Error clearing cache: {error}")
-            raise SystemException(f"Failed to clear cache: {error}")
+            raise SystemException(f"Failed to clear cache: {error}") from error
 
 
 class HealthCheckUseCase:
@@ -184,7 +197,7 @@ class HealthCheckUseCase:
             await self._check_cache_health(health_status)
             health_status["ml_model"] = "not_implemented"
             return health_status
-        except Exception as error:
+        except SYSTEM_OPERATION_ERRORS as error:
             logger.error(f"Error during health check: {error}")
             health_status["status"] = "error"
             health_status["error"] = str(error)
@@ -196,7 +209,7 @@ class HealthCheckUseCase:
             db.execute(text("SELECT 1"))
             health_status["database"] = "connected"
             logger.debug("Database health check: OK")
-        except Exception as error:
+        except (SQLAlchemyError, RuntimeError, OSError) as error:
             health_status["database"] = "disconnected"
             health_status["status"] = "unhealthy"
             logger.error(f"Database health check failed: {error}")
@@ -208,7 +221,7 @@ class HealthCheckUseCase:
             await self.cache_adapter.delete(test_key)
             health_status["cache"] = "connected"
             logger.debug("Cache health check: OK")
-        except Exception as error:
+        except SYSTEM_OPERATION_ERRORS as error:
             health_status["cache"] = "disconnected"
             health_status["status"] = "unhealthy"
             logger.error(f"Cache health check failed: {error}")
@@ -252,16 +265,16 @@ class GetAppInfoUseCase:
             }
             logger.info("Application info retrieved successfully")
             return app_info
-        except Exception as error:
+        except SYSTEM_OPERATION_ERRORS as error:
             logger.error(f"Error getting application info: {error}")
-            raise SystemException(f"Failed to get application info: {error}")
+            raise SystemException(f"Failed to get application info: {error}") from error
 
     @staticmethod
     def _is_database_connected(db: Session) -> bool:
         try:
             db.execute(text("SELECT 1"))
             return True
-        except Exception:
+        except (SQLAlchemyError, RuntimeError, OSError):
             return False
 
     async def _is_cache_connected(self) -> bool:
@@ -270,5 +283,5 @@ class GetAppInfoUseCase:
             await self.cache_adapter.set(test_key, "test", 5)
             await self.cache_adapter.delete(test_key)
             return True
-        except Exception:
+        except SYSTEM_OPERATION_ERRORS:
             return False

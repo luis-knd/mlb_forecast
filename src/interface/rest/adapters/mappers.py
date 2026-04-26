@@ -32,7 +32,7 @@ def _to_number(value: Any, caster):
     if callable(value):
         try:
             value = value()
-        except Exception:
+        except (RuntimeError, TypeError, ValueError, AttributeError):
             return None
     try:
         return caster(value)

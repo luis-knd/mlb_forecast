@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import JSONResponse
@@ -111,8 +112,8 @@ def _build_ingestion_result(players: list[object], start_time: datetime) -> Data
 
 
 def get_player_use_cases(
-    db: Session = Depends(get_db),
-    cache: CachePort = Depends(get_cache_adapter),
+    db: Annotated[Session, Depends(get_db)],
+    cache: Annotated[CachePort, Depends(get_cache_adapter)],
 ):
     player_repository = PlayerRepository(db)
     team_repository = TeamRepository(db)
@@ -146,20 +147,23 @@ def get_player_use_cases(
     },
 )
 async def list_players(
-    team_id: int | None = Query(None, description="Filter by internal team ID"),
-    position: str | None = Query(None, description="Filter by position abbreviation"),
-    name: str | None = Query(None, description="Filter by player name"),
-    active: bool | None = Query(None, description="Filter by active status"),
-    limit: int = Query(50, ge=1, le=200, description="Maximum number of players to return"),
-    offset: int = Query(0, ge=0, description="Pagination offset"),
-    include: list[str] | None = Query(
-        None,
-        description=(
-            "Relations to hydrate. Supports comma-separated values and dot notation, "
-            "e.g. current_team or current_team.venue_name"
+    team_id: Annotated[int | None, Query(description="Filter by internal team ID")] = None,
+    position: Annotated[str | None, Query(description="Filter by position abbreviation")] = None,
+    name: Annotated[str | None, Query(description="Filter by player name")] = None,
+    active: Annotated[bool | None, Query(description="Filter by active status")] = None,
+    limit: Annotated[int, Query(ge=1, le=200, description="Maximum number of players to return")] = 50,
+    offset: Annotated[int, Query(ge=0, description="Pagination offset")] = 0,
+    include: Annotated[
+        list[str] | None,
+        Query(
+            description=(
+                "Relations to hydrate. Supports comma-separated values and dot notation, "
+                "e.g. current_team or current_team.venue_name"
+            ),
         ),
-    ),
-    use_cases: dict = Depends(get_player_use_cases),
+    ] = None,
+    *,
+    use_cases: Annotated[dict, Depends(get_player_use_cases)],
 ) -> JSONResponse:
     if team_id is not None and team_id <= 0:
         raise DomainExceptions.InvalidDataError("team_id must be a positive integer")
@@ -195,15 +199,18 @@ async def list_players(
     },
 )
 async def get_player(
-    player_id: int = Path(..., description="MLB personId"),
-    include: list[str] | None = Query(
-        None,
-        description=(
-            "Relations to hydrate. Supports comma-separated values and dot notation, "
-            "e.g. current_team or current_team.venue_name"
+    player_id: Annotated[int, Path(description="MLB personId")],
+    include: Annotated[
+        list[str] | None,
+        Query(
+            description=(
+                "Relations to hydrate. Supports comma-separated values and dot notation, "
+                "e.g. current_team or current_team.venue_name"
+            ),
         ),
-    ),
-    use_cases: dict = Depends(get_player_use_cases),
+    ] = None,
+    *,
+    use_cases: Annotated[dict, Depends(get_player_use_cases)],
 ) -> JSONResponse:
     if player_id <= 0:
         raise DomainExceptions.InvalidDataError("player_id must be a positive integer")
@@ -235,17 +242,25 @@ async def get_player(
     },
 )
 async def ingest_players(
-    source: str = Query("sport_players", description="Source mode: team_roster, sport_players, search"),
-    season: int | None = Query(None, description="Season year"),
-    team_id: int | None = Query(
-        None,
-        alias="teamId",
-        description="Internal team ID required when source=team_roster and optional filter when source=sport_players",
-    ),
-    roster_type: str = Query("active", alias="rosterType", description="Roster type for team roster ingestion"),
-    sport_id: int = Query(1, alias="sportId", description="Sport ID for sport_players mode"),
-    query: str | None = Query(None, alias="q", description="Search text when source=search"),
-    use_cases: dict = Depends(get_player_use_cases),
+    source: Annotated[str, Query(description="Source mode: team_roster, sport_players, search")] = "sport_players",
+    season: Annotated[int | None, Query(description="Season year")] = None,
+    team_id: Annotated[
+        int | None,
+        Query(
+            alias="teamId",
+            description=(
+                "Internal team ID required when source=team_roster and optional filter when source=sport_players"
+            ),
+        ),
+    ] = None,
+    roster_type: Annotated[
+        str,
+        Query(alias="rosterType", description="Roster type for team roster ingestion"),
+    ] = "active",
+    sport_id: Annotated[int, Query(alias="sportId", description="Sport ID for sport_players mode")] = 1,
+    query: Annotated[str | None, Query(alias="q", description="Search text when source=search")] = None,
+    *,
+    use_cases: Annotated[dict, Depends(get_player_use_cases)],
 ) -> JSONResponse:
     start_time = datetime.now()
     normalized_source = _validate_ingest_players_request(source, season, team_id, sport_id)

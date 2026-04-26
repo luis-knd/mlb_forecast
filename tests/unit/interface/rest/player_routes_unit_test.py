@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -11,6 +12,108 @@ from interface.rest.exception_handlers import DomainExceptions
 
 def _decode_response(response) -> dict:
     return json.loads(response.body.decode())
+
+
+@patch("interface.rest.player_routes.datetime")
+def test_validate_ingest_players_request_normalizes_source_and_accepts_future_boundary(datetime_mock):
+    # Given
+    datetime_mock.now.return_value = datetime(2026, 4, 26, 12, 0, 0)
+
+    # When
+    normalized_source = player_routes._validate_ingest_players_request(
+        source=" TEAM_ROSTER ",
+        season=2027,
+        team_id=7,
+        sport_id=1,
+    )
+
+    # Then
+    assert normalized_source == "team_roster"
+
+
+@pytest.mark.asyncio
+async def test_resolve_team_mlb_id_for_ingestion_returns_expected_values(sample_team):
+    # Given
+    use_cases = {"get_team": AsyncMock()}
+    use_cases["get_team"].execute.return_value = sample_team
+
+    # When
+    resolved_team_mlb_id = await player_routes._resolve_team_mlb_id_for_ingestion(
+        "sport_players", sample_team.id, use_cases
+    )
+    ignored_team_mlb_id = await player_routes._resolve_team_mlb_id_for_ingestion("search", sample_team.id, use_cases)
+    missing_team_mlb_id = await player_routes._resolve_team_mlb_id_for_ingestion("team_roster", None, use_cases)
+
+    # Then
+    assert resolved_team_mlb_id == sample_team.mlb_id
+    assert ignored_team_mlb_id is None
+    assert missing_team_mlb_id is None
+    use_cases["get_team"].execute.assert_awaited_once_with(team_id=sample_team.id)
+
+
+@pytest.mark.asyncio
+async def test_ingest_players_from_source_delegates_and_translates_value_errors(sample_player):
+    # Given
+    use_cases = {"ingest_players_by_source": AsyncMock()}
+    use_cases["ingest_players_by_source"].execute.return_value = [sample_player]
+
+    # When
+    players = await player_routes._ingest_players_from_source(
+        source="search",
+        season=2025,
+        team_mlb_id=None,
+        roster_type="active",
+        sport_id=1,
+        query="ohtani",
+        use_cases=use_cases,
+    )
+
+    # Then
+    assert players == [sample_player]
+    use_cases["ingest_players_by_source"].execute.assert_awaited_once_with(
+        source="search",
+        season=2025,
+        team_mlb_id=None,
+        roster_type="active",
+        sport_id=1,
+        query="ohtani",
+    )
+
+    # Given
+    failing_use_cases = {"ingest_players_by_source": AsyncMock()}
+    failing_use_cases["ingest_players_by_source"].execute.side_effect = ValueError("invalid source")
+
+    # When / Then
+    with pytest.raises(DomainExceptions.InvalidDataError, match="invalid source"):
+        await player_routes._ingest_players_from_source(
+            source="search",
+            season=2025,
+            team_mlb_id=None,
+            roster_type="active",
+            sport_id=1,
+            query="ohtani",
+            use_cases=failing_use_cases,
+        )
+
+
+@patch("interface.rest.player_routes.datetime")
+def test_build_ingestion_result_returns_timed_summary(datetime_mock):
+    # Given
+    start_time = datetime(2026, 4, 26, 10, 0, 0)
+    end_time = datetime(2026, 4, 26, 10, 0, 5)
+    datetime_mock.now.return_value = end_time
+
+    # When
+    result = player_routes._build_ingestion_result(players=[object(), object()], start_time=start_time)
+
+    # Then
+    assert result.operation == "player_ingestion"
+    assert result.records_processed == 2
+    assert result.records_created == 2
+    assert result.records_updated == 0
+    assert result.errors == []
+    assert result.duration_seconds == 5.0
+    assert result.timestamp == end_time
 
 
 @pytest.fixture

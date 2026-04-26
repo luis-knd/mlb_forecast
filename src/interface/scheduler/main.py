@@ -30,6 +30,7 @@ logging.basicConfig(
 )
 
 logger = structlog.get_logger(__name__)
+SCHEDULER_RUNTIME_ERRORS = (RuntimeError, OSError, ValueError, TypeError)
 
 
 def _build_adapters() -> tuple[RedisAdapter, MLModelAdapter, MLBApiAdapter, SchedulerAdapter]:
@@ -53,7 +54,7 @@ async def _load_current_model(ml_model_adapter: MLModelAdapter) -> None:
         model_path = os.path.join(settings.MODEL_DIR, "current_model.pkl")
         await ml_model_adapter.load_model(model_path)
         logger.info("ML model loaded successfully")
-    except Exception as e:
+    except SCHEDULER_RUNTIME_ERRORS as e:
         logger.warning(f"Could not load ML model: {e}")
 
 
@@ -193,7 +194,7 @@ async def main():
 
     except KeyboardInterrupt:
         logger.info("⏹️ Interrupt received, shutting down...")
-    except Exception as e:
+    except SCHEDULER_RUNTIME_ERRORS as e:
         logger.error(f"❌ Critical error in jobs: {e}")
     finally:
         # Clean up

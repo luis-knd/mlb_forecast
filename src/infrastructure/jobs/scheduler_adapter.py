@@ -6,7 +6,9 @@ This module implements the SchedulerPort interface using APScheduler.
 import logging
 from typing import Any
 
+from apscheduler.jobstores.base import ConflictingIdError, JobLookupError
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.schedulers.base import SchedulerAlreadyRunningError, SchedulerNotRunningError
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
@@ -22,12 +24,38 @@ class SchedulerException(Exception):
     pass
 
 
+SCHEDULER_OPERATION_ERRORS = (
+    SchedulerException,
+    SchedulerAlreadyRunningError,
+    SchedulerNotRunningError,
+    ConflictingIdError,
+    JobLookupError,
+    RuntimeError,
+    ValueError,
+    TypeError,
+)
+
+
 class SchedulerAdapter(SchedulerPort):
     """Implementation of the SchedulerPort interface using APScheduler."""
 
     def __init__(self):
         self.scheduler = AsyncIOScheduler()
         self.is_running = False
+
+    @staticmethod
+    def _serialize_job(job: Any) -> dict[str, Any]:
+        return {
+            "id": job.id,
+            "name": job.name,
+            "next_run": job.next_run_time.isoformat() if job.next_run_time else None,
+            "trigger": str(job.trigger),
+            "max_instances": job.max_instances,
+            "pending": job.pending,
+        }
+
+    def _get_serialized_jobs(self) -> list[dict[str, Any]]:
+        return [self._serialize_job(job) for job in self.scheduler.get_jobs()]
 
     async def initialize(self) -> None:
         """Initialize the jobs and connect services."""
@@ -36,9 +64,9 @@ class SchedulerAdapter(SchedulerPort):
             # No additional initialization needed for APScheduler
             # This method is here for consistency with the interface
             # and to allow for future extensions
-        except Exception as e:
+        except SCHEDULER_OPERATION_ERRORS as e:
             logger.error(f"Error initializing jobs: {e}")
-            raise SchedulerException(f"Scheduler initialization error: {e}")
+            raise SchedulerException(f"Scheduler initialization error: {e}") from e
 
     async def start(self) -> None:
         """Start the jobs."""
@@ -47,9 +75,9 @@ class SchedulerAdapter(SchedulerPort):
                 self.scheduler.start()
                 self.is_running = True
                 logger.info("🚀 Scheduler started")
-            except Exception as e:
+            except SCHEDULER_OPERATION_ERRORS as e:
                 logger.error(f"Error starting jobs: {e}")
-                raise SchedulerException(f"Scheduler start error: {e}")
+                raise SchedulerException(f"Scheduler start error: {e}") from e
         else:
             logger.warning("Scheduler is already running")
 
@@ -60,9 +88,9 @@ class SchedulerAdapter(SchedulerPort):
                 self.scheduler.shutdown(wait=False)
                 self.is_running = False
                 logger.info("⏹️ Scheduler stopped")
-            except Exception as e:
+            except SCHEDULER_OPERATION_ERRORS as e:
                 logger.error(f"Error stopping jobs: {e}")
-                raise SchedulerException(f"Scheduler stop error: {e}")
+                raise SchedulerException(f"Scheduler stop error: {e}") from e
         else:
             logger.warning("Scheduler is not running")
 
@@ -113,9 +141,9 @@ class SchedulerAdapter(SchedulerPort):
 
             logger.info(f"Added job: {job_id}")
 
-        except Exception as e:
+        except SCHEDULER_OPERATION_ERRORS as e:
             logger.error(f"Error adding job {job_id}: {e}")
-            raise SchedulerException(f"Error adding job {job_id}: {e}")
+            raise SchedulerException(f"Error adding job {job_id}: {e}") from e
 
     async def remove_job(self, job_id: str) -> bool:
         """
@@ -131,7 +159,7 @@ class SchedulerAdapter(SchedulerPort):
             self.scheduler.remove_job(job_id)
             logger.info(f"Removed job: {job_id}")
             return True
-        except Exception as e:
+        except SCHEDULER_OPERATION_ERRORS as e:
             logger.error(f"Error removing job {job_id}: {e}")
             return False
 
@@ -142,17 +170,7 @@ class SchedulerAdapter(SchedulerPort):
         Returns:
             List of job information dictionaries
         """
-        return [
-            {
-                "id": job.id,
-                "name": job.name,
-                "next_run": (job.next_run_time.isoformat() if job.next_run_time else None),
-                "trigger": str(job.trigger),
-                "max_instances": job.max_instances,
-                "pending": job.pending,
-            }
-            for job in self.scheduler.get_jobs()
-        ]
+        return self._get_serialized_jobs()
 
     async def get_job(self, job_id: str) -> dict[str, Any] | None:
         """
@@ -169,14 +187,7 @@ class SchedulerAdapter(SchedulerPort):
         if not job:
             return None
 
-        return {
-            "id": job.id,
-            "name": job.name,
-            "next_run": job.next_run_time.isoformat() if job.next_run_time else None,
-            "trigger": str(job.trigger),
-            "max_instances": job.max_instances,
-            "pending": job.pending,
-        }
+        return self._serialize_job(job)
 
     def get_status(self) -> dict[str, Any]:
         """
@@ -188,5 +199,5 @@ class SchedulerAdapter(SchedulerPort):
         return {
             "scheduler_running": self.is_running,
             "total_jobs": len(self.scheduler.get_jobs()),
-            "jobs": self.get_jobs(),
+            "jobs": self._get_serialized_jobs(),
         }

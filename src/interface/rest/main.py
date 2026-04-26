@@ -24,6 +24,7 @@ from interface.rest.routes import router as api_router
 
 # Initialize ML model (cache handled by cache_provider)
 ml_model_adapter = MLModelAdapter()
+STARTUP_OPERATION_ERRORS = (RuntimeError, OSError, ValueError, TypeError)
 OPENAPI_TAG_METADATA = [
     {
         "name": "Teams",
@@ -79,7 +80,7 @@ async def lifespan(app: FastAPI):
     try:
         await ml_model_adapter.load_model(f"{settings.MODEL_DIR}/current_model.pkl")
         logging.info("ML model loaded successfully")
-    except Exception as e:
+    except STARTUP_OPERATION_ERRORS as e:
         logging.warning(f"Could not load ML model: {e}")
 
     yield

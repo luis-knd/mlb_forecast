@@ -172,12 +172,13 @@ def run_docker_build_with_progress(command: str, description: str = "") -> bool:
             line_clean = line.strip()
 
             # Detener spinner si está activo para mostrar progreso específico
-            if spinner_active and any(
-                keyword in line_clean.lower() for keyword in ["step ", "pulling", "downloading", "extracting"]
+            if (
+                spinner_active
+                and spinner
+                and any(keyword in line_clean.lower() for keyword in ["step ", "pulling", "downloading", "extracting"])
             ):
-                if spinner:
-                    spinner.stop()
-                    spinner_active = False
+                spinner.stop()
+                spinner_active = False
 
             # Detectar número total de pasos al inicio
             if line_clean.startswith("Step ") and "/" in line_clean and total_steps == 0:
@@ -271,13 +272,16 @@ def run_docker_build_with_progress(command: str, description: str = "") -> bool:
                     print(f"   ℹ️  {line_clean}")
 
             # Si no hemos detectado pasos específicos, mantener spinner o mostrar actividad
-            elif not total_steps and not spinner_active:
-                # Mostrar líneas que indican actividad sin spinner
-                if any(
+            elif (
+                not total_steps
+                and not spinner_active
+                and any(
                     keyword in line_clean.lower()
                     for keyword in ["from", "run", "copy", "add", "expose", "cmd", "workdir"]
-                ):
-                    print(f"   📝 {line_clean}")
+                )
+            ):
+                # Mostrar líneas que indican actividad sin spinner
+                print(f"   📝 {line_clean}")
 
         # Limpiar spinner si aún está activo
         if spinner_active and spinner:
@@ -296,7 +300,7 @@ def run_docker_build_with_progress(command: str, description: str = "") -> bool:
             print(f"❌ Error en la construcción (código: {process.returncode})")
             return False
 
-    except Exception as e:
+    except (subprocess.SubprocessError, OSError, RuntimeError, ValueError) as e:
         print(f"\n❌ Error ejecutando comando: {e}")
         return False
     finally:
@@ -348,7 +352,7 @@ def run_command_with_live_output(command: str, description: str = "") -> bool:
             print(f"❌ Error (código: {process.returncode})")
             return False
 
-    except Exception as e:
+    except (subprocess.SubprocessError, OSError, RuntimeError, ValueError) as e:
         print(f"❌ Error ejecutando comando: {e}")
         return False
 
@@ -384,7 +388,7 @@ def run_command_with_spinner(command: str, description: str = "") -> bool:
     except subprocess.TimeoutExpired:
         spinner.stop("Comando tardó demasiado (timeout)")
         return False
-    except Exception as e:
+    except (subprocess.SubprocessError, OSError, RuntimeError, ValueError) as e:
         spinner.stop(f"Error ejecutando comando: {e}")
         return False
 
