@@ -45,7 +45,10 @@ async def test_get_by_id_and_team_season(repository, session):
 async def test_list_and_top_methods(repository, monkeypatch):
     # Given
     repository.get_by_team_and_season = AsyncMock(return_value={"ok": True})
-    repository.session.query.return_value.filter.return_value.order_by.return_value.all.return_value = [(2026,), (2025,)]
+    repository.session.query.return_value.filter.return_value.order_by.return_value.all.return_value = [
+        (2026,),
+        (2025,),
+    ]
     repository.session.query.return_value.filter.return_value.all.return_value = [(1,), (2,)]
 
     # When
