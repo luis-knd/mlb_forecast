@@ -114,3 +114,51 @@ async def test_get_by_team_and_season_returns_none_when_all_stats_missing(reposi
 def test_model_to_dict_handles_none_model():
     # Given / When / Then
     assert TeamStatsRepository._model_to_dict(None) is None
+
+
+@pytest.mark.asyncio
+async def test_update_stats_and_delete_cover_pitching_and_fielding_branches(repository, session):
+    # Given
+    repository.get_by_team_and_season = AsyncMock(return_value={"ok": True})
+    session.query.return_value.filter.return_value.first.side_effect = [
+        None,
+        SimpleNamespace(team_id=9, season=2026),
+        None,
+        None,
+        SimpleNamespace(team_id=9, season=2026),
+        None,
+        None,
+        None,
+        SimpleNamespace(id=88),
+        None,
+        None,
+        None,
+        SimpleNamespace(id=77),
+        None,
+    ]
+
+    # When
+    updated_pitching = await repository.update_stats(1, {})
+    updated_fielding = await repository.update_stats(2, {})
+    deleted_pitching = await repository.delete(88)
+    deleted_fielding = await repository.delete(77)
+
+    # Then
+    assert updated_pitching == {"ok": True}
+    assert updated_fielding == {"ok": True}
+    assert deleted_pitching is True
+    assert deleted_fielding is True
+
+
+@pytest.mark.asyncio
+async def test_save_rolls_back_when_commit_fails(repository, session):
+    # Given
+    team_stats = TeamStats.create(team_id=1, season=2026)
+    session.query.return_value.filter.return_value.first.return_value = None
+    session.commit.side_effect = RuntimeError("commit failed")
+
+    # When / Then
+    with pytest.raises(RuntimeError, match="commit failed"):
+        await repository.save(team_stats)
+
+    session.rollback.assert_called_once()

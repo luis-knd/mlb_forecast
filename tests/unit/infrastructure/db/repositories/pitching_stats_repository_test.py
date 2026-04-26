@@ -66,3 +66,33 @@ async def test_save_update_delete(repository, session, entity, monkeypatch):
     assert updated is entity
     assert existing.wins == 7
     assert deleted is True
+
+
+def test_get_existing_model_prioritizes_id_lookup(repository, session, entity):
+    # Given
+    existing = MagicMock(id=99)
+    session.query.return_value.filter.return_value.first.side_effect = [existing]
+    entity.id = 99
+
+    # When
+    result = repository._get_existing_model(entity)
+
+    # Then
+    assert result is existing
+
+
+@pytest.mark.asyncio
+async def test_list_top_teams_by_stat_valid_and_update_stats_missing(repository, session):
+    # Given
+    fake = PitchingStats.create(team_id=1, season=2026)
+    q = session.query.return_value.options.return_value
+    q.filter.return_value.order_by.return_value.limit.return_value.all.return_value = [fake]
+    session.query.return_value.filter.return_value.first.return_value = None
+
+    # When
+    top = await repository.list_top_teams_by_stat(2026, "wins", limit=1, descending=False)
+    missing_update = await repository.update_stats(123, {"wins": 10})
+
+    # Then
+    assert len(top) == 1
+    assert missing_update is None
