@@ -116,9 +116,7 @@ class TestMLBApiAdapter:
         # Given
         adapter = MLBApiAdapter()
         stats_data = {
-            "stats": [
-                {"group": {"displayName": "hitting"}, "splits": [{"team": {"id": 99}, "stat": {"runs": 100}}]}
-            ]
+            "stats": [{"group": {"displayName": "hitting"}, "splits": [{"team": {"id": 99}, "stat": {"runs": 100}}]}]
         }
 
         # When
