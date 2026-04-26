@@ -47,6 +47,14 @@ def test_count_team_stats_payload_returns_sum_for_all_sections():
     assert total == 6
 
 
+def test_count_team_stats_payload_returns_zero_for_non_dict_input():
+    # Given / When
+    total = data_ingestion_routes_module._count_team_stats_payload(["not", "a", "dict"])
+
+    # Then
+    assert total == 0
+
+
 @pytest.mark.asyncio
 async def test_run_ingestion_step_updates_success_and_count():
     # Given
@@ -170,3 +178,52 @@ async def test_ingest_full_data_wraps_mlb_api_related_errors(monkeypatch):
     # When / Then
     with pytest.raises(DomainExceptions.ExternalServiceError, match="MLB API"):
         await data_ingestion_routes_module.ingest_full_data(season=2026, days_back=7, use_cases=use_cases)
+
+
+@pytest.mark.asyncio
+async def test_ingest_full_data_returns_created_response_on_success(monkeypatch):
+    # Given
+    use_cases = {"ingest_teams": AsyncMock(), "ingest_games": AsyncMock(), "ingest_all_team_stats": AsyncMock()}
+    ingestion_results = data_ingestion_routes_module._new_ingestion_results()
+    ingestion_results["teams"].update({"success": True, "count": 2})
+    ingestion_results["games"].update({"success": True, "count": 3})
+    ingestion_results["team_stats"].update({"success": True, "count": 4})
+
+    async def _collect_ok(**_kwargs):
+        return ingestion_results, 9, []
+
+    monkeypatch.setattr(data_ingestion_routes_module, "_collect_ingestion_results", _collect_ok)
+
+    # When
+    response = await data_ingestion_routes_module.ingest_full_data(season=2026, days_back=7, use_cases=use_cases)
+    payload = json.loads(response.body)
+
+    # Then
+    assert response.status_code == 201
+    assert payload["data"]["teams_ingested"] == 2
+    assert payload["data"]["games_ingested"] == 3
+    assert payload["data"]["stats_ingested"] == 4
+
+
+@pytest.mark.asyncio
+async def test_ingest_full_data_reraises_non_api_errors(monkeypatch):
+    # Given
+    use_cases = {"ingest_teams": AsyncMock(), "ingest_games": AsyncMock(), "ingest_all_team_stats": AsyncMock()}
+
+    async def _collect_boom(**_kwargs):
+        raise RuntimeError("db disconnected")
+
+    monkeypatch.setattr(data_ingestion_routes_module, "_collect_ingestion_results", _collect_boom)
+
+    # When / Then
+    with pytest.raises(RuntimeError, match="db disconnected"):
+        await data_ingestion_routes_module.ingest_full_data(season=2026, days_back=7, use_cases=use_cases)
+
+
+@pytest.mark.asyncio
+async def test_retrain_ml_model_returns_placeholder_payload():
+    # Given / When
+    payload = await data_ingestion_routes_module.retrain_ml_model()
+
+    # Then
+    assert payload == {"message": "Retrain ML model endpoint - To be implemented"}
