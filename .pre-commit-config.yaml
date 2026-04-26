@@ -32,7 +32,7 @@ repos:
           - "--select=E,W,F,ERA,UP,BLE,B,C4,SIM"
           - "--fix"
           - "--line-length=120"
-          - "--extend-ignore=E203,B008,B904,BLE001,SIM102,SIM103,SIM105,UP038"
+          - "--extend-ignore=E203"
           - "--exclude=src/interface/rest/generated"
       - id: ruff-format
 

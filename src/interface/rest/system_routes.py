@@ -3,6 +3,7 @@ REST API routes for system operations and administration.
 """
 
 from datetime import datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
@@ -36,7 +37,7 @@ from interface.rest.response_handler import ResponseHandler
 router = APIRouter()
 
 
-def get_system_use_cases(db: Session = Depends(get_db)):
+def get_system_use_cases(db: Annotated[Session, Depends(get_db)]):
     """Get system use cases with dependencies."""
     cache_adapter = get_cache_adapter()
     runtime_config = SystemRuntimeConfig(
@@ -71,10 +72,14 @@ def get_system_use_cases(db: Session = Depends(get_db)):
     },
 )
 async def get_cache_stats(
-    include_keys: bool = Query(False, description="Include a sample of keys in stats output"),
-    pattern: str | None = Query(None, description="Pattern to match keys when include_keys=true (e.g., 'mlb:*')"),
-    limit: int = Query(100, ge=1, le=10000, description="Max number of keys to list when include_keys=true"),
-    use_cases: dict = Depends(get_system_use_cases),
+    include_keys: Annotated[bool, Query(description="Include a sample of keys in stats output")] = False,
+    pattern: Annotated[
+        str | None,
+        Query(description="Pattern to match keys when include_keys=true (e.g., 'mlb:*')"),
+    ] = None,
+    limit: Annotated[int, Query(ge=1, le=10000, description="Max number of keys to list when include_keys=true")] = 100,
+    *,
+    use_cases: Annotated[dict, Depends(get_system_use_cases)],
 ) -> JSONResponse:
     """
     Get cache statistics for monitoring and debugging purposes.
@@ -110,8 +115,12 @@ async def get_cache_stats(
     },
 )
 async def clear_cache(
-    pattern: str | None = Query(None, description="Pattern to clear specific cache keys (e.g., 'mlb:teams:*')"),
-    use_cases: dict = Depends(get_system_use_cases),
+    pattern: Annotated[
+        str | None,
+        Query(description="Pattern to clear specific cache keys (e.g., 'mlb:teams:*')"),
+    ] = None,
+    *,
+    use_cases: Annotated[dict, Depends(get_system_use_cases)],
 ) -> JSONResponse:
     """
     Clear cache keys based on a provided pattern.
@@ -161,8 +170,8 @@ async def clear_cache(
     },
 )
 async def health_check(
-    db: Session = Depends(get_db),
-    use_cases: dict = Depends(get_system_use_cases),
+    db: Annotated[Session, Depends(get_db)],
+    use_cases: Annotated[dict, Depends(get_system_use_cases)],
 ) -> JSONResponse:
     """
     Comprehensive system health check endpoint.
@@ -204,7 +213,7 @@ async def health_check(
             )
 
             return ResponseHandler.success(data=health_dto, message="System health check completed successfully")
-        except Exception:
+        except (TypeError, ValueError):
             # Fallback to raw health_status if DTO conversion fails
             return ResponseHandler.success(data=health_status, message="System health check completed successfully")
     finally:
@@ -225,8 +234,8 @@ async def health_check(
     },
 )
 async def app_info(
-    db: Session = Depends(get_db),
-    use_cases: dict = Depends(get_system_use_cases),
+    db: Annotated[Session, Depends(get_db)],
+    use_cases: Annotated[dict, Depends(get_system_use_cases)],
 ) -> JSONResponse:
     """
     Get comprehensive application information and metadata.

@@ -1,3 +1,4 @@
+from contextlib import suppress
 from unittest.mock import MagicMock
 
 from infrastructure.db import database
@@ -11,10 +12,8 @@ def test_get_db_closes_session(monkeypatch):
     # When
     generator = database.get_db()
     yielded = next(generator)
-    try:
+    with suppress(StopIteration):
         next(generator)
-    except StopIteration:
-        pass
 
     # Then
     assert yielded is fake_session

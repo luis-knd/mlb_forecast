@@ -1,9 +1,10 @@
 """REST API routes for team statistics ingestion."""
 
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
 
 from application.use_cases.team_stats_ingestion_use_cases import (
     IngestAllTeamStatsUseCase,
@@ -32,7 +33,7 @@ from interface.rest.response_handler import ResponseHandler
 router = APIRouter()
 
 
-def get_team_stats_ingestion_use_cases(db=Depends(get_db)) -> dict[str, Any]:
+def get_team_stats_ingestion_use_cases(db: Annotated[Session, Depends(get_db)]) -> dict[str, Any]:
     """Create team statistics ingestion use cases."""
     team_repository = TeamRepository(db)
     hitting_stats_repository = HittingStatsRepository(db)
@@ -92,11 +93,9 @@ def get_team_stats_ingestion_use_cases(db=Depends(get_db)) -> dict[str, Any]:
     },
 )
 async def ingest_all_team_stats(
-    season: int = Query(
-        default=datetime.now().year,
-        description="Season year to ingest all team statistics for.",
-    ),
-    use_cases: dict[str, Any] = Depends(get_team_stats_ingestion_use_cases),
+    season: Annotated[int, Query(description="Season year to ingest all team statistics for.")] = datetime.now().year,
+    *,
+    use_cases: Annotated[dict[str, Any], Depends(get_team_stats_ingestion_use_cases)],
 ):
     """Ingest all team statistics for a season."""
     try:
@@ -136,11 +135,11 @@ async def ingest_all_team_stats(
     },
 )
 async def ingest_team_hitting_stats(
-    season: int = Query(
-        default=datetime.now().year,
-        description="Season year to ingest team hitting statistics for.",
+    season: Annotated[int, Query(description="Season year to ingest team hitting statistics for.")] = (
+        datetime.now().year
     ),
-    use_cases: dict[str, Any] = Depends(get_team_stats_ingestion_use_cases),
+    *,
+    use_cases: Annotated[dict[str, Any], Depends(get_team_stats_ingestion_use_cases)],
 ):
     """Ingest team hitting statistics for a season."""
     try:
@@ -176,11 +175,11 @@ async def ingest_team_hitting_stats(
     },
 )
 async def ingest_team_pitching_stats(
-    season: int = Query(
-        default=datetime.now().year,
-        description="Season year to ingest team pitching statistics for.",
+    season: Annotated[int, Query(description="Season year to ingest team pitching statistics for.")] = (
+        datetime.now().year
     ),
-    use_cases: dict[str, Any] = Depends(get_team_stats_ingestion_use_cases),
+    *,
+    use_cases: Annotated[dict[str, Any], Depends(get_team_stats_ingestion_use_cases)],
 ):
     """Ingest team pitching statistics for a season."""
     try:
@@ -216,11 +215,11 @@ async def ingest_team_pitching_stats(
     },
 )
 async def ingest_team_fielding_stats(
-    season: int = Query(
-        default=datetime.now().year,
-        description="Season year to ingest team fielding statistics for.",
+    season: Annotated[int, Query(description="Season year to ingest team fielding statistics for.")] = (
+        datetime.now().year
     ),
-    use_cases: dict[str, Any] = Depends(get_team_stats_ingestion_use_cases),
+    *,
+    use_cases: Annotated[dict[str, Any], Depends(get_team_stats_ingestion_use_cases)],
 ):
     """Ingest team fielding statistics for a season."""
     try:
@@ -256,11 +255,11 @@ async def ingest_team_fielding_stats(
     },
 )
 async def ingest_team_catching_stats(
-    season: int = Query(
-        default=datetime.now().year,
-        description="Season year to ingest team catching statistics for.",
+    season: Annotated[int, Query(description="Season year to ingest team catching statistics for.")] = (
+        datetime.now().year
     ),
-    use_cases: dict[str, Any] = Depends(get_team_stats_ingestion_use_cases),
+    *,
+    use_cases: Annotated[dict[str, Any], Depends(get_team_stats_ingestion_use_cases)],
 ):
     """Ingest team catching statistics for a season."""
     try:

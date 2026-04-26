@@ -10,6 +10,8 @@ import subprocess
 import sys
 import venv
 from pathlib import Path
+from urllib.error import URLError
+from urllib.request import urlretrieve
 
 
 def run_command(command, description="", cwd=None):
@@ -48,8 +50,6 @@ def check_python_version():
 
 def create_virtual_environment():
     """Crea el entorno virtual y asegura que pip esté instalado, incluso si ensurepip no está disponible."""
-    import urllib.request
-
     venv_path = Path("venv")
 
     if venv_path.exists():
@@ -59,7 +59,7 @@ def create_virtual_environment():
         try:
             venv.create("venv", with_pip=False)
             print("✅ Entorno virtual creado en ./venv")
-        except Exception as e:
+        except (OSError, RuntimeError, ValueError) as e:
             print(f"❌ Error creando entorno virtual: {e}")
             return False
 
@@ -72,7 +72,7 @@ def create_virtual_environment():
         try:
             url = "https://bootstrap.pypa.io/get-pip.py"
             get_pip_script = "get-pip.py"
-            urllib.request.urlretrieve(url, get_pip_script)
+            urlretrieve(url, get_pip_script)
             print("📥 get-pip.py descargado con éxito")
 
             print("⚙️ Instalando pip en entorno virtual...")
@@ -84,7 +84,7 @@ def create_virtual_environment():
             print("✅ pip instalado correctamente en el entorno virtual")
             os.remove(get_pip_script)
 
-        except Exception as e:
+        except (OSError, URLError, subprocess.SubprocessError) as e:
             print(f"❌ Error descargando o ejecutando get-pip.py: {e}")
             return False
 
@@ -147,13 +147,10 @@ def install_dependencies():
         return False
 
     # Instalar dependencias
-    if not run_command(
+    return run_command(
         f"{pip_cmd} install -r requirements.txt -c constraints.txt",
         "Instalando dependencias del proyecto con restricciones",
-    ):
-        return False
-
-    return True
+    )
 
 
 def create_env_file():
@@ -176,7 +173,7 @@ def create_env_file():
             dst.write(src.read())
         print("✅ Archivo .env creado")
         return True
-    except Exception as e:
+    except OSError as e:
         print(f"❌ Error creando .env: {e}")
         return False
 
@@ -254,7 +251,7 @@ echo   ❌ Desactivar: deactivate
         print("  - activate_venv.bat (Windows)")
         return True
 
-    except Exception as e:
+    except OSError as e:
         print(f"❌ Error creando scripts: {e}")
         return False
 

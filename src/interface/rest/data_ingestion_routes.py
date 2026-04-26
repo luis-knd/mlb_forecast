@@ -4,7 +4,7 @@ REST API routes for data ingestion and machine learning operations.
 
 from collections.abc import Awaitable, Callable
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
@@ -47,9 +47,10 @@ MIN_SUPPORTED_SEASON = 1900
 MAX_DAYS_BACK = 30
 MAX_SEASON_OFFSET = 1
 StepExecutor = Callable[[], Awaitable[Any]]
+INGESTION_STEP_ERRORS = (RuntimeError, ValueError, TypeError, OSError)
 
 
-def get_data_ingestion_use_cases(db: Session = Depends(get_db)):
+def get_data_ingestion_use_cases(db: Annotated[Session, Depends(get_db)]):
     """Get data ingestion use cases with dependencies."""
     # Repositories
     team_repository = TeamRepository(db)
@@ -134,7 +135,7 @@ async def _run_ingestion_step(
         ingestion_results[step_key]["success"] = True
         ingestion_results[step_key]["count"] = count
         return count
-    except Exception as exc:
+    except INGESTION_STEP_ERRORS as exc:
         ingestion_results[step_key]["error"] = str(exc)
         errors.append(f"{step_key.replace('_', ' ').title()} ingestion failed: {exc}")
         return 0
@@ -211,9 +212,10 @@ def _build_ingestion_response(
     },
 )
 async def ingest_full_data(
-    season: int = Query(datetime.now().year, description="Season to ingest data for"),
-    days_back: int = Query(7, le=30, description="Number of days back to ingest games for"),
-    use_cases: dict = Depends(get_data_ingestion_use_cases),
+    season: Annotated[int, Query(description="Season to ingest data for")] = datetime.now().year,
+    days_back: Annotated[int, Query(le=30, description="Number of days back to ingest games for")] = 7,
+    *,
+    use_cases: Annotated[dict, Depends(get_data_ingestion_use_cases)],
 ) -> JSONResponse:
     """
     Handle the full data ingestion process for a given season.
@@ -244,7 +246,7 @@ async def ingest_full_data(
         return _build_ingestion_response(season, start_time, ingestion_results, total_records, errors)
     except Exception as e:
         if "MLB API" in str(e) or "api" in str(e).lower():
-            raise DomainExceptions.ExternalServiceError("MLB API", str(e))
+            raise DomainExceptions.ExternalServiceError("MLB API", str(e)) from e
         raise
 
 

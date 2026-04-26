@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import JSONResponse
@@ -41,8 +42,8 @@ router = APIRouter()
 
 
 def get_game_use_cases(
-    db: Session = Depends(get_db),
-    cache: CachePort = Depends(get_cache_adapter),
+    db: Annotated[Session, Depends(get_db)],
+    cache: Annotated[CachePort, Depends(get_cache_adapter)],
 ):
     """Get game use cases with dependencies."""
     game_repository = GameRepository(db)
@@ -70,18 +71,24 @@ def get_game_use_cases(
     },
 )
 async def list_games(
-    date: str | None = Query(None, description="Filter by date in YYYY-MM-DD format"),
-    team_id: int | None = Query(None, description="Filter by team ID"),
-    status: str | None = Query(None, description="Filter by game status (scheduled, in_progress, completed)"),
-    limit: int = Query(50, le=200, description="Maximum number of games to return"),
-    include: list[str] | None = Query(
-        None,
-        description=(
-            "Relations to hydrate. Supports comma-separated values and dot notation, "
-            "e.g. home_team or winning_team.name"
+    date: Annotated[str | None, Query(description="Filter by date in YYYY-MM-DD format")] = None,
+    team_id: Annotated[int | None, Query(description="Filter by team ID")] = None,
+    status: Annotated[
+        str | None,
+        Query(description="Filter by game status (scheduled, in_progress, completed)"),
+    ] = None,
+    limit: Annotated[int, Query(le=200, description="Maximum number of games to return")] = 50,
+    include: Annotated[
+        list[str] | None,
+        Query(
+            description=(
+                "Relations to hydrate. Supports comma-separated values and dot notation, "
+                "e.g. home_team or winning_team.name"
+            ),
         ),
-    ),
-    use_cases: dict = Depends(get_game_use_cases),
+    ] = None,
+    *,
+    use_cases: Annotated[dict, Depends(get_game_use_cases)],
 ) -> JSONResponse:
     """
     Retrieve games with optional filtering and pagination.
@@ -103,8 +110,8 @@ async def list_games(
     if date:
         try:
             datetime.strptime(date, "%Y-%m-%d")
-        except ValueError:
-            raise DomainExceptions.InvalidDataError("Date must be in YYYY-MM-DD format")
+        except ValueError as exc:
+            raise DomainExceptions.InvalidDataError("Date must be in YYYY-MM-DD format") from exc
 
     # Validate status if provided
     valid_statuses = ["scheduled", "in_progress", "completed", "postponed", "cancelled"]
@@ -143,15 +150,18 @@ async def list_games(
     },
 )
 async def get_game(
-    game_id: int = Path(..., description="The ID of the game to get"),
-    include: list[str] | None = Query(
-        None,
-        description=(
-            "Relations to hydrate. Supports comma-separated values and dot notation, "
-            "e.g. home_team or winning_team.name"
+    game_id: Annotated[int, Path(description="The ID of the game to get")],
+    include: Annotated[
+        list[str] | None,
+        Query(
+            description=(
+                "Relations to hydrate. Supports comma-separated values and dot notation, "
+                "e.g. home_team or winning_team.name"
+            ),
         ),
-    ),
-    use_cases: dict = Depends(get_game_use_cases),
+    ] = None,
+    *,
+    use_cases: Annotated[dict, Depends(get_game_use_cases)],
 ) -> JSONResponse:
     """
     Get a game by its ID.
@@ -197,9 +207,10 @@ async def get_game(
     },
 )
 async def ingest_games(
-    date: str | None = Query(None, description="Specific date to ingest games for (YYYY-MM-DD)"),
-    days_back: int = Query(7, le=30, description="Number of days back to ingest games for"),
-    use_cases: dict = Depends(get_game_use_cases),
+    date: Annotated[str | None, Query(description="Specific date to ingest games for (YYYY-MM-DD)")] = None,
+    days_back: Annotated[int, Query(le=30, description="Number of days back to ingest games for")] = 7,
+    *,
+    use_cases: Annotated[dict, Depends(get_game_use_cases)],
 ) -> JSONResponse:
     """
     Ingest game data from external MLB API.
@@ -221,8 +232,8 @@ async def ingest_games(
     if date:
         try:
             game_date = datetime.strptime(date, "%Y-%m-%d").date()
-        except ValueError:
-            raise DomainExceptions.InvalidDataError("Date must be in YYYY-MM-DD format")
+        except ValueError as exc:
+            raise DomainExceptions.InvalidDataError("Date must be in YYYY-MM-DD format") from exc
     if days_back < 1 or days_back > 30:
         raise DomainExceptions.InvalidDataError("Days back must be between 1 and 30")
     try:
@@ -251,5 +262,5 @@ async def ingest_games(
         )
     except Exception as e:
         if "MLB API" in str(e) or "api" in str(e).lower():
-            raise DomainExceptions.ExternalServiceError("MLB API", str(e))
+            raise DomainExceptions.ExternalServiceError("MLB API", str(e)) from e
         raise

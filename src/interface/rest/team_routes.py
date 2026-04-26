@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import JSONResponse
@@ -30,8 +31,8 @@ router = APIRouter()
 
 
 def get_team_use_cases(
-    db: Session = Depends(get_db),
-    cache: CachePort = Depends(get_cache_adapter),
+    db: Annotated[Session, Depends(get_db)],
+    cache: Annotated[CachePort, Depends(get_cache_adapter)],
 ):
     team_repository = TeamRepository(db)
     # cache used from argument
@@ -60,9 +61,10 @@ def get_team_use_cases(
     },
 )
 async def list_teams(
-    league: str | None = Query(None, description="Filter by league (e.g. American or National)"),
-    division: str | None = Query(None, description="Filter by division (e.g. East, West, Central)"),
-    use_cases: dict = Depends(get_team_use_cases),
+    league: Annotated[str | None, Query(description="Filter by league (e.g. American or National)")] = None,
+    division: Annotated[str | None, Query(description="Filter by division (e.g. East, West, Central)")] = None,
+    *,
+    use_cases: Annotated[dict, Depends(get_team_use_cases)],
 ) -> JSONResponse:
     teams = await use_cases["list_teams"].execute(league=league, division=division)
     teams_dto = to_team_dto_list(teams)
@@ -85,8 +87,8 @@ async def list_teams(
     },
 )
 async def get_team(
-    team_id: int = Path(..., description="The ID of the team to get"),
-    use_cases: dict = Depends(get_team_use_cases),
+    team_id: Annotated[int, Path(description="The ID of the team to get")],
+    use_cases: Annotated[dict, Depends(get_team_use_cases)],
 ) -> JSONResponse:
     team = await use_cases["get_team"].execute(team_id=team_id)
     team_dto = to_team_dto(team)
@@ -111,7 +113,7 @@ async def get_team(
     },
 )
 async def ingest_teams(
-    use_cases: dict = Depends(get_team_use_cases),
+    use_cases: Annotated[dict, Depends(get_team_use_cases)],
 ) -> JSONResponse:
     start_time = datetime.now()
     try:
@@ -119,7 +121,7 @@ async def ingest_teams(
     except DomainExceptions.ExternalServiceError:
         raise
     except Exception as e:
-        raise DomainExceptions.ExternalServiceError("MLB API", str(e))
+        raise DomainExceptions.ExternalServiceError("MLB API", str(e)) from e
     end_time = datetime.now()
     duration = (end_time - start_time).total_seconds()
 

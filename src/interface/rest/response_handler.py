@@ -7,7 +7,7 @@ import json
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 
-class ResponseStatus(str, Enum):
+class ResponseStatus(StrEnum):
     """Response status enumeration."""
 
     SUCCESS = "success"
@@ -28,7 +28,7 @@ class CustomJSONEncoder(json.JSONEncoder):
     """Custom JSON encoder for complex types."""
 
     def default(self, obj: Any) -> Any:
-        if isinstance(obj, (datetime, date)):
+        if isinstance(obj, datetime | date):
             return obj.isoformat()
         elif isinstance(obj, Decimal):
             return float(obj)

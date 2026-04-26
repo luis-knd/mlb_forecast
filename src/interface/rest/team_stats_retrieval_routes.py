@@ -3,6 +3,7 @@ REST API routes for team statistics retrieval operations.
 """
 
 from datetime import datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from fastapi.responses import JSONResponse
@@ -30,8 +31,8 @@ router = APIRouter()
 
 
 def get_team_stats_use_cases(
-    db: Session = Depends(get_db),
-    cache_adapter: CachePort = Depends(get_cache_adapter),
+    db: Annotated[Session, Depends(get_db)],
+    cache_adapter: Annotated[CachePort, Depends(get_cache_adapter)],
 ):
     """Get team stats use cases with dependencies."""
     team_stats_repository = TeamStatsRepository(db)
@@ -80,14 +81,17 @@ def _resolve_stats_category(category: str | None) -> TeamStatsCategory:
     tags=["Teams", "Stats"],
 )
 async def get_team_stats(
-    team_id: int = Path(..., description="The ID of the team to get stats for"),
-    season: str = Path(..., description="The season to get stats for"),
-    category: str | None = Query(
-        "all",
-        description="Optional stats category filter. Defaults to `all`.",
-        json_schema_extra={"enum": list(TeamStatsCategory.allowed_values())},
-    ),
-    use_cases: dict = Depends(get_team_stats_use_cases),
+    team_id: Annotated[int, Path(description="The ID of the team to get stats for")],
+    season: Annotated[str, Path(description="The season to get stats for")],
+    category: Annotated[
+        str | None,
+        Query(
+            description="Optional stats category filter. Defaults to `all`.",
+            json_schema_extra={"enum": list(TeamStatsCategory.allowed_values())},
+        ),
+    ] = "all",
+    *,
+    use_cases: Annotated[dict, Depends(get_team_stats_use_cases)],
 ) -> JSONResponse:
     """
     Retrieve statistical data for a specific team for a given season.
@@ -137,4 +141,4 @@ async def get_team_stats(
     except DomainExceptions.TeamNotFoundError:
         raise
     except Exception as e:
-        raise DomainExceptions.ExternalServiceError("Database", str(e))
+        raise DomainExceptions.ExternalServiceError("Database", str(e)) from e

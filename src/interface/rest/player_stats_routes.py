@@ -3,7 +3,7 @@ REST routes for persisted player stats retrieval and ingestion.
 """
 
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import JSONResponse
@@ -47,8 +47,8 @@ MIN_SUPPORTED_SEASON = 1876
 
 
 def get_persisted_player_stats_use_cases(
-    db: Session = Depends(get_db),
-    cache: CachePort = Depends(get_cache_adapter),
+    db: Annotated[Session, Depends(get_db)],
+    cache: Annotated[CachePort, Depends(get_cache_adapter)],
 ) -> dict[str, Any]:
     player_repository = PlayerRepository(db)
     team_repository = TeamRepository(db)
@@ -114,11 +114,12 @@ def _translate_validation_error(error: ValueError) -> None:
     },
 )
 async def get_persisted_player_season_stats(
-    player_id: int = Path(..., description="Internal player ID"),
-    season: int = Query(..., ge=MIN_SUPPORTED_SEASON, description="Season year"),
-    group: str = Query("all", description="Stats group to retrieve from persisted data"),
-    game_type: str | None = Query("R", alias="gameType", description="Persisted game type code"),
-    use_cases: dict[str, Any] = Depends(get_persisted_player_stats_use_cases),
+    player_id: Annotated[int, Path(description="Internal player ID")],
+    season: Annotated[int, Query(ge=MIN_SUPPORTED_SEASON, description="Season year")],
+    group: Annotated[str, Query(description="Stats group to retrieve from persisted data")] = "all",
+    game_type: Annotated[str | None, Query(alias="gameType", description="Persisted game type code")] = "R",
+    *,
+    use_cases: Annotated[dict[str, Any], Depends(get_persisted_player_stats_use_cases)],
 ) -> JSONResponse:
     await _load_player_or_raise(player_id, use_cases)
     try:
@@ -155,10 +156,11 @@ async def get_persisted_player_season_stats(
     },
 )
 async def get_persisted_player_career_stats(
-    player_id: int = Path(..., description="Internal player ID"),
-    group: str = Query("all", description="Stats group to retrieve from persisted data"),
-    game_type: str | None = Query("R", alias="gameType", description="Persisted game type code"),
-    use_cases: dict[str, Any] = Depends(get_persisted_player_stats_use_cases),
+    player_id: Annotated[int, Path(description="Internal player ID")],
+    group: Annotated[str, Query(description="Stats group to retrieve from persisted data")] = "all",
+    game_type: Annotated[str | None, Query(alias="gameType", description="Persisted game type code")] = "R",
+    *,
+    use_cases: Annotated[dict[str, Any], Depends(get_persisted_player_stats_use_cases)],
 ) -> JSONResponse:
     await _load_player_or_raise(player_id, use_cases)
     try:
@@ -193,10 +195,11 @@ async def get_persisted_player_career_stats(
     },
 )
 async def get_persisted_player_year_by_year_stats(
-    player_id: int = Path(..., description="Internal player ID"),
-    group: str = Query("all", description="Stats group to retrieve from persisted data"),
-    game_type: str | None = Query("R", alias="gameType", description="Persisted game type code"),
-    use_cases: dict[str, Any] = Depends(get_persisted_player_stats_use_cases),
+    player_id: Annotated[int, Path(description="Internal player ID")],
+    group: Annotated[str, Query(description="Stats group to retrieve from persisted data")] = "all",
+    game_type: Annotated[str | None, Query(alias="gameType", description="Persisted game type code")] = "R",
+    *,
+    use_cases: Annotated[dict[str, Any], Depends(get_persisted_player_stats_use_cases)],
 ) -> JSONResponse:
     await _load_player_or_raise(player_id, use_cases)
     try:
@@ -231,13 +234,17 @@ async def get_persisted_player_year_by_year_stats(
     },
 )
 async def get_persisted_player_game_logs(
-    player_id: int = Path(..., description="Internal player ID"),
-    season: int = Query(..., ge=MIN_SUPPORTED_SEASON, description="Season year"),
-    group: str = Query("all", description="Stats group to retrieve from persisted data"),
-    game_type: str | None = Query("R", alias="gameType", description="Persisted game type code"),
-    days_back: int | None = Query(None, alias="daysBack", ge=1, description="Optional rolling window in days"),
-    limit: int | None = Query(None, ge=1, le=500, description="Optional maximum records to return"),
-    use_cases: dict[str, Any] = Depends(get_persisted_player_stats_use_cases),
+    player_id: Annotated[int, Path(description="Internal player ID")],
+    season: Annotated[int, Query(ge=MIN_SUPPORTED_SEASON, description="Season year")],
+    group: Annotated[str, Query(description="Stats group to retrieve from persisted data")] = "all",
+    game_type: Annotated[str | None, Query(alias="gameType", description="Persisted game type code")] = "R",
+    days_back: Annotated[
+        int | None,
+        Query(alias="daysBack", ge=1, description="Optional rolling window in days"),
+    ] = None,
+    limit: Annotated[int | None, Query(ge=1, le=500, description="Optional maximum records to return")] = None,
+    *,
+    use_cases: Annotated[dict[str, Any], Depends(get_persisted_player_stats_use_cases)],
 ) -> JSONResponse:
     await _load_player_or_raise(player_id, use_cases)
     try:
@@ -275,12 +282,13 @@ async def get_persisted_player_game_logs(
     },
 )
 async def get_persisted_player_stat_splits(
-    player_id: int = Path(..., description="Internal player ID"),
-    season: int = Query(..., ge=MIN_SUPPORTED_SEASON, description="Season year"),
-    group: str = Query("all", description="Stats group to retrieve from persisted data"),
-    game_type: str | None = Query("R", alias="gameType", description="Persisted game type code"),
-    limit: int | None = Query(None, ge=1, le=500, description="Optional maximum records to return"),
-    use_cases: dict[str, Any] = Depends(get_persisted_player_stats_use_cases),
+    player_id: Annotated[int, Path(description="Internal player ID")],
+    season: Annotated[int, Query(ge=MIN_SUPPORTED_SEASON, description="Season year")],
+    group: Annotated[str, Query(description="Stats group to retrieve from persisted data")] = "all",
+    game_type: Annotated[str | None, Query(alias="gameType", description="Persisted game type code")] = "R",
+    limit: Annotated[int | None, Query(ge=1, le=500, description="Optional maximum records to return")] = None,
+    *,
+    use_cases: Annotated[dict[str, Any], Depends(get_persisted_player_stats_use_cases)],
 ) -> JSONResponse:
     await _load_player_or_raise(player_id, use_cases)
     try:
@@ -318,13 +326,20 @@ async def get_persisted_player_stat_splits(
     },
 )
 async def ingest_persisted_player_season_stats(
-    season: int = Query(default=datetime.now().year, ge=MIN_SUPPORTED_SEASON, description="Season year to ingest"),
-    group: str = Query("all", description="Stats group to ingest from StatsAPI"),
-    game_type: str | None = Query("R", alias="gameType", description="Persisted game type code"),
-    player_id: int | None = Query(None, alias="playerId", description="Internal player ID to ingest"),
-    team_id: int | None = Query(None, alias="teamId", description="Internal team ID to ingest all roster players"),
-    force_refresh: bool = Query(False, alias="forceRefresh", description="Force refresh even for historical seasons"),
-    use_cases: dict[str, Any] = Depends(get_persisted_player_stats_use_cases),
+    season: Annotated[int, Query(ge=MIN_SUPPORTED_SEASON, description="Season year to ingest")] = datetime.now().year,
+    group: Annotated[str, Query(description="Stats group to ingest from StatsAPI")] = "all",
+    game_type: Annotated[str | None, Query(alias="gameType", description="Persisted game type code")] = "R",
+    player_id: Annotated[int | None, Query(alias="playerId", description="Internal player ID to ingest")] = None,
+    team_id: Annotated[
+        int | None,
+        Query(alias="teamId", description="Internal team ID to ingest all roster players"),
+    ] = None,
+    force_refresh: Annotated[
+        bool,
+        Query(alias="forceRefresh", description="Force refresh even for historical seasons"),
+    ] = False,
+    *,
+    use_cases: Annotated[dict[str, Any], Depends(get_persisted_player_stats_use_cases)],
 ) -> JSONResponse:
     try:
         ingestion_result = await use_cases["ingest_season_stats"].execute(
@@ -357,14 +372,24 @@ async def ingest_persisted_player_season_stats(
     },
 )
 async def ingest_persisted_player_stats_history(
-    season: int = Query(default=datetime.now().year, ge=MIN_SUPPORTED_SEASON, description="Season year to ingest"),
-    group: str = Query("all", description="Stats group to ingest from StatsAPI"),
-    game_type: str | None = Query("R", alias="gameType", description="Persisted game type code"),
-    player_id: int | None = Query(None, alias="playerId", description="Internal player ID to ingest"),
-    team_id: int | None = Query(None, alias="teamId", description="Internal team ID to ingest all roster players"),
-    days_back: int | None = Query(None, alias="daysBack", ge=1, description="Optional rolling daysBack for game logs"),
-    force_refresh: bool = Query(False, alias="forceRefresh", description="Force refresh even for historical seasons"),
-    use_cases: dict[str, Any] = Depends(get_persisted_player_stats_use_cases),
+    season: Annotated[int, Query(ge=MIN_SUPPORTED_SEASON, description="Season year to ingest")] = datetime.now().year,
+    group: Annotated[str, Query(description="Stats group to ingest from StatsAPI")] = "all",
+    game_type: Annotated[str | None, Query(alias="gameType", description="Persisted game type code")] = "R",
+    player_id: Annotated[int | None, Query(alias="playerId", description="Internal player ID to ingest")] = None,
+    team_id: Annotated[
+        int | None,
+        Query(alias="teamId", description="Internal team ID to ingest all roster players"),
+    ] = None,
+    days_back: Annotated[
+        int | None,
+        Query(alias="daysBack", ge=1, description="Optional rolling daysBack for game logs"),
+    ] = None,
+    force_refresh: Annotated[
+        bool,
+        Query(alias="forceRefresh", description="Force refresh even for historical seasons"),
+    ] = False,
+    *,
+    use_cases: Annotated[dict[str, Any], Depends(get_persisted_player_stats_use_cases)],
 ) -> JSONResponse:
     try:
         ingestion_result = await use_cases["ingest_history_stats"].execute(

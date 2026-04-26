@@ -105,7 +105,7 @@ def _node_line_count(node: ast.AST) -> int:
 
 
 def _docstring_line_count(node: ast.AST) -> int:
-    if not isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+    if not isinstance(node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef):
         return 0
     if not node.body:
         return 0

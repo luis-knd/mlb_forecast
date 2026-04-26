@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from enum import Enum
+from enum import StrEnum
 
 
-class TeamStatsCategory(str, Enum):
+class TeamStatsCategory(StrEnum):
     """Enumeration of the supported statistics categories for a team season."""
 
     HITTING = "hitting"

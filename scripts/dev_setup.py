@@ -81,7 +81,7 @@ def create_env_file():
             dst.write(src.read())
         print("✅ Archivo .env creado")
         return True
-    except Exception as e:
+    except OSError as e:
         print(f"❌ Error creando .env: {e}")
         return False
 

@@ -158,3 +158,4 @@ async def test_add_remove_get_jobs_and_status_paths():
     assert removed is True
     assert len(jobs) == 1
     assert status_info["total_jobs"] == 1
+    assert status_info["jobs"] == jobs
