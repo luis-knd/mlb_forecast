@@ -69,7 +69,7 @@ async def test_save_update_delete_and_update_stats_paths(repository, session):
     repository.get_by_team_and_season = AsyncMock(return_value={"team_id": 1, "season": 2026})
 
     # For update_stats and delete path order
-    session.query.return_value.filter.return_value.first.side_effect = [
+    responses = [
         None,
         None,
         None,
@@ -77,7 +77,14 @@ async def test_save_update_delete_and_update_stats_paths(repository, session):
         SimpleNamespace(team_id=1, season=2026),  # delete hitting found
         None,
         None,
+        None,
+        None,
     ]
+
+    def _next_query_result():
+        return responses.pop(0) if responses else None
+
+    session.query.return_value.filter.return_value.first.side_effect = _next_query_result
 
     # When
     saved = await repository.save(team_stats)

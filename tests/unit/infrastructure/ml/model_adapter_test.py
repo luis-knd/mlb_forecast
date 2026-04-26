@@ -1,4 +1,6 @@
 from datetime import datetime
+from pathlib import Path
+from unittest.mock import AsyncMock
 
 import numpy as np
 import pandas as pd
@@ -78,3 +80,84 @@ def test_to_training_frame_raises_for_insufficient_data():
     # Given / When / Then
     with pytest.raises(MLModelException):
         MLModelAdapter._to_training_frame([{"a": 1, "winner": 1, "total_runs": 8}] * 10)
+
+
+@pytest.fixture
+def adapter(monkeypatch, tmp_path):
+    monkeypatch.setattr(MLModelAdapter, "_try_load_model", lambda self: None)
+    model_adapter = MLModelAdapter()
+    model_adapter.model_dir = str(tmp_path)
+    return model_adapter
+
+
+@pytest.mark.asyncio
+async def test_train_predict_evaluate_and_version_helpers(adapter, monkeypatch):
+    # Given
+    historical = [{"f1": 1.0, "winner": 1, "total_runs": 8.0}] * 60
+    monkeypatch.setattr(adapter, "save_model", AsyncMock(return_value=True))
+
+    # When
+    metrics = await adapter.train(historical)
+    performance = await adapter.get_model_performance()
+    version = await adapter.get_model_version()
+
+    # Then
+    assert metrics["training_samples"] == 60
+    assert performance["is_trained"] == 1.0
+    assert version.startswith("v1.0_")
+
+
+@pytest.mark.asyncio
+async def test_predict_and_evaluate_error_paths(adapter):
+    # Given / When / Then
+    with pytest.raises(MLModelException):
+        await adapter.predict_game_outcome({}, {}, datetime(2026, 1, 1))
+
+    with pytest.raises(MLModelException):
+        await adapter.evaluate_model([])
+
+
+@pytest.mark.asyncio
+async def test_save_load_and_feature_importance(adapter, tmp_path):
+    # Given
+    adapter.is_trained = True
+    filepath = str(Path(tmp_path) / "model_test.pkl")
+
+    # When
+    saved = await adapter.save_model(filepath)
+    loaded = await adapter.load_model(filepath)
+    importance = await adapter.get_feature_importance()
+
+    # Then
+    assert saved is True
+    assert loaded is True
+    assert isinstance(importance, dict)
+
+
+def test_try_load_model_reads_latest_file(monkeypatch, tmp_path):
+    # Given
+    monkeypatch.setattr(MLModelAdapter, "_try_load_model", lambda self: None)
+    adapter = MLModelAdapter()
+    adapter.model_dir = str(tmp_path)
+    adapter.is_trained = True
+    latest_file = Path(tmp_path) / "model_latest.pkl"
+
+    import pickle
+
+    with latest_file.open("wb") as file_handle:
+        pickle.dump(
+            {
+                "winner_model": adapter.winner_model,
+                "runs_model": adapter.runs_model,
+                "scaler": adapter.scaler,
+                "model_version": "vX",
+                "is_trained": True,
+            },
+            file_handle,
+        )
+
+    # When
+    MLModelAdapter._try_load_model(adapter)
+
+    # Then
+    assert adapter.model_version == "vX"
