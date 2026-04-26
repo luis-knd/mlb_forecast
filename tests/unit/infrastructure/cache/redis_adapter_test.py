@@ -201,3 +201,45 @@ class TestRedisAdapter:
         # Then
         adapter.redis_client.aclose.assert_awaited_once()
         adapter.connection_pool.disconnect.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_set_many_returns_false_when_pipeline_results_contain_false(self):
+        # Given
+        adapter = RedisAdapter()
+        adapter.redis_client = MagicMock()
+        pipe = MagicMock()
+        pipe.setex = AsyncMock()
+        pipe.execute = AsyncMock(return_value=[True, False])
+        adapter.redis_client.pipeline.return_value = pipe
+
+        # When
+        result = await adapter.set_many({"a": 1, "b": 2}, ttl=5)
+
+        # Then
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_clear_pattern_returns_zero_when_no_keys(self):
+        # Given
+        adapter = RedisAdapter()
+        adapter.redis_client = AsyncMock()
+        adapter.redis_client.keys.return_value = []
+
+        # When
+        cleared = await adapter.clear(pattern="none:*")
+
+        # Then
+        assert cleared == 0
+
+    @pytest.mark.asyncio
+    async def test_get_stats_returns_error_payload_on_exception(self):
+        # Given
+        adapter = RedisAdapter()
+        adapter.redis_client = AsyncMock()
+        adapter.redis_client.info.side_effect = RuntimeError("broken")
+
+        # When
+        stats = await adapter.get_stats()
+
+        # Then
+        assert "error" in stats

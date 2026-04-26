@@ -207,3 +207,33 @@ class TestMLBApiAdapter:
 
         # Then
         assert players == []
+
+
+def test_parse_game_date_and_status_fallbacks():
+    # Given
+    adapter = MLBApiAdapter()
+
+    # When
+    invalid_date = adapter._parse_game_date("not-a-date")
+    cancelled = adapter._normalize_game_status(detailed_state="cancelled")
+    unknown = adapter._normalize_game_status(detailed_state="mystery")
+
+    # Then
+    assert invalid_date is None
+    assert cancelled == "cancelled"
+    assert unknown == "scheduled"
+
+
+@pytest.mark.asyncio
+async def test_get_players_by_team_and_get_player_by_id_error_paths():
+    # Given
+    adapter = MLBApiAdapter()
+    adapter._make_request = AsyncMock(side_effect=MLBApiException("boom"))
+
+    # When
+    roster = await adapter.get_players_by_team(1)
+    player = await adapter.get_player_by_id(10)
+
+    # Then
+    assert roster == []
+    assert player is None

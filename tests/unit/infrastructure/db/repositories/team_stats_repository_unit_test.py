@@ -97,3 +97,20 @@ async def test_save_update_delete_and_update_stats_paths(repository, session):
     assert updated == {"team_id": 1, "season": 2026}
     assert deleted is True
     assert not_deleted is False
+
+
+@pytest.mark.asyncio
+async def test_get_by_team_and_season_returns_none_when_all_stats_missing(repository, session):
+    # Given
+    session.query.return_value.filter.return_value.first.return_value = None
+
+    # When
+    result = await repository.get_by_team_and_season(1, 2026)
+
+    # Then
+    assert result is None
+
+
+def test_model_to_dict_handles_none_model():
+    # Given / When / Then
+    assert TeamStatsRepository._model_to_dict(None) is None
