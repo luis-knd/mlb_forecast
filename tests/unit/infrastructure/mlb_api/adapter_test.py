@@ -1,6 +1,7 @@
 from datetime import date
 from unittest.mock import AsyncMock
 
+import httpx
 import pytest
 
 from infrastructure.mlb_api.adapter import MLBApiAdapter, MLBApiException, _safe_float
@@ -237,3 +238,67 @@ async def test_get_players_by_team_and_get_player_by_id_error_paths():
     # Then
     assert roster == []
     assert player is None
+
+
+@pytest.mark.asyncio
+async def test_get_teams_and_team_stats_and_player_stats_success_paths():
+    # Given
+    adapter = MLBApiAdapter()
+    adapter._make_request = AsyncMock(
+        side_effect=[
+            {"teams": [{"id": 1, "name": "A"}]},
+            {"stats": [{"dummy": 1}]},
+            {"stats": []},
+        ]
+    )
+
+    # When
+    teams = await adapter.get_teams()
+    team_stats = await adapter.get_team_stats(2026, "hitting", mlb_team_id=1)
+    player_stats = await adapter.get_player_stats(10, "season", "hitting", season=2026)
+
+    # Then
+    assert len(teams) == 1
+    assert team_stats is not None
+    assert player_stats is not None
+
+
+@pytest.mark.asyncio
+async def test_make_request_wraps_http_and_request_errors(monkeypatch):
+    # Given
+    adapter = MLBApiAdapter()
+    adapter.max_retries = 0
+
+    class _ErrorResponse:
+        status_code = 500
+
+    class _FakeClientHTTP:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def get(self, url, params=None):
+            raise httpx.HTTPStatusError("http", request=None, response=_ErrorResponse())
+
+    monkeypatch.setattr("infrastructure.mlb_api.adapter.httpx.AsyncClient", lambda timeout: _FakeClientHTTP())
+
+    # When / Then
+    with pytest.raises(MLBApiException, match="HTTP error"):
+        await adapter._make_request("/x")
+
+    class _FakeClientReq:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def get(self, url, params=None):
+            raise httpx.RequestError("conn", request=None)
+
+    monkeypatch.setattr("infrastructure.mlb_api.adapter.httpx.AsyncClient", lambda timeout: _FakeClientReq())
+
+    with pytest.raises(MLBApiException, match="Connection error"):
+        await adapter._make_request("/x")

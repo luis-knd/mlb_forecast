@@ -136,3 +136,23 @@ async def test_main_handles_general_exception_and_cleanup(sleep_mock, setup_mock
     logger_mock.error.assert_called_once()
     scheduler_adapter.stop.assert_awaited_once()
     cache_adapter.disconnect.assert_awaited_once()
+
+
+def test_build_adapters_and_repositories_helpers(monkeypatch):
+    # Given
+    fake_cache = MagicMock()
+    fake_ml = MagicMock()
+    fake_api = MagicMock()
+    fake_scheduler = MagicMock()
+    monkeypatch.setattr(main, "RedisAdapter", MagicMock(return_value=fake_cache))
+    monkeypatch.setattr(main, "MLModelAdapter", MagicMock(return_value=fake_ml))
+    monkeypatch.setattr(main, "MLBApiAdapter", MagicMock(return_value=fake_api))
+    monkeypatch.setattr(main, "SchedulerAdapter", MagicMock(return_value=fake_scheduler))
+
+    # When
+    adapters = main._build_adapters()
+    repositories = main._build_repositories(MagicMock())
+
+    # Then
+    assert adapters == (fake_cache, fake_ml, fake_api, fake_scheduler)
+    assert len(repositories) == 4

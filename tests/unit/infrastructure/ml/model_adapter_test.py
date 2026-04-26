@@ -1,11 +1,12 @@
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import numpy as np
 import pandas as pd
 import pytest
 
+from domain.entities.game import Game
 from infrastructure.ml.model_adapter import (
     MLModelAdapter,
     MLModelException,
@@ -164,3 +165,129 @@ def test_try_load_model_reads_latest_file(monkeypatch, tmp_path):
 
     # Then
     assert adapter.model_version == "vX"
+
+
+def test_create_matchup_features_with_historical_games():
+    # Given
+    home_stats = {"team_id": 1, "win_percentage": 0.6, "run_differential": 30, "ops": 0.8, "earned_run_average": 3.4}
+    away_stats = {"team_id": 2, "win_percentage": 0.4, "run_differential": -10, "ops": 0.7, "earned_run_average": 4.5}
+    historical = [
+        Game(
+            id=1,
+            mlb_game_id=1,
+            home_team_id=1,
+            away_team_id=2,
+            game_date=datetime(2026, 1, 1),
+            status="completed",
+            home_score=5,
+            away_score=3,
+            winning_team_id=1,
+        ),
+        Game(
+            id=2,
+            mlb_game_id=2,
+            home_team_id=1,
+            away_team_id=2,
+            game_date=datetime(2026, 1, 2),
+            status="completed",
+            home_score=2,
+            away_score=4,
+            winning_team_id=2,
+        ),
+    ]
+
+    # When
+    features = MLModelAdapter._create_matchup_features(home_stats, away_stats, historical)
+
+    # Then
+    assert features["historical_home_win_rate"] == 0.5
+    assert features["avg_total_runs_historical"] == 7.0
+
+
+@pytest.mark.asyncio
+async def test_train_raises_wrapped_exception(adapter):
+    # Given / When / Then
+    with pytest.raises(MLModelException, match="Training error"):
+        await adapter.train([{"winner": 1, "total_runs": 8}])
+
+
+@pytest.mark.asyncio
+async def test_predict_success_and_error_wrapping(adapter):
+    # Given
+    adapter.is_trained = True
+    adapter.scaler = AsyncMock()  # type: ignore[assignment]
+    adapter.scaler.transform = MagicMock(return_value=np.array([[1.0] * 37]))
+    adapter.winner_model = MagicMock()
+    adapter.winner_model.predict_proba.return_value = [[0.3, 0.7]]
+    adapter.runs_model = MagicMock()
+    adapter.runs_model.predict.return_value = [8.2]
+
+    home = {"hitting_stats": {}, "pitching_stats": {}}
+    away = {"hitting_stats": {}, "pitching_stats": {}}
+
+    # When
+    prediction = await adapter.predict_game_outcome(home, away, datetime(2026, 4, 1))
+
+    # Then
+    assert prediction.home_win_probability == 0.7
+
+    # Given error branch
+    adapter.scaler.transform.side_effect = RuntimeError("bad scale")
+
+    # When / Then
+    with pytest.raises(MLModelException, match="Prediction error"):
+        await adapter.predict_game_outcome(home, away, datetime(2026, 4, 1))
+
+
+@pytest.mark.asyncio
+async def test_evaluate_success_and_wrapped_error(adapter):
+    # Given
+    adapter.is_trained = True
+    adapter.scaler.transform = MagicMock(return_value=np.array([[1.0], [1.0]]))
+    adapter.winner_model.predict = MagicMock(return_value=np.array([1, 0]))
+    adapter.runs_model.predict = MagicMock(return_value=np.array([8.0, 7.0]))
+
+    # When
+    metrics = await adapter.evaluate_model(
+        [
+            {"f1": 1, "winner": 1, "total_runs": 8.0},
+            {"f1": 2, "winner": 0, "total_runs": 7.0},
+        ]
+    )
+
+    # Then
+    assert "test_samples" in metrics
+
+    # Given error branch
+    adapter.scaler.transform.side_effect = RuntimeError("bad")
+
+    # When / Then
+    with pytest.raises(MLModelException, match="Evaluation error"):
+        await adapter.evaluate_model(
+            [
+                {"f1": 1, "winner": 1, "total_runs": 8.0},
+                {"f1": 2, "winner": 0, "total_runs": 7.0},
+            ]
+        )
+
+
+@pytest.mark.asyncio
+async def test_model_misc_paths(adapter):
+    # Given
+    adapter.is_trained = False
+
+    # When
+    perf = await adapter.get_model_performance()
+    save_fail = await adapter.save_model("/path/that/does/not/exist/model.pkl")
+    load_fail = await adapter.load_model("/path/that/does/not/exist/model.pkl")
+    raw_importance = adapter._get_feature_importance()
+    mapped = adapter._map_feature_importance(
+        [0.1] * len(adapter._map_feature_importance.__globals__["WINNER_FEATURE_NAMES"])
+    )
+
+    # Then
+    assert perf == {"error": "Model not trained"}
+    assert save_fail is False
+    assert load_fail is False
+    assert raw_importance == {}
+    assert "games_played" in mapped

@@ -68,3 +68,31 @@ async def test_app_info_and_cache_stats_routes(monkeypatch):
     # Then
     assert info_result["data"]["application_info"] == {"name": "app"}
     assert cache_result["data"]["cache_stats"] == {"keys": 1}
+
+
+@pytest.mark.asyncio
+async def test_clear_cache_with_pattern_and_health_dto_success(monkeypatch):
+    # Given
+    use_cases = {
+        "clear_cache": AsyncMock(execute=AsyncMock(return_value={"cleared": 2})),
+        "health_check": AsyncMock(
+            execute=AsyncMock(
+                return_value={
+                    "status": "healthy",
+                    "version": "1",
+                    "database": "ok",
+                    "cache": "ok",
+                    "ml_model": "ok",
+                }
+            )
+        ),
+    }
+    monkeypatch.setattr(system_routes.ResponseHandler, "success", lambda **kwargs: kwargs)
+
+    # When
+    clear_result = await system_routes.clear_cache(pattern="mlb:*", use_cases=use_cases)
+    health_result = await system_routes.health_check(db=object(), use_cases=use_cases)
+
+    # Then
+    assert clear_result["message"] == "Cache cleared with pattern: mlb:*"
+    assert health_result["message"] == "System health check completed successfully"

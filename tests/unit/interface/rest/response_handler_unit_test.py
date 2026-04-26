@@ -52,3 +52,20 @@ def test_response_handler_helpers_return_expected_status_codes():
     assert bad_request.status_code == 400
     assert created.status_code == 201
     assert no_content.status_code == 204
+
+
+class _Obj:
+    def __init__(self):
+        self.public = 1
+        self._private = 2
+
+
+def test_custom_json_encoder_serializes_object_dict_without_private_fields():
+    # Given
+    encoder = CustomJSONEncoder()
+
+    # When
+    serialized = encoder.default(_Obj())
+
+    # Then
+    assert serialized == {"public": 1}

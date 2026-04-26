@@ -1,13 +1,11 @@
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import HTTPException
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from interface.rest.exception_handlers import ExceptionHandlerMiddleware, domain_exception_handler
-from interface.rest.exception_handlers import DomainExceptions
+from interface.rest.exception_handlers import DomainExceptions, ExceptionHandlerMiddleware, domain_exception_handler
 
 
 class _Model(BaseModel):
