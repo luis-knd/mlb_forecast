@@ -83,6 +83,42 @@ def test_get_cache_stats_execute_handles_count_key_errors_safely():
     assert stats["total_keys"] is None
 
 
+def test_get_cache_stats_execute_wraps_unexpected_errors_with_system_exception():
+    # Given
+    cache = _CacheWithDiagnostics()
+    cache.get_stats.side_effect = RuntimeError("redis unavailable")
+    use_case = GetCacheStatsUseCase(cache_adapter=cache)
+
+    # When / Then
+    with pytest.raises(SystemException, match="Failed to get cache statistics: redis unavailable"):
+        asyncio.run(use_case.execute())
+
+
+def test_get_cache_stats_execute_defaults_pattern_and_lower_bounds_limit():
+    # Given
+    cache = _CacheWithDiagnostics()
+    use_case = GetCacheStatsUseCase(cache_adapter=cache)
+
+    # When
+    stats = asyncio.run(use_case.execute(include_keys=True, pattern=None, limit=0))
+
+    # Then
+    assert stats["keys_pattern"] == "*"
+    cache.list_keys.assert_awaited_once_with("*", 1)
+
+
+def test_normalize_stats_uses_provided_hit_rate_over_computed_value():
+    # Given
+    raw_stats = {"keyspace_hits": 1, "keyspace_misses": 999, "hit_rate_percentage": "12.345"}
+
+    # When
+    normalized = GetCacheStatsUseCase._normalize_stats(raw_stats)
+
+    # Then
+    assert normalized["hit_rate_percentage"] == 12.35
+    assert normalized["total_requests"] == 1000
+
+
 def test_clear_cache_execute_with_specific_pattern():
     # Given
     cache = AsyncMock(clear=AsyncMock(return_value=7))
@@ -110,6 +146,16 @@ def test_clear_cache_execute_without_pattern_clears_default_groups():
     assert result["success"] is True
     assert result["deleted_keys"] == 15
     assert cache.clear.await_count == 5
+
+
+def test_clear_cache_execute_wraps_errors_with_system_exception():
+    # Given
+    cache = AsyncMock(clear=AsyncMock(side_effect=RuntimeError("boom")))
+    use_case = ClearCacheUseCase(cache_adapter=cache)
+
+    # When / Then
+    with pytest.raises(SystemException, match="Failed to clear cache: boom"):
+        asyncio.run(use_case.execute(pattern="mlb:*"))
 
 
 def test_health_check_execute_marks_healthy_when_db_and_cache_work():
@@ -144,6 +190,25 @@ def test_health_check_execute_marks_unhealthy_when_dependencies_fail():
     assert result["cache"] == "disconnected"
 
 
+def test_health_check_execute_returns_error_status_when_unexpected_failure_occurs():
+    # Given
+    db = MagicMock()
+    cache = AsyncMock(set=AsyncMock(), delete=AsyncMock())
+    use_case = HealthCheckUseCase(cache_adapter=cache, runtime_config=_runtime_config())
+
+    def _boom(_db, _health_status):
+        raise RuntimeError("unexpected db error")
+
+    use_case._check_database_health = _boom
+
+    # When
+    result = asyncio.run(use_case.execute(db=db))
+
+    # Then
+    assert result["status"] == "error"
+    assert result["error"] == "unexpected db error"
+
+
 def test_get_app_info_execute_reports_connectivity_flags():
     # Given
     db = MagicMock()
@@ -173,3 +238,19 @@ def test_get_app_info_execute_handles_db_or_cache_disconnected():
     # Then
     assert info["database_connected"] is False
     assert info["cache_connected"] is False
+
+
+def test_get_app_info_execute_wraps_unexpected_errors_with_system_exception():
+    # Given
+    db = MagicMock()
+    cache = AsyncMock(set=AsyncMock(), delete=AsyncMock())
+    use_case = GetAppInfoUseCase(cache_adapter=cache, runtime_config=_runtime_config())
+
+    async def _explode():
+        raise RuntimeError("cache probe exploded")
+
+    use_case._is_cache_connected = _explode
+
+    # When / Then
+    with pytest.raises(SystemException, match="Failed to get application info: cache probe exploded"):
+        asyncio.run(use_case.execute(db=db))
