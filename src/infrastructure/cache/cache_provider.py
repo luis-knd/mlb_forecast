@@ -7,11 +7,11 @@ to avoid reconnecting on every request and spamming logs.
 
 import logging
 
-from infrastructure.cache.redis_adapter import RedisAdapter
+from infrastructure.cache.redis_adapter import CacheException, RedisAdapter
 
 _cache_adapter: RedisAdapter | None = None
 logger = logging.getLogger(__name__)
-CACHE_LIFECYCLE_ERRORS = (RuntimeError, OSError, ValueError, TypeError)
+CACHE_LIFECYCLE_ERRORS = (CacheException, RuntimeError, OSError, ValueError, TypeError)
 
 
 def get_cache_adapter() -> RedisAdapter:

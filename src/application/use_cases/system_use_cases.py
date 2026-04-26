@@ -13,6 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from application.ports.cache import CachePort
+from infrastructure.cache.redis_adapter import CacheException
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,15 @@ class SystemException(Exception):
     """Custom exception for system operations."""
 
 
-SYSTEM_OPERATION_ERRORS = (SystemException, SQLAlchemyError, RuntimeError, ValueError, TypeError, OSError)
+SYSTEM_OPERATION_ERRORS = (
+    SystemException,
+    CacheException,
+    SQLAlchemyError,
+    RuntimeError,
+    ValueError,
+    TypeError,
+    OSError,
+)
 
 
 class GetCacheStatsUseCase:

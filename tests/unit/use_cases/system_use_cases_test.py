@@ -11,6 +11,7 @@ from application.use_cases.system_use_cases import (
     SystemException,
     SystemRuntimeConfig,
 )
+from infrastructure.cache.redis_adapter import CacheException
 
 
 class _CacheWithDiagnostics:
@@ -187,6 +188,21 @@ def test_health_check_execute_marks_unhealthy_when_dependencies_fail():
     # Then
     assert result["status"] == "unhealthy"
     assert result["database"] == "disconnected"
+    assert result["cache"] == "disconnected"
+
+
+def test_health_check_execute_marks_unhealthy_when_cache_connection_fails():
+    # Given
+    db = MagicMock()
+    cache = AsyncMock(set=AsyncMock(side_effect=CacheException("redis down")), delete=AsyncMock())
+    use_case = HealthCheckUseCase(cache_adapter=cache, runtime_config=_runtime_config())
+
+    # When
+    result = asyncio.run(use_case.execute(db=db))
+
+    # Then
+    assert result["status"] == "unhealthy"
+    assert result["database"] == "connected"
     assert result["cache"] == "disconnected"
 
 
