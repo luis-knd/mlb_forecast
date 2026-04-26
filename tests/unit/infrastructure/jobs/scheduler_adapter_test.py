@@ -106,3 +106,55 @@ async def test_remove_job_returns_false_when_scheduler_raises_exception():
 
     # Then
     assert removed is False
+
+
+@pytest.mark.asyncio
+async def test_initialize_start_stop_warning_and_exception_paths(monkeypatch):
+    # Given
+    adapter = _build_adapter_with_mocked_scheduler()
+
+    # When
+    await adapter.initialize()
+    await adapter.start()
+    await adapter.start()  # already running branch
+    await adapter.stop()
+    await adapter.stop()  # not running branch
+
+    # Then
+    assert adapter.is_running is False
+
+    # Given exception path
+    failing = _build_adapter_with_mocked_scheduler()
+    failing.scheduler.start.side_effect = RuntimeError("boom")
+
+    # When / Then
+    with pytest.raises(SchedulerException):
+        await failing.start()
+
+
+@pytest.mark.asyncio
+async def test_add_remove_get_jobs_and_status_paths():
+    # Given
+    adapter = _build_adapter_with_mocked_scheduler()
+    adapter.scheduler.get_jobs.return_value = [
+        SimpleNamespace(
+            id="j1",
+            name="Job 1",
+            next_run_time=datetime(2026, 1, 1, 10, 0),
+            trigger="interval",
+            max_instances=1,
+            pending=False,
+        )
+    ]
+
+    # When
+    await adapter.add_job(job_id="cron-job", func=lambda: None, trigger_type="cron", hour=1, minute=0)
+    await adapter.add_job(job_id="date-job", func=lambda: None, trigger_type="date", run_date=datetime(2026, 1, 1))
+    removed = await adapter.remove_job("j1")
+    jobs = await adapter.get_jobs()
+    status_info = adapter.get_status()
+
+    # Then
+    assert removed is True
+    assert len(jobs) == 1
+    assert status_info["total_jobs"] == 1

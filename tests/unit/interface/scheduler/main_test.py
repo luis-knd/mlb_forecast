@@ -96,3 +96,63 @@ async def test_setup_scheduler_initializes_and_starts_components(
     register_jobs_mock.assert_awaited_once_with(scheduler_adapter, scheduler_use_cases)
     scheduler_adapter.start.assert_awaited_once()
     load_current_model_mock.assert_awaited_once_with(ml_model_adapter)
+
+
+@pytest.mark.asyncio
+@patch("interface.scheduler.main.logger")
+@patch("interface.scheduler.main.setup_scheduler", new_callable=AsyncMock)
+@patch("interface.scheduler.main.asyncio.sleep", new_callable=AsyncMock)
+async def test_main_handles_keyboard_interrupt(sleep_mock, setup_mock, logger_mock):
+    # Given
+    scheduler_adapter = AsyncMock()
+    cache_adapter = AsyncMock()
+    setup_mock.return_value = (scheduler_adapter, cache_adapter)
+    sleep_mock.side_effect = KeyboardInterrupt()
+
+    # When
+    await main.main()
+
+    # Then
+    scheduler_adapter.stop.assert_awaited_once()
+    cache_adapter.disconnect.assert_awaited_once()
+    logger_mock.info.assert_any_call("⏹️ Interrupt received, shutting down...")
+
+
+@pytest.mark.asyncio
+@patch("interface.scheduler.main.logger")
+@patch("interface.scheduler.main.setup_scheduler", new_callable=AsyncMock)
+@patch("interface.scheduler.main.asyncio.sleep", new_callable=AsyncMock)
+async def test_main_handles_general_exception_and_cleanup(sleep_mock, setup_mock, logger_mock):
+    # Given
+    scheduler_adapter = AsyncMock()
+    cache_adapter = AsyncMock()
+    setup_mock.return_value = (scheduler_adapter, cache_adapter)
+    sleep_mock.side_effect = RuntimeError("boom")
+
+    # When
+    await main.main()
+
+    # Then
+    logger_mock.error.assert_called_once()
+    scheduler_adapter.stop.assert_awaited_once()
+    cache_adapter.disconnect.assert_awaited_once()
+
+
+def test_build_adapters_and_repositories_helpers(monkeypatch):
+    # Given
+    fake_cache = MagicMock()
+    fake_ml = MagicMock()
+    fake_api = MagicMock()
+    fake_scheduler = MagicMock()
+    monkeypatch.setattr(main, "RedisAdapter", MagicMock(return_value=fake_cache))
+    monkeypatch.setattr(main, "MLModelAdapter", MagicMock(return_value=fake_ml))
+    monkeypatch.setattr(main, "MLBApiAdapter", MagicMock(return_value=fake_api))
+    monkeypatch.setattr(main, "SchedulerAdapter", MagicMock(return_value=fake_scheduler))
+
+    # When
+    adapters = main._build_adapters()
+    repositories = main._build_repositories(MagicMock())
+
+    # Then
+    assert adapters == (fake_cache, fake_ml, fake_api, fake_scheduler)
+    assert len(repositories) == 4
