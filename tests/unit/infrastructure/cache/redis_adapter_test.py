@@ -112,13 +112,14 @@ class TestRedisAdapter:
     async def test_get_many_and_set_many_and_delete_many(self):
         # Given
         adapter = RedisAdapter()
-        adapter.redis_client = AsyncMock()
-        adapter.redis_client.mget.return_value = [pickle.dumps(1), None]
+        adapter.redis_client = MagicMock()
+        adapter.redis_client.mget = AsyncMock(return_value=[pickle.dumps(1), None])
 
-        pipe = AsyncMock()
-        pipe.execute.return_value = [True, True]
+        pipe = MagicMock()
+        pipe.setex = AsyncMock()
+        pipe.execute = AsyncMock(return_value=[True, True])
         adapter.redis_client.pipeline.return_value = pipe
-        adapter.redis_client.delete.return_value = 2
+        adapter.redis_client.delete = AsyncMock(return_value=2)
 
         # When
         values = await adapter.get_many(["a", "b"])

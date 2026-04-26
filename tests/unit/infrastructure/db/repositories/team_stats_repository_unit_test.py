@@ -70,6 +70,9 @@ async def test_save_update_delete_and_update_stats_paths(repository, session):
 
     # For update_stats and delete path order
     session.query.return_value.filter.return_value.first.side_effect = [
+        None,
+        None,
+        None,
         SimpleNamespace(team_id=1, season=2026),  # update hitting found
         SimpleNamespace(team_id=1, season=2026),  # delete hitting found
         None,

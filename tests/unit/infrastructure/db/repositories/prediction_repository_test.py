@@ -63,9 +63,8 @@ class TestPredictionRepository:
         query = session.query.return_value.options.return_value
         query.filter.return_value.first.return_value = model
         query.filter.return_value.order_by.return_value.all.return_value = [model]
-        session.query.return_value.options.return_value.order_by.return_value.limit.return_value.all.return_value = [
-            model
-        ]
+        query.filter.return_value.order_by.return_value.limit.return_value.all.return_value = [model]
+        query.order_by.return_value.limit.return_value.all.return_value = [model]
 
         # When
         by_id = await repository.get_by_id(1)
