@@ -1,4 +1,5 @@
-from unittest.mock import AsyncMock
+import pickle
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -12,7 +13,6 @@ class TestRedisAdapter:
         adapter = RedisAdapter()
         adapter.redis_client = AsyncMock()
 
-        # Mock scan_iter to return a few keys
         async def mock_scan_iter(match):
             yield b"key1"
             yield b"key2"
@@ -33,7 +33,6 @@ class TestRedisAdapter:
         adapter = RedisAdapter()
         adapter.redis_client = AsyncMock()
 
-        # Mock scan_iter to yield nothing
         async def mock_scan_iter(match):
             if False:
                 yield
@@ -46,3 +45,158 @@ class TestRedisAdapter:
         # Then
         assert deleted_count == 0
         adapter.redis_client.delete.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_get_returns_default_on_miss(self):
+        # Given
+        adapter = RedisAdapter()
+        adapter.redis_client = AsyncMock()
+        adapter.redis_client.get.return_value = None
+
+        # When
+        result = await adapter.get("missing", default={"v": 1})
+
+        # Then
+        assert result == {"v": 1}
+
+    @pytest.mark.asyncio
+    async def test_get_returns_deserialized_value(self):
+        # Given
+        adapter = RedisAdapter()
+        adapter.redis_client = AsyncMock()
+        adapter.redis_client.get.return_value = pickle.dumps({"ok": True})
+
+        # When
+        result = await adapter.get("key")
+
+        # Then
+        assert result == {"ok": True}
+
+    @pytest.mark.asyncio
+    async def test_set_uses_setex(self):
+        # Given
+        adapter = RedisAdapter()
+        adapter.redis_client = AsyncMock()
+        adapter.redis_client.setex.return_value = True
+
+        # When
+        result = await adapter.set("k", {"a": 1}, ttl=10)
+
+        # Then
+        assert result is True
+        adapter.redis_client.setex.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_exists_delete_and_clear_paths(self):
+        # Given
+        adapter = RedisAdapter()
+        adapter.redis_client = AsyncMock()
+        adapter.redis_client.exists.return_value = 1
+        adapter.redis_client.delete.return_value = 2
+        adapter.redis_client.keys.return_value = ["a", "b"]
+        adapter.redis_client.flushdb.return_value = True
+
+        # When
+        exists = await adapter.exists("a")
+        deleted = await adapter.delete("a")
+        cleared_pattern = await adapter.clear(pattern="prefix:*")
+        cleared_all = await adapter.clear()
+
+        # Then
+        assert exists is True
+        assert deleted is True
+        assert cleared_pattern == 2
+        assert cleared_all == 1
+
+    @pytest.mark.asyncio
+    async def test_get_many_and_set_many_and_delete_many(self):
+        # Given
+        adapter = RedisAdapter()
+        adapter.redis_client = AsyncMock()
+        adapter.redis_client.mget.return_value = [pickle.dumps(1), None]
+
+        pipe = AsyncMock()
+        pipe.execute.return_value = [True, True]
+        adapter.redis_client.pipeline.return_value = pipe
+        adapter.redis_client.delete.return_value = 2
+
+        # When
+        values = await adapter.get_many(["a", "b"])
+        set_ok = await adapter.set_many({"a": 1, "b": 2}, ttl=5)
+        deleted = await adapter.delete_many(["a", "b"])
+
+        # Then
+        assert values == {"a": 1, "b": None}
+        assert set_ok is True
+        assert deleted == 2
+
+    @pytest.mark.asyncio
+    async def test_increment_decrement_and_count_keys(self):
+        # Given
+        adapter = RedisAdapter()
+        adapter.redis_client = AsyncMock()
+        adapter.redis_client.incrby.return_value = 5
+        adapter.redis_client.decrby.return_value = 4
+        adapter.redis_client.dbsize.return_value = 33
+
+        # When
+        inc = await adapter.increment("count", 2)
+        dec = await adapter.decrement("count", 1)
+        keys = await adapter.count_keys()
+
+        # Then
+        assert inc == 5
+        assert dec == 4
+        assert keys == 33
+
+    @pytest.mark.asyncio
+    async def test_list_keys_respects_limit_and_normalizes_bytes(self):
+        # Given
+        adapter = RedisAdapter()
+        adapter.redis_client = MagicMock()
+
+        async def _scan_iter(match, count):
+            yield b"a"
+            yield "b"
+            yield b"c"
+
+        adapter.redis_client.scan_iter = _scan_iter
+
+        # When
+        keys = await adapter.list_keys(pattern="*", limit=2)
+
+        # Then
+        assert keys == ["a", "b"]
+
+    @pytest.mark.asyncio
+    async def test_get_stats_returns_hit_rate(self):
+        # Given
+        adapter = RedisAdapter()
+        adapter.redis_client = AsyncMock()
+        adapter.redis_client.info.return_value = {
+            "keyspace_hits": 9,
+            "keyspace_misses": 1,
+            "connected_clients": 5,
+        }
+
+        # When
+        stats = await adapter.get_stats()
+
+        # Then
+        assert stats["keyspace_hits"] == 9
+        assert stats["keyspace_misses"] == 1
+        assert stats["hit_rate_percentage"] == 90.0
+
+    @pytest.mark.asyncio
+    async def test_disconnect_prefers_aclose_and_disconnects_pool(self):
+        # Given
+        adapter = RedisAdapter()
+        adapter.redis_client = AsyncMock()
+        adapter.connection_pool = AsyncMock()
+
+        # When
+        await adapter.disconnect()
+
+        # Then
+        adapter.redis_client.aclose.assert_awaited_once()
+        adapter.connection_pool.disconnect.assert_awaited_once()
