@@ -50,7 +50,12 @@ async def test_list_players_search_and_mutations(repository, session):
     query.filter.return_value = query
     query.order_by.return_value.offset.return_value.limit.return_value.all.return_value = [model]
     session.query.return_value.options.return_value.filter.return_value.all.return_value = [model]
-    session.query.return_value.filter.return_value.first.side_effect = [model, model, None]
+    responses = [model, model, model, None, None]
+
+    def _next_first_result():
+        return responses.pop(0) if responses else None
+
+    session.query.return_value.filter.return_value.first.side_effect = _next_first_result
 
     repository.get_by_id = AsyncMock(return_value=model)
 

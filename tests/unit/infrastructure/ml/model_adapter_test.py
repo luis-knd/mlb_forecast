@@ -136,8 +136,11 @@ async def test_save_load_and_feature_importance(adapter, tmp_path):
 
 def test_try_load_model_reads_latest_file(monkeypatch, tmp_path):
     # Given
+    original_try_load = MLModelAdapter._try_load_model
     monkeypatch.setattr(MLModelAdapter, "_try_load_model", lambda self: None)
     adapter = MLModelAdapter()
+    monkeypatch.setattr(MLModelAdapter, "_try_load_model", original_try_load)
+
     adapter.model_dir = str(tmp_path)
     adapter.is_trained = True
     latest_file = Path(tmp_path) / "model_latest.pkl"
@@ -157,7 +160,7 @@ def test_try_load_model_reads_latest_file(monkeypatch, tmp_path):
         )
 
     # When
-    MLModelAdapter._try_load_model(adapter)
+    original_try_load(adapter)
 
     # Then
     assert adapter.model_version == "vX"
