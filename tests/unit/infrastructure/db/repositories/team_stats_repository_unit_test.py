@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from domain.entities.team_stats import TeamStats
+from infrastructure.db.models import FieldingStatsModel, HittingStatsModel, PitchingStatsModel
 from infrastructure.db.repositories.team_stats_repository import TeamStatsRepository
 
 
@@ -120,22 +121,43 @@ def test_model_to_dict_handles_none_model():
 async def test_update_stats_and_delete_cover_pitching_and_fielding_branches(repository, session):
     # Given
     repository.get_by_team_and_season = AsyncMock(return_value={"ok": True})
-    session.query.return_value.filter.return_value.first.side_effect = [
-        None,
-        SimpleNamespace(team_id=9, season=2026),
-        None,
-        None,
-        SimpleNamespace(team_id=9, season=2026),
-        None,
-        None,
-        None,
-        SimpleNamespace(id=88),
-        None,
-        None,
-        None,
-        SimpleNamespace(id=77),
-        None,
-    ]
+    query_mock = MagicMock()
+    filter_mock = MagicMock()
+    session.query.return_value = query_mock
+    query_mock.filter.return_value = filter_mock
+
+    calls: dict[type, int] = {HittingStatsModel: 0, PitchingStatsModel: 0, FieldingStatsModel: 0}
+
+    def _first_side_effect():
+        model_class = session.query.call_args.args[0]
+        calls[model_class] += 1
+        # update_stats(1): miss hitting -> hit pitching
+        if model_class is HittingStatsModel and calls[model_class] == 1:
+            return None
+        if model_class is PitchingStatsModel and calls[model_class] == 1:
+            return SimpleNamespace(team_id=9, season=2026)
+        # update_stats(2): miss hitting/pitching -> hit fielding
+        if model_class is HittingStatsModel and calls[model_class] == 2:
+            return None
+        if model_class is PitchingStatsModel and calls[model_class] == 2:
+            return None
+        if model_class is FieldingStatsModel and calls[model_class] == 1:
+            return SimpleNamespace(team_id=9, season=2026)
+        # delete(88): miss hitting -> hit pitching
+        if model_class is HittingStatsModel and calls[model_class] == 3:
+            return None
+        if model_class is PitchingStatsModel and calls[model_class] == 3:
+            return SimpleNamespace(id=88)
+        # delete(77): miss hitting/pitching -> hit fielding
+        if model_class is HittingStatsModel and calls[model_class] == 4:
+            return None
+        if model_class is PitchingStatsModel and calls[model_class] == 4:
+            return None
+        if model_class is FieldingStatsModel and calls[model_class] == 2:
+            return SimpleNamespace(id=77)
+        return None
+
+    filter_mock.first.side_effect = _first_side_effect
 
     # When
     updated_pitching = await repository.update_stats(1, {})

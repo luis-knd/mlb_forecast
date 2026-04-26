@@ -65,6 +65,26 @@ class TestMLBApiAdapter:
         assert dto.status == "completed"
         assert dto.winning_team_id == 1
 
+    def test_transform_game_data_handles_tie_and_unknown_status(self):
+        # Given
+        adapter = MLBApiAdapter()
+        game_data = {
+            "gamePk": 101,
+            "gameDate": "2026-04-20T19:10:00Z",
+            "status": {"detailedState": "mysterious"},
+            "teams": {
+                "home": {"team": {"id": 1}, "score": 3},
+                "away": {"team": {"id": 2}, "score": 3},
+            },
+        }
+
+        # When
+        dto = adapter._transform_game_data(game_data)
+
+        # Then
+        assert dto.status == "scheduled"
+        assert dto.winning_team_id is None
+
     def test_transform_team_stats_applies_defaults_and_derived_metrics(self):
         # Given
         adapter = MLBApiAdapter()
@@ -91,6 +111,22 @@ class TestMLBApiAdapter:
         assert result["runs_allowed"] == 5
         assert result["run_differential"] == 5
         assert result["pythagorean_expectation"] > 0
+
+    def test_transform_team_stats_ignores_other_team_splits(self):
+        # Given
+        adapter = MLBApiAdapter()
+        stats_data = {
+            "stats": [
+                {"group": {"displayName": "hitting"}, "splits": [{"team": {"id": 99}, "stat": {"runs": 100}}]}
+            ]
+        }
+
+        # When
+        result = adapter._transform_team_stats_data(stats_data, mlb_team_id=1, season=2026)
+
+        # Then
+        assert result["runs_scored"] == 0
+        assert result["run_differential"] == 0
 
     def test_transform_fielding_stats_calculates_derived_values(self):
         # Given
@@ -122,6 +158,27 @@ class TestMLBApiAdapter:
         assert result["fielding_percentage"] == 0.8
         assert result["range_factor_per_game"] == 4
         assert result["range_factor_per_nine"] == 4
+
+    def test_transform_player_data_uses_full_name_fallback(self):
+        # Given
+        adapter = MLBApiAdapter()
+
+        # When
+        player = adapter._transform_player_data({"id": 1, "fullName": "Shohei Ohtani", "active": True})
+
+        # Then
+        assert player.first_name == "Shohei"
+        assert player.last_name == "Ohtani"
+
+    def test_parse_player_birth_date_handles_invalid_value(self):
+        # Given
+        adapter = MLBApiAdapter()
+
+        # When
+        result = adapter._parse_player_birth_date({"birthDate": "invalid"})
+
+        # Then
+        assert result is None
 
     @pytest.mark.asyncio
     async def test_get_players_by_sport_passes_team_id_query_parameter(self):
@@ -302,3 +359,79 @@ async def test_make_request_wraps_http_and_request_errors(monkeypatch):
 
     with pytest.raises(MLBApiException, match="Connection error"):
         await adapter._make_request("/x")
+
+
+@pytest.mark.asyncio
+async def test_make_request_retries_on_retryable_http_status(monkeypatch):
+    # Given
+    adapter = MLBApiAdapter()
+    adapter.max_retries = 1
+    calls = {"n": 0}
+
+    class _Resp:
+        def __init__(self, status_code=200):
+            self.status_code = status_code
+
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                raise httpx.HTTPStatusError("http", request=None, response=self)
+
+        def json(self):
+            return {"ok": True}
+
+    class _Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def get(self, url, params=None):
+            calls["n"] += 1
+            return _Resp(status_code=500 if calls["n"] == 1 else 200)
+
+    monkeypatch.setattr("infrastructure.mlb_api.adapter.httpx.AsyncClient", lambda timeout: _Client())
+    monkeypatch.setattr("infrastructure.mlb_api.adapter.asyncio.sleep", AsyncMock())
+
+    # When
+    response = await adapter._make_request("/x")
+
+    # Then
+    assert response == {"ok": True}
+    assert calls["n"] == 2
+
+
+@pytest.mark.asyncio
+async def test_make_request_wraps_unexpected_errors(monkeypatch):
+    # Given
+    adapter = MLBApiAdapter()
+    adapter.max_retries = 0
+
+    class _Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def get(self, url, params=None):
+            raise ValueError("kaboom")
+
+    monkeypatch.setattr("infrastructure.mlb_api.adapter.httpx.AsyncClient", lambda timeout: _Client())
+
+    # When / Then
+    with pytest.raises(MLBApiException, match="Unexpected error"):
+        await adapter._make_request("/x")
+
+
+@pytest.mark.asyncio
+async def test_get_game_by_id_returns_none_on_error():
+    # Given
+    adapter = MLBApiAdapter()
+    adapter._make_request = AsyncMock(side_effect=MLBApiException("404"))
+
+    # When
+    result = await adapter.get_game_by_id(123)
+
+    # Then
+    assert result is None
